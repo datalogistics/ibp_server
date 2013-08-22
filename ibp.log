@@ -1,0 +1,95 @@
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_split_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_merge_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_status!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_manage!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_write!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_store!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_load!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_send!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_phoebus_send!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_rename!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_alias_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_alias_manage!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_push!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_pull!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_write!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_load!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_split_allocate!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_write!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_store!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_load!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_send!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_phoebus_send!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_push!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_pull!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_validate_chksum!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_get_chksum!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_write!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command ibp_load!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_get_corrupt!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_get_config!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_get_alloc!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_date_free!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_expire_list!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_undelete!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_rescan!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_rid_mount!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_rid_umount!
+[mi=0 tid=0 file=:101 fn=add_command] add_command: Using default ACL for command internal_rid_set_mode!
+[mi=0 tid=0 file=:97 fn=log_preamble] 
+[mi=0 tid=0 file=:98 fn=log_preamble] *****************************************************************
+[mi=0 tid=0 file=:99 fn=log_preamble] Starting ibp_server on Mon Aug 12 13:36:51 2013
+[mi=0 tid=0 file=:100 fn=log_preamble] *****************************************************************
+[mi=0 tid=0 file=:101 fn=log_preamble] 
+[mi=0 tid=0 file=:103 fn=log_preamble] *********************Printing configuration file **********************
+
+[server]
+interfaces=localhost.localdomain:6714;
+threads = 16
+max_pending = 16
+min_idle = 60
+max_network_wait_ms = 1000
+password = IBPch@ngem3
+stats_size = 5000
+lazy_allocate = 1
+big_alloc_enable = 1
+splice_enable = 0
+db_env_loc = /tmp/ibp_dbenv
+db_mem = 256
+log_file = ibp.log
+log_level = 0
+return_cap_id = 1
+backoff_scale = 0.100000
+backoff_max = 30
+log_maxsize = 100
+debug_level = 0
+timestamp_interval = 60
+activity_file = ibp_activity.log
+activity_maxsize = 50
+activity_max_history = 1
+activity_host = (null)
+activity_port = 0
+
+force_resource_rebuild = 0
+truncate_duration = 0
+soft_fail = 0
+
+# Total Resources : 0
+
+[phoebus]
+gateway = localhost/5006
+
+[phoebus]
+gateway = localhost/5006
+
+
+[access_control]
+default = open
+
+[mi=0 tid=0 file=:109 fn=log_preamble] *****************************************************************
+
+[mi=0 tid=0 file=:3602 fn=activity_log_open] activity_log_open: alog ibp_activity.log was not closed properly! Moving to EOF manually.
+[mi=0 tid=0 file=:3314 fn=activity_log_read_header_1byte_id] read_1byte_id error
+[mi=0 tid=0 file=:2636 fn=_alog_resources] alog_read_res: nres=0

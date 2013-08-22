@@ -1,0 +1,258 @@
+v1.5.3
+----------------------------------------------------------------------
+-Properly handled osd_open() returning NULL in many locations.
+-Added insertion of corrupt allocation when running get_alloc
+
+v1.5.2
+----------------------------------------------------------------------
+-Did a proper ibp_{attach|detach}_rid functionality in ibp_server. This required adding an activity
+   counter to resource_t that gets incremented everytime an op occurs.  Sometimes more than once.
+   So it's not an accurate operatio ncounter but pretty close.  This counter is used to decide when
+   to shut detach a RID when the RID is inactive for the specified amount of time.  This is still
+   not perfect but should catch 99% of the cases.  The only edge case not properly handled is when
+   a long running transfer blocks for a long time (longer than the detach delay).
+-Added a pending stack to resource_list_t to keep from adding a resource multipel times.  This 
+   was happening cause the ibp_attach_rid command was trying to connect and then timing out and retrying
+   but ibp_server was waking up and reading the command anyhow and doing the attach.
+-Added printing the activity counter on get_version.
+-Increased the timeouts for ibp_{attach|detach}_rid to 1 hour to handle rebuilds and long running commands.
+-Fixed a bug in free_resource_list.  It was iterating over "n" instead of "max_res" causing a small memory leak.
+
+v1.5.1
+----------------------------------------------------------------------
+-Fixed race condition with copy allocation updates.  Previously the server replied with success after
+   the copy operation succeeded but beofre the DB record was updated.  This has been switched.
+-Fixed various malloc's not being freed on exit.  These were not memory leaks just globals not properly
+   cleaned up on exit.
+
+v1.2.5
+----------------------------------------------------------------------
+-Added "return_cap_id" option in ibp config file to allow the allocations local filename/id
+   to be returned in the typekey field since it's not used by the server.  This is less secure
+   but makes it easier debugging problems cause the caps aren't sotred i nthe activity logs, only the ids.
+-Added IBP_VEC_[READ|WRITE] and IBP_VEC_[READ|WRITE]_CHKSUM.  These commands provide 
+   I/O vec support for depot r/w.
+-Added IBP_TRUNCATE as a subcommand for IBP_MANAGE.  This commands can grow/shrink an allocation.
+   IBP_CHNG does similar functionality but changes the size, duration, and allocation type as well.
+   Meaning that in most cases you must 1st perform an IBP_PROBE to get that information.  Additionally
+   IBP_CHNG does not allow you to "lose" data so you can't truncate an allocation if it results in data
+   loss.  IBP_TRUNCATE does allow this.  
+-Fixed allocation history updates generating an invalid slot.
+-Fixed IBP_VALIDATE_CHKSUM to update the allocation header's state if the errors were corrected.
+   Modified fs_validate_chksum.
+-Added IBP_E_OUT_OF_SOCKETS error code.  This code is used to signify thatthe depot is under 
+   heavy load and is rejecting connections.  When this code is returned it also supplies
+   a suggested wait time to the client before retrying.  This time is controlled via the 
+   backoff_scale and backoff_max server configuration options.
+-Added ability to mount/umount an RID from a running ibp_server.  See ibp_mount/ibp_umount
+   in the README file.
+-Fixed race condition in network.c due to APR pools not being thread safe.
+-Added APR_SO_REUSEADDR in net_sock for bind function.  This got lost in the APR conversion.
+-Added network chksum variations of all READ/WRITE commands: 
+   IBP_WRITE_CHKSUM, IBP_STORE_CHKSUM, IBP_LOAD_CHKSUM, IBP_SEND_CHKSUM
+   IBP_PHOEBUS_SEND_CHKSUM, IBP_PUSH_CHKSUM, IBP_PULL_CHKSUM
+-Added chksum functionality supported by OpenSSL: SHA1, SHA256, SHA512, and MD5
+-Added standalone program get_config and corresponding INTERNAL_GET_CONFIG command to retrieve
+  the depot configuration.
+-Added soft_fail flag to control how most IBP errors are handled.  If soft_fail=1 then the
+  connection is not automatically severed on an IBP error.
+-Added the ability for a remote client to retrieve the IBP server config
+-Added the printing of all interfaces and hostname for get_version
+-Initial splice support added for data transfers.  This can be disabled in the config file.
+  It can also be detected at run time cause older kernels don't support TCP splice just
+  disk-to-disk splicing.  Although I still can't get splice to work reliably.  It hangs
+  quickly so I wouldn't use this just yet.
+-Added support for allocations greater than 2GB-1 bytes.  The server tries to determine if support
+  is available at compile time and sets it appropriately but it can also be configured in the
+  config file.  This changed code in several places where I was sloppy with my data types.
+-Added support for string RID
+-Added Trash or recycle bin support to help in the recovery of expired allocations.
+  This results in a new thread for each resource which does all garbage collection.  I also
+  tweaked the freeing of space for writes to recover space from trash if needed.  This was
+  due to a race condition between multiple allocs occuring simultaneously.
+- Made OSD macros to simplify reading code, ie dev->create_id(dev) is now osd_create_id(dev). 
+-Removed EBOFS and CEPH since it hadn't been used in a long time.  This allowed me to switch
+  back to pure C to make things easier to port.
+-Removed GLIB support and instead use Apache Portable Runtime (APR) toolkit.
+-Switched to using APR for all POSIX thread functionality
+-Added iniparse.c for parsing the config files.  This is to replace the GLIB functionality
+-Simplified the RID config files by merging the DB config into the RID config.
+  Also renamed the RID coonfig from depot.settings to rid.settings.
+-Modified mkfs_resource to add the max size to use instead of defaulting to the full drive or directory
+-Forced removal of the RID DB environments on a force_rebuild.  This should get around the issue 
+  related to "unable to join environment" due to a corrupt environment.
+-Added "-r" option to do an automatic "force_rebuild=2" on start.
+-Switched to using cmake for the build.
+-Added options to build either 32- or 64-bit binaries.
+
+v1.2.3p4
+----------------------------------------------------------------------
+Fixed bug with trash not being reclaimed when out of space.
+Fixed handling of multiple interfaces.
+Fixed bug with IBP_PUSH/PULL commands not passing the client timeout information.
+
+v1.2.3p0
+----------------------------------------------------------------------
+Re-tooled the rebuild process. force_resource_rebuild=2 behavior is unchanged.  Although
+  the behavior when 1 is different. When force_resource_rebuild=1 an attempt is made to 
+  recover the DB directly.  If this succeeds the usage is then recalculated by scanning the DB.
+  This is the default recovery behavior if the depot dies unexpectedly upon restart.
+Duration truncation- IF force_resource_rebuild=1 and truncate_durations=1 then the DB is walked
+  shortening any durations as needed and also removing any expired allocations.
+
+v1.2.2p0
+----------------------------------------------------------------------
+Added background resource cleanup thread. As a result the freeing of all expired allocations
+   that used to occur for status and get_version calls has been dropped.  If extra space is
+   needed in create_allocation_resource() attempts are still made to free the space.
+
+
+v1.2.1p0
+----------------------------------------------------------------------
+IBP_PUSH - Expanded form of IBP_SEND/IBP_PHOEBUS_SEND, which is used for depot-depot copies.
+   The new command provides equivalent functionality to IBP_SEND/IBP_PHOEBUS_SEND but also 
+   adds support for specifying an offset for the destination allocation.  If "-1" is specified
+   it defaults to append the same as the IBP_*SEND commands.
+IBP_PULL - Same functionality as IBP_PUSH but in this case the data is "pulled" or read from
+   the remote depot instead of pushed or written.  The command supports all the same functionality 
+   as IBP_PULL: phoebus/normal transfers, support for data appending or specific destination
+   offset.  IBP_PULL allows for the transfer of data to depot's located behind firewalls,
+   private subnets, or NATed.  A private depot can normally send or push data to a publicly
+   available depot but the reverse is normally not true since the private depot is not allowed
+   direct access to the Internet and instead accesses the internet through a proxy or gateway 
+   machine. IBP_PULL gets around this problem by allowing the private depot to initiate the 
+   transfer and pull or read the data from the public depot.
+
+IBP_SPLIT_ALLOCATE - Provides support to atomically split an existing allocation
+   NOTE: The data is not split just the allocations size/space is changed.
+IBP_MERGE_ALLOCATE - Atomic support to merge the space of 2 existing allocations
+   NOTE: The data in the 2ndary alloc is lost.  Just it's space is merged with the primary.
+
+v1.2.0p0
+----------------------------------------------------------------------
+***NOTE: This version is not backward compatible with previous version because 
+    the allocation_t type has changed!!!****
+
+ibp_upgrade_v1-2-0 - Routine to upgrade the depot allocations from previous versions.  
+
+
+Big Changes
+........................
+Activity log support - This feature is not complete yet.  Currently it logs each IBP command to an
+   activity log file which is appended between subsequent ibp_server restarts.  It does recover from 
+   hard kills.  It does NOT currently send full activity logs to a remote log server.  That will be 
+   added soon.  The program print_alog processes the compressed activity log files
+   generated and prints them to the screen.
+
+Recent activity queries - The allocation_t data structure has been modified which breaks backward 
+   compatibility.  This change keeps the most recent 16 read, 16 write, and 16 manage operations for each
+   allocation.  This includes operations generated through an alias.  This can be disabled in the 
+   config file.  There are new IBP commands designed for internal use to access this information
+   discussed below.
+
+DB reliability changed to ACID compliant -  This has not been fully tested so be careful.  As a
+   result of this change the create allocation rate has dropped significantly to around 
+   ~80 creates/sec/resource.
+
+Initial Security Framework - This is definitely just started and not complete.  The current
+   implementation is focused on 2 aspects creating, using, and managing alias allocations along
+   with controlling IBP command execution. 
+
+   Alias framework - Think of an alias allocation as a soft link to the primary allocation that 
+       can also be byte restricted.  The idea is that only alias allocations are handed out to
+       clients. Since clients never see the true allocation their access can be revoked at any
+       time without effecting other users access to the same allocation.  With the exception
+       of making allocation changes via IBP_MANAGE the client has no concept they are using
+       a alias allocation.
+
+   iptables-like control - Each IBP command's execution can be controlled through and iptables-like 
+       framework.  Namely each ibp command can be restricted via a subnet mask.  This way
+       you can restrict IBP_ALLOCATE commands to only come from approved hosts but IBP_READ/WRITE
+       commands can come from anywhere.
+
+Network layer abstraction completely retooled - This was for adding phoebus support and 
+   for future SSL support needed for the security framework.  This framework is much more
+   flexible and also supports monitoring of multiple ports.
+
+Management tools
+.....................
+print_alog - Used to parse the activity log files.
+
+date_spacefree - Generates a table showing the daily amount of space that comes available.
+
+expire_list - Generates a table listing each allocation in the order they expire.
+
+get_alloc - retrieves the given allocation and prints all the information.  This includes the 
+     read, write, and manage recent activity history along with the creation date.  Optionally
+     a byte range of data can be read.
+    
+New IBP functionality
+..........................
+IBP_PHOEBUS_SEND - Performs a depot-depot copy using a phoebus network bath instead of a standard
+    TCP/IP connection.
+IBP_RENAME - Forces the generation of a new set of caps for an existing allocation.  The old caps are no
+    longer valid after execution.
+IBP_ALIAS_ALLOCATE - Generates a set of caps that act as an alias for an existing allocation. The alias can
+    be created using a specific byte range of the existing allocation to restrict access.  The primary
+    allocation is not effected upon deletion of the alias allocation.
+IBP_ALIAS_MANAGE - Similar to IBP_MANAGE but for the alias allocation.  Requires the primary or master 
+    allocations manage cap to make changes.
+INTERNAL_GET_ALLOC - Used to retrieve a raw allocation.
+INTERNAL_DATE_FREE - Used to retrieve the free space vs date table
+INTERNAL_EXPIRE_LIST - Used to retrieve which allocations are expiring and when.
+
+Bugs fixed
+..................
+Fixed a remove_allocation bug which resulted in an empty allocation not being completely removed.
+
+
+v1.1.7p0
+------------------------------------------------------------------------------------
+Support for installable commands - Replaced the hard coded case statement with a function table to allow
+additional commands to added modularly.  This added commands.c and install_commands.c and an internal restructuring
+in ibp_server.c and server_lib.c.  From now on to add a new command you should just have to edit install_commands.c
+to add the new command and also modify the makefile.
+
+v1.1.6p2
+-------------------------------
+read_command() - Fixed bug so that a fragmented line wouldn't return early leading to a mangled command.
+
+server_version() - Added compile flags to string
+
+
+v1.1.6p1
+-------------------------------
+make_dportal_connection() - Rearranged things so the net_connect() call occurs outside the lock.
+This means that depot-depot copies should be be faster.  The old approach meant that all depot-depot copies 
+were serialized in making the connection to the remote depot.  This isn't a problem if the depot 
+is up but if it's unresponsive it can cause a *huge* backlog if lots of threads are being used for 
+depot-depot copies.
+
+depot/depot copy accounting - Modified transfer_stats to support tracking bytes sent to other depots.
+The additional info is also reported with get_version. This way it's possible to eliminate the double
+counting of bytes if you want to calculate the aggregate transfer among a collection of depots. 
+Assuming there are no transfers to depots outside the collection:)
+
+max_size - Added the "max_size" attribute to a resource config file.  The parameter defines the maximum
+amount of disk space to use for the sum of both hard+soft allocations.  "min_free" is still used to make 
+sure the disk is not accidentally filled up by the depot.
+
+_lookup_id_with_cap_db() - Modified it so that a fatal DB error triggers a shutdown.  Also modified 
+server_loop() to shutdown monitoring port immediately.  This way StorCore sees the depot as down even if
+there are problems continuing the shutdown.
+
+same_depot_copy() - Fixed bug for append mode.  It would instead use an offset of 0 and overwrite.
+Also fixed a race condition when multiple threads writing to the same allocation would cause a corruption
+of the allocations size.
+ 
+handle_send() - Same error as above.
+
+network.c - Modified readline_* routines to *not* return the actual newline character.
+
+stack.c - Added link/unlink functionality to help minimize malloc/free calls for certain use cases.
+
+flawfinder/rat - corrected all the potential security issues these tools found.  This touched all sorts of files.
+
+
+
+

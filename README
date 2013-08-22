@@ -1,0 +1,416 @@
+Building ibp_server
+-------------------------------------------------------------------------------
+For building you need the following packages installed:
+
+  -Apache Portable Runtime Toolkit
+  -Apache Portable Runtime Utilities Toolkit
+  -Berkeley DB
+  -Google Protocol Buffers and also the protoc-c 3rd party
+   compiler for native C support
+  -OpenSSL
+  -cmake
+
+and optionally Phoebus for TCP overlay transfers.
+
+To build the IBP_server you should be able to unpack the tarball and then modify
+bootstrap as needed.  bootstrap is a wrapper that runs cmake to generate the Makefiles.
+You can then run 'make' to build the executables....
+
+tar zxvf ibp_server-accre.tgz
+cd ibp_server
+...modify bootstrap...
+./bootstrap
+make
+
+
+IBP configuration options
+-------------------------------------------------------------------------------
+
+[server] options
+-------------------------------
+interfaces=host1:port1;host2:port2;
+  You can have as many host/port combinations as you want.  If interfaces is
+  not used then it defaults to using the hostname.
+
+port=my_port
+  Default port to use.  Only used if interfaces is missing.  Default is 6714.
+
+password=my_password
+  Default is ibp.  The password is in clear text in the file and transfered over the wire
+  so be warned.  It's really only used for a few calls that I don't classify as insecure.
+  The depot doesn't support the ability to change RID's or settings remotely.
+
+lazy_allocate=[0|1]
+  Don't allocate space upon creation just when it is used.  The default is 1.  Setting to 0
+  is discouraged.
+
+threads=N
+  Max number of threads or connections to allow.  I tend to make it 2-4 times the number of RID's
+
+max_pending=N
+  Max number of pending connections. Default is 8.
+
+max_network_wait_ms=N
+  Max amount of time in ms allowed to read a command before the connection is closed
+
+timestamp_interval=N
+  Log file timestamp interval in sec. Default is 60 sec
+
+min_idle=N
+  Min idle connection time in secs *between commands* before closing a connection.  
+  Default is 30 sec.
+
+backoff_scale=N
+  Scale factor for calculating backoff time when the max number of incoming connections is reached.
+  The backoff time, in secs, that's returned is MIN(backoff_max, MAX(1,reject_count*backoff_scale)).
+  reject_count is a tally of rejected connections without success. As soon as a connection is
+  accepted reject_count is reset to 0.
+
+backoff_max=N
+  Max time, in secs, to wait before a retry.  Sent to the client.
+
+big_alloc_enable=[0|1]
+  Allow 2GB or greater allocations if set to 1.
+
+splice_enable=[0|1]
+  Attempt to use splice if set to 1 for data transfers.  This may be overriden if the OS
+  doesn't support it.  ALso this setting is ignored if disk chksums are required for the operation.
+
+log_file=output_file
+  Where to store the log output.  If output file is "stdout" or "stderr" then the 
+  output is redirected to those devices.  Otherwise it goes tothe file.
+
+log_maxsize=N
+   Max size of the log file in MB before it gets recycled.
+
+log_level=N
+   Controls verbosity of output with 0 being minimal and 20 being everything.
+
+debug_level=N
+   Similar to log_level and should be removed.
+
+db_env_loc=my_env
+   Where to store the RID DB environment files.  If set to "local" then each RID
+   keeps it's own DB environment.  This is the default.
+
+db_mem=N
+   Amount of memory to use for the DB cache.  Default is 256MB.  If db_env_loc=local
+   this should be much smaller, say 16MB.
+
+activity_file=my_activity_log
+   Where to store the activity log.  This is a compressed log of all IBP commands 
+   the depot attempts to execute.  You can use print_alog to replay these log files.
+
+activity_maxsize=N
+   Max size of each activity file in MB.
+
+activity_max_history=N
+   Number of old activity files to keep.  The default is 1.
+
+activity_host=host
+   Hostname or IP address of where to send the activity logs to.  IF not declared then
+   the logs are deleted based on activity_max_history.
+
+activity_port=port
+   Port on host to send the logs.
+
+force_resource_rebuild=N
+   Only used in case of an emergency to do a file system walk to rebuild the RID DBes.
+   The default value is 0 and if set to 2 a complete rebuild is done.  A value of 1
+   used to have a meaning and shouldn't be used.....Oops.
+
+truncate_duration=N
+   This is useful if you shorten the depots max duration.  If set to 1 and 
+   force_resource_rebuild=2 then the depot rebuilds DBes and truncates any
+   allocations with excessive durations.
+
+soft_fail=[0|1]
+   Controls how a client connection is handled when encountering an IBP error.  The default,
+   soft_fail=0, is to always close the client connection on any error.  If soft_fail=1 then
+   for most errors the client connection is not terminated.  It is always terminated on malformed
+   commands.
+
+return_cap_id=[0|1]
+   The default method, 0, is to return a dummy argument for the typekey since the depot doesn't use it.
+   if 1 the allocation's file name, id, is returned.  This facilitates debugging but is less secure.
+
+[phoebus] options
+-------------------------------
+gateway=phoebus_host1/port1,phoebus_host2/port2,....
+   This is the default Phoebus path to use.
+   Must be specified (even if not enabled) and points to the default Phoebus host.
+   Can be filled with anything if not enabled.  This parameter is pased directly to phoebus
+   and is the reason for using "/" and "," notation which is different for other parameters.
+
+
+[access_control] options
+-------------------------------
+These options control access to each individual IBP command.  They all take
+an access control list argument which is a collection of ACL's each ACL can have the form:
+   host
+   ip_address
+   host/bit_mask
+   ip_address/bit_mask
+
+Multiple ACL's are separated by a ";".  Specify "open" to leave the command unfiltered.  
+Local access can be granted using the keyword "local".
+
+------------------------------
+
+default=ACL
+   This is the default ACLs to use for any command NOT specified.  The default is "open".
+   All chksum command ACLs are covered by the non-chksum versions 
+
+ibp_allocate=ACL
+ibp_split_allocate=ACL
+ibp_merge_allocate=ACL
+ibp_status=ACL
+ibp_manage=ACL
+ibp_write=ACL
+ibp_store=ACL
+ibp_load=ACL
+ibp_send=ACL
+ibp_phoebus_send=ACL
+ibp_rename=ACL
+ibp_alias_allocate=ACL
+ibp_alias_manage=ACL
+ibp_push=ACL
+ibp_pull=ACL
+internal_get_config=ACL
+internal_get_alloc=ACL
+internal_get_corrupt=ACL
+internal_date_free=ACL
+internal_expire_list=ACL
+internal_undelete=ACL
+internal_rescan=ACL
+internal_ibp_mount=ACL
+internal_ibp_umount=ACL
+
+RID options
+-------------------------------
+Each Resource is defined by 2 sections -- [resource RID] and [db RID] -- where
+RID is the resource ID.
+-------------------------------
+
+[resource RID] options
+-------------------------------
+rid=my_rid
+   This should match the RID in the section.  It's redundant and should be removed.
+
+mode=[read, write, manage]
+   Comma seperated list of access modes. The default mode is to enable full access.
+   The most common usage is when a drive is failing and you mark it as read-only while the 
+   data is being copied/repaired.
+
+cache_expire=N
+   How long, in seconds, to cache block level chksums when doing read operations.  If the same allocation
+   block is accessed within this timeframe the full block is not re-read to validate the chksum.  It is assumed to be
+   good and just the data requested is accessed.  The default is 30 sec.
+
+n_cache=N
+   Number of allocation block chksums to cache.  The default is 100,00.
+
+max_duration=N
+   Max allocation duration in sec.
+
+resource_type=dir
+   Type of resource.  Currently the only option is "dir" for a directory resource.
+
+device=/resource/path
+   Directory to use for storing data
+
+update_alloc=[0|1]
+   Update each allocation header in addition to it's DB entry if set to 1. Default is 1. 
+
+enable_read_history=[0|1]
+   Keep a log of the last 16 read commands on the allocation if set to 1.
+
+enable_write_history=[0|1]
+   Keep a log of the last 16 write commands on the allocation if set to 1.
+
+enable_manage_history=[0|1]
+   Keep a log of the last 16 manage commands on the allocation if set to 1.
+
+enable_alias_history=[0|1]
+   Keep a log of the last 16 alias operations on the allocation if set to 1.
+
+cleanup_interval=N
+   Cleanup thread interval in sec.  Default is 600 sec.  This controls how often
+   the check for expired data is run.  Any expired data is then moved to the 
+   expired recycle bin.  After the expire check runs the thread then looks for any recycle
+   bin data that has exhausted it's grace period and physically removes it.
+
+rescan_interval=N
+   How often the recycle bins are inventoried.  At any point a person can change
+   in the the trash directories and manually remove files.  When this occurs
+   the amount of space in the recycle bins differs from what the depot thinks 
+   is their.  In this case the recycle directories should be rescanned using the
+   ibp_rescan tool.
+
+delete_grace_period=N
+   Amount of time a deleted allocation stays in the deleted recycle bin before
+   being purged.
+
+expire_grace_period=N
+   Amount of time a deleted allocation stays in the deleted recycle bin before
+   being purged.
+
+preexpire_grace_period=N
+   Extra time in secs an expired allocation can be used before it is moved to the 
+   expired recycle bin.  This is really intended to give an application a brief
+   window to easily recover an expired allocation before it's moved to the recycle
+   bin where it's much more complicated to recover.
+  
+max_size=N
+   Max amount of disk space to use in MB.
+
+soft_size=N
+   Max amount of space to use for "soft" allocations in MB.
+
+hard_size=N
+   Max amount of space to use for "hard" allocations in MB.
+
+minfree_size=N
+   Minimum amount of free space to leave on the device in MB.
+
+preallocate=[0|1]
+   Preallocate allocation space if 1.  This writes 0's to the allocation guaranteeing
+   the space.  The default is 0.  This will greatly reduces performance and is discouraged.
+
+
+[db RID] options
+-------------------------------
+loc=/path/to/db/files
+  Specifies the location to place all DB files and optionally the DB environment if "local"
+  is used.
+
+
+--------------------------------------------------------------------------------
+Commands
+--------------------------------------------------------------------------------
+
+Common options
+----------------------
+RID     - Resource ID
+host    - Depot host to contact
+port    - Port on hoist to contact
+timeout - Seconds to wait for the command to complete.
+
+
+ibp_server [-r] [-d] ibp_config_file
+-----------------------------------------------------
+This is the IBP server.  
+
+-r  --  Forces a rebuild of all resources. This is automaitcally done for any RIDs not closed cleanly.
+-d  --  Start the ibp_server process as a daemon.
+ibp_config_file  -- Config file to load.  Also used with ibp_mount/ibp_umount.
+
+
+mkfs.resource RID type device db_location [max_mbytes]
+-----------------------------------------------------
+Creates a new IBP resource. Not invoked directly but through the shell scripts create_resource.[dev|dir]
+
+RID    - Resource ID.  Can be any non-blank valid character string.
+type   - Type or resource. Currently only 'dir' is supported
+device - Device to be used for the resource.
+db_location - Base directory to use for storing the DBes for the resource.
+max_mbytes  - Max number of MB to use.  If missing it defaults to the entire disk.
+
+
+get_corrupt host port rid [timeout]
+----------------------------------------------------------------
+Get the list of corrupt allocations for the given RID
+
+
+get_config -a | host port [timeout]
+----------------------------------------------------------------
+Get the depots currently running configuration.  Using "-a" or auto mode will use the local host's name and default port.
+
+get_version -a | host port [timeout]
+----------------------------------------------------------------
+Get the depot version information and usage statistics. Using "-a" or auto mode will use the local host's name and default port.
+
+get_alloc [-d debug_level] [--print_blocks] [--file fname offset len] [--cap full_ibp_capability]|[host port RID key_type key] [--file fname offset len]
+----------------------------------------------------------------
+Retrieves an allocations header and optional data.
+
+key_type - Type of capability used. Should be: read|write|manage|id
+--file   - Stores a portion of the allocation to fname based on the given offset and length
+           fname - Filename of where to store data.  If stdout or stderr redirects to that device
+           data_offset -  Offset relative to the start of data, after the header.
+           len   - Number of bytes to retrieve. If 0 means return all data available starting from offset
+--print_blocks  - Prints the chksum block information if available
+-d debug_level  - Sets the debug level.  Default is 0.
+
+
+read_alloc [-d debug_level] [--print_blocks] [--file fname data_offset len] rid_file
+----------------------------------------------------------------
+Takes a physical file containing an allocation and retrieves the header and optional data.
+
+rid_file - Actual filename containng the allocation.
+--file   - Stores a portion of the allocation to fname based on the given offset and length
+           fname - Filename of where to store data.  If stdout or stderr redirects to that device
+           data_offset -  Offset relative to the start of data, after the header.
+           len   - Number of bytes to retrieve. If 0 means return all data available starting from offset
+--print_blocks  - Prints the chksum block information if available
+-d debug_level  - Sets the debug level.  Default is 0.
+
+
+date_spacefree [-full] host port RID size(mb)
+----------------------------------------------------------------
+Prints a table showing when next "size" MB of space becomes free on the resource.
+
+-full  - Print all the columns returned.
+size   - Amount of free space, in megabytes, to return.
+
+
+expire_list host port RID mode time count
+----------------------------------------------------------------
+Walk the allocation table expiration column printing expiration details
+
+mode  - Format for time.  Should be: "abs" or "rel"
+time  - Future time with format of days:hours:min:sec
+count - Number of allocations to retrieve
+
+
+print_alog filename
+----------------------------------------------------------------
+Print the compressed activity log.
+
+filename - Activity log file to print.
+
+
+ibp_rescan host port RID [timeout]
+----------------------------------------------------------------
+Rescans the resources trash bins and updates the free space.  This is normally
+used after manually removing files from the trash bin.
+
+
+ibp_mount [-r] host port RID [timeout]
+----------------------------------------------------------------
+Add a resource to a currently running IBP server.  The RID must occur in the
+depot's configuration file.  The file is reloaded on each command invocation.
+
+-r  - Force a rebuilding of the resource.  Normally used if the RID was not 
+      umounted cleanly.
+
+
+ibp_umount host port RID delay_before_umount [timeout]
+----------------------------------------------------------------
+Unmount a resource from a currerntly running IBP server. The resource is
+immediately removed from the list of available resources and then sleeps
+using the provided delay before umounted the resource.
+
+delay_before_umount - Amount of time to wait before unmounting the resource.
+        This value should be big enough to allow all traffic on the RID to quiesce.
+
+
+ibp_undelete host port RID trash_type trash_id duration [timeout]
+----------------------------------------------------------------
+Undelete an expired or deleted allocation currently residing in a trash bin.
+
+trash_type - Type of allocation to undelete.  Should be either 'expired' or 'deleted'.
+trash_id   - Local filename of the trashed allocation to undelete.
+duration   - New expiration time (seconds) from current time.
+
+
