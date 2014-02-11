@@ -3,11 +3,14 @@ project( IBP_SERVER C )
 
 # User changes should go here
 #----------------------------------------
-set(CMAKE_BUILD_TYPE "Debug")
-#set(CMAKE_BUILD_TYPE "Release")
-
+if (${CMAKE_BUILD_TYPE})
+    message("Using requested build type: ${CMAKE_BUILD_TYPE}")
+else(${CMAKE_BUILD_TYPE})
+    message("Making a debug build since CMAKE_BUILD_TYPE was unset")
+    message("  This can be changed by adding -DCMAKE_BUILD_TYPE=<type> to the command line")
+    set(CMAKE_BUILD_TYPE "Debug")
+endif(${CMAKE_BUILD_TYPE})
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -O2 -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
-message("flags_debug1=${CMAKE_C_FLAGS_DEBUG}")
 #list(APPEND CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_REQUIRED_FLAGS} -O                     -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
 #----------------------------------------
@@ -131,4 +134,26 @@ TARGET_LINK_LIBRARIES( ibp_attach_rid ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_rid_mode ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_undelete ${LIBS})
 TARGET_LINK_LIBRARIES( chksum_test ${OPENSSL_LIBRARIES} ${CRYPTO_LIBRARIES})
-
+# Install target
+INSTALL(TARGETS chksum_test
+               date_spacefree
+               expire_list
+               get_alloc
+               get_config
+               get_corrupt
+               get_version
+               ibp_attach_rid
+               ibp_detach_rid
+               ibp_rescan
+               ibp_rid_mode
+               ibp_server
+               ibp_undelete
+               mkfs.resource
+               print_alog
+               read_alloc
+               repair_history
+        DESTINATION bin)
+INSTALL(FILES misc/ibp.cfg
+        DESTINATION etc)
+INSTALL(FILES misc/ibp-server
+        DESTINATION etc/init.d)
