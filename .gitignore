@@ -1,3 +1,5 @@
 CMakeCache.txt
 Makefile
-
+config.h
+CMakeFiles/
+alog.pb-c.*
