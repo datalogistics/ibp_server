@@ -202,12 +202,17 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
       sock->sec = xsp_sess_new_security("ibp", NULL, "somecert.pem", "somekey.pem", NULL);
       if (xsp_sess_set_security(sock->sess, sock->sec, XSP_SEC_NONE)) {
 	    fprintf(stderr, "could not set requested xsp security method\n");
-	    exit(-1);
+	    return (1);
       }
       
       if (xsp_connect(sock->sess)) {
 	    log_printf(0, "phoebus_connect: could not connect to %s\n", dest);
 	    return (1);
+      }
+
+      if (xsp_signal_inf_data(sock->sess)) {
+	  fprintf(stderr, "phoebus_connect: failed to signal infinite length SPDU\n");
+	  return (1);
       }
       
       sfd = xsp_get_session_socket(sock->sess);      
