@@ -36,7 +36,7 @@ Where:
     If the maximum size is omitted, the default is to have no limit
 
 Will provide the on-disk files needed. The output from mkfs.resource should then
-be copy/pasted into the /etc/lio.cfg to inform IBP of the additional resources
+be copy/pasted into the /etc/ibp.cfg to inform IBP of the additional resources
 available after restart.
 
 Starting the service
