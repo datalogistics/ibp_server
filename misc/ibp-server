@@ -52,7 +52,7 @@ do
             echo "$0 $ARG: ibp_server (pid $PID) already running"
             continue
         fi
-        grep -e '^%include' -e '^\[rid\]' ${CONFFILE} >/dev/null 2>&1
+        grep -e '^%include' -e '^\[resource' ${CONFFILE} >/dev/null 2>&1
         if [[ $? -gt 0 ]]; then
             echo "WARNING: You don't appear to have added any resources to this server"
             echo "         This is probably unintentional, please read the README at:"
