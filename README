@@ -170,10 +170,14 @@ return_cap_id=[0|1]
 [phoebus] options
 -------------------------------
 gateway=phoebus_host1/port1,phoebus_host2/port2,....
-   This is the default Phoebus path to use.
-   Must be specified (even if not enabled) and points to the default Phoebus host.
-   Can be filled with anything if not enabled.  This parameter is pased directly to phoebus
-   and is the reason for using "/" and "," notation which is different for other parameters.
+   This is the default Phoebus path to use if you have phoebus compatible binary. For non phoebus
+   binary, this option does not matter and all network operation commands will user normal socket. 
+   For Phoebus compatible binary, if this option is not specified, then user must specify phoebus path 
+   in the command otherwise command will fail.
+   This is the only way to specify the gateway, old deprecated way of setting environment variables like
+   PHOEBUS_GW or PHOEBUS_PATH are not supported.
+   This parameter is pased directly to phoebus and is the reason for using "/" and "," notation which is
+   different for other parameters.
 
 
 [access_control] options

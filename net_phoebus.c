@@ -206,7 +206,7 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
       }
       
       if (xsp_connect(sock->sess)) {
-	    log_printf(0, "phoebus_connect: could not connect to %s\n", dest);
+	    log_printf(0, "phoebus_connect: failed as could not connect to %s\n", dest);
 	    return (1);
       }
 
@@ -218,20 +218,20 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
       sfd = xsp_get_session_socket(sock->sess);      
    }
    else {
-      log_printf(0, "phoebus_connect: called without valid phoebus path!\n");
+      log_printf(0, "phoebus_connect: failed as called without valid phoebus path!\n");
       return(1);
    }
 
    // Configure it correctly
    int flag=1;
    if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(flag)) != 0) {
-      log_printf(0, "phoebus_connect: Can't configure SO_REUSEADDR!\n");
+      log_printf(0, "phoebus_connect: failed as can't configure SO_REUSEADDR!\n");
    }
 
 
    //Configure the socket for non-blocking I/O
    if ((err = fcntl(sfd, F_SETFL, O_NONBLOCK)) == -1) {  
-      log_printf(0, "phoebus_connect: Can't configure connection for non-blocking I/O!");
+      log_printf(0, "phoebus_connect: failed as can't configure connection for non-blocking I/O!");
    }
 
    log_printf(20, "phoebus_connect: Before select timeout=%lu time=" TT "\n", timeout, apr_time_now());
