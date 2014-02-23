@@ -42,6 +42,7 @@ find_package(Protobufc REQUIRED)
 find_package(APR REQUIRED)
 find_package(APRUtil REQUIRED)
 find_package(Phoebus)
+find_package(Unisc)
 
 check_include_file("stdint.h" HAVE_STDINT_H)
 check_include_file("inttypes.h" HAVE_INTTYPES_H)
@@ -62,6 +63,16 @@ if (PHOEBUS_FOUND)
 else (PHOEBUS_FOUND)
   OPTION( _ENABLE_PHOEBUS "Enable Phoebus support" OFF )
 endif (PHOEBUS_FOUND)
+
+# Check if we found unis lib c and the set options
+if (UNIS_C_FOUND)
+  set(UNIS_C_OPT "-D_ENABLE_UNIS_C")
+  OPTION( _ENABLE_UNIS_C "Enable Phoebus support" ON )
+  include_directories(${UNIS_C_INCLUDE_DIR})
+  list(APPEND LIBS ${UNIS_C_LIBRARY} curl jansson)
+else (UNIS_C_FOUND)
+  OPTION( _ENABLE_UNIS_C "Enable Phoebus support" OFF )
+endif (UNIS_C_FOUND)
 
 #message("flags=${CMAKE_C_FLAGS}")
 #message("flags_debug3=${CMAKE_C_FLAGS_DEBUG}")
@@ -92,7 +103,7 @@ WRAP_PROTO(PROTO_SRC "alog.proto")
 ADD_EXECUTABLE(ibp_server ibp_server.c server_lib.c  global_data.c
    parse_commands.c install_commands.c commands.c
    handle_commands.c resource_list.c subnet.c stack.c
-   buffer_transfer.c dns_cache.c transfer_stats.c
+   buffer_transfer.c dns_cache.c transfer_stats.c register_unis.c
    server_version.c lock_alloc.c activity_log.c thread_slots.c envelope.c
    envelope_net ${STRING_OBJS} ${RESOURCE_OBJS} ${NETWORK_OBJS} ${PROTO_SRC})
 

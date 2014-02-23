@@ -4,4 +4,5 @@
 #cmakedefine _ENABLE_PHOEBUS
 #cmakedefine HAVE_STDINT_H
 #cmakedefine HAVE_INTTYPES_H
+#cmakedefine _ENABLE_UNIS_C
 #endif

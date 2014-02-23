@@ -226,6 +226,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->alog_host = inip_get_string(keyfile, "server", "activity_host", server->alog_host);
   server->alog_port = inip_get_integer(keyfile, "server", "activity_port", server->alog_port);
 
+
   if (force_rebuild == 0) {  //** The command line option overrides the file
      cfg->force_resource_rebuild = inip_get_integer(keyfile, "server", "force_resource_rebuild", cfg->force_resource_rebuild);
   }
@@ -439,7 +440,7 @@ int main(int argc, const char **argv)
   j = 3*config.server.max_threads + 2*resource_list_n_used(config.rl) + 64;
   if (i < j) {
      k = (i - 2*resource_list_n_used(config.rl) - 64) / 3;
-     log_printf(0, "ibp_server: ERROR Too many threads!  Current threads=%d, n_resources=%d, and max fd=%d.\n", config.server.max_threads, resource_list_n_used(config.rl), i);
+      log_printf(0, "ibp_server: ERROR Too many threads!  Current threads=%d, n_resources=%d, and max fd=%d.\n", config.server.max_threads, resource_list_n_used(config.rl), i);
      log_printf(0, "ibp_server: Either make threads < %d or increase the max fd > %d (ulimit -n %d)\n", k, j, j);
      shutdown_now = 1;
   }
@@ -451,6 +452,9 @@ int main(int argc, const char **argv)
 
   //*** Install the commands: loads Vectable info and parses config options only ****
   install_commands(keyfile);
+
+  //save unis configs
+  parse_unis_config(keyfile);
 
   inip_destroy(keyfile);   //Free the keyfile context
 
@@ -510,6 +514,8 @@ printf("ibp_server.c: STDOUT=STDERR=LOG_FD() dnoes not work!!!!!!!!!!!!!!!!!!!!!
 
   //*** Start the activity log ***
   alog_open();
+
+  start_unis_registration();
 
   server_loop(&config);     //***** Main processing loop ******
 
