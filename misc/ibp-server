@@ -9,7 +9,7 @@
 #
 
 
-#PREFIX=/prefixdir
+PREFIX=/usr/local
 if [ -z ${PREFIX} ]; then
 IBPBINDIR=/bin
 else
@@ -23,6 +23,7 @@ LOGFILE=${IBPVARDIR}/log/ibp_server.log
 DEBUGLEVEL=9
 
 IBP="${IBPBINDIR}/ibp_server -d ${CONFFILE}"
+IBP_CONFIGURE="${IBPBINDIR}/ibp_configure.py"
 
 ERROR=0
 ARGV="$@"
@@ -52,6 +53,11 @@ do
             echo "$0 $ARG: ibp_server (pid $PID) already running"
             continue
         fi
+
+        if [ -f $IBP_CONFIGURE ] ; then
+          $IBP_CONFIGURE
+        fi
+
         grep -e '^%include' -e '^\[resource' ${CONFFILE} >/dev/null 2>&1
         if [[ $? -gt 0 ]]; then
             echo "WARNING: You don't appear to have added any resources to this server"
