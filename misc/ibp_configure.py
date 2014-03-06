@@ -20,8 +20,12 @@ RESOURCE_DB = RESOURCE_BASE_DIR + "/db"
 RESOURCE_INIT_COMMAND = "/usr/local/bin/mkfs.resource database dir " + RESOURCE_BASE_DIR + " " + RESOURCE_DB + " " + str(ALLOCATION_SIZE)
 IBP_CONFIG_FILE = "/usr/local/etc/ibp.cfg"
 START_IBP_SERVER = "bash /usr/local/etc/init.d/ibp-server start"
+START_IBP_INTERFACE_MONITOR = "/usr/local/bin/ibp_interface_monitor.py -l -d"
 
 ibp_sample_config = """
+# Do not modify this directly. It will loose change after service restart.
+# Change in ibp_configure.py and then do 'service ibp-server restart'
+
 [server]
 interfaces={}
 lazy_allocate=1
@@ -43,10 +47,11 @@ publicip = {}
 publicport = 6714
 
 """
-def execute_command(cmd):
+
+def execute_command(cmd, ignore_status = False):
   print "Command to run:", cmd   ## good to debug cmd before actually running it
   (status, output) = commands.getstatusoutput(cmd)
-  if status:    ## Error case, print the command's output to stderr and exit
+  if status and not ignore_status:    ## Error case, print the command's output to stderr and exit
     sys.stderr.write(output)
     sys.exit(1)
   print output
@@ -150,4 +155,5 @@ if __name__ == "__main__":
   with open(IBP_CONFIG_FILE, 'w') as f:
     f.write(ibp_config)
 
+  execute_command(START_IBP_INTERFACE_MONITOR, True)
   sys.exit(0)
