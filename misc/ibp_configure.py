@@ -9,12 +9,15 @@ import os.path
 import time
 import neuca
 import array
+import shutil
 
 
 IBP_PORT=6714
-INSTALLATION_SUCCESS_FILE = "/root/.installed"
-RESOURCE_DIR = "/root/ibp_resources/db"
-RESOURCE_INIT_COMMAND = "/usr/local/bin/mkfs.resource database dir /root/ibp_resources/ /root/ibp_resources/db/ 8000"
+ALLOCATION_SIZE = 8000  #mb
+ALLOCATION_SUCCESS_FILE = "/root/.allocations_do_not_remove"
+RESOURCE_BASE_DIR = "/root/ibp_resources"
+RESOURCE_DB = RESOURCE_BASE_DIR + "/db"
+RESOURCE_INIT_COMMAND = "/usr/local/bin/mkfs.resource database dir " + RESOURCE_BASE_DIR + " " + RESOURCE_DB + " " + str(ALLOCATION_SIZE)
 IBP_CONFIG_FILE = "/usr/local/etc/ibp.cfg"
 START_IBP_SERVER = "bash /usr/local/etc/init.d/ibp-server start"
 
@@ -25,7 +28,6 @@ lazy_allocate=1
 threads=16
 log_file=/var/log/ibp_server.log
 password=ibp
-phoebus_enable=0
 
 #[phoebus]
 #gateway=localhost/5006
@@ -36,7 +38,6 @@ phoebus_enable=0
 name = IBP Server
 type = ibp_server
 endpoint = http://monitor.incntre.iu.edu:9000
-init_register = 1
 registration_interval = 120
 publicip = {}
 publicport = 6714
@@ -84,47 +85,69 @@ def format_ip(addr):
            str(ord(addr[3]))
 
 
+#TODO: after every restart check and see if ip has been changed and then update it
 if __name__ == "__main__":
+  resource = ""
+  # check if we have allocated resources before
+  if os.path.isfile(ALLOCATION_SUCCESS_FILE):
+    print 'INFO: This text file ({}) acts as a lock for resource allocation. Delete it for reallocation.!'.format(ALLOCATION_SUCCESS_FILE)
+  else:
+    print 'INFO: This text file ({}) not found, so allocating the resources'.format(ALLOCATION_SUCCESS_FILE)
+
+    # check if already allocated
+    if os.path.exists(RESOURCE_BASE_DIR):
+      shutil.rmtree(RESOURCE_BASE_DIR)
+
+    if os.path.exists(RESOURCE_DB):
+      shutil.rmtree(RESOURCE_DB)
+
+    # now init the resources
+    os.makedirs(RESOURCE_BASE_DIR)
+    os.makedirs(RESOURCE_DB)
+    resource = execute_command(RESOURCE_INIT_COMMAND)
+
+    # save resource for later runs
+    with open(ALLOCATION_SUCCESS_FILE, 'w') as f:
+      f.write(resource)
+
   # Need to sleep because network prob fails if we do not wait for them
   time.sleep(60)
 
-  # check if we have ran the script before
-  if not os.path.isfile(INSTALLATION_SUCCESS_FILE):
-    with open(INSTALLATION_SUCCESS_FILE, 'w') as f:
-      f.write('This text file acts as a lock for installation script. Delete it to install it again.!')
+  # get ip address of eth0
+  ip_address = ""
+  for name, ip in all_interfaces():
+      if name != "lo" or ip.startswith("127."):
+          ip_address += format_ip(ip) + ":" + str(IBP_PORT) + ";"
+  print ip_address
 
-    # get ip address of eth0
-    #ip_address = get_ip_address("eth0")
-    ip_address = ""
-    for name, ip in all_interfaces():
-        if name != "lo" or ip.startswith("127."):
-            ip_address += format_ip(ip) + ":" + str(IBP_PORT) + ";"
-    print ip_address
-    if ip_address == "":
-      print "eth0 interface could not be determined"
+  if ip_address == "":
+    print "even atleast eth0 interface could not be determined"
+    sys.exit(1)
+
+  # get the public ip
+  distro = "debian"
+  customizer = {
+      "debian": neuca.NEucaLinuxCustomizer,
+      "Ubuntu": neuca.NEucaLinuxCustomizer,
+      "redhat": neuca.NEucaLinuxCustomizer,
+      "fedora": neuca.NEucaLinuxCustomizer,
+      "centos": neuca.NEucaLinuxCustomizer,
+  }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
+  
+  customizer.updateUserData()
+  public_ip = customizer.getPublicIP()
+
+  #prepare config
+  if resource == "":
+    if os.path.isfile(ALLOCATION_SUCCESS_FILE):
+      with open(ALLOCATION_SUCCESS_FILE, 'r') as f:
+        resource = f.read()
+    else:
+      print "ERROR: No resource allocation information found. Quitting...!"
       sys.exit(1)
-
-    # now init the resources
-    os.makedirs(RESOURCE_DIR)
-    output = execute_command(RESOURCE_INIT_COMMAND)
-
-    # get the public ip
-    distro = "debian"
-    customizer = {
-        "debian": neuca.NEucaLinuxCustomizer,
-        "Ubuntu": neuca.NEucaLinuxCustomizer,
-        "redhat": neuca.NEucaLinuxCustomizer,
-        "fedora": neuca.NEucaLinuxCustomizer,
-        "centos": neuca.NEucaLinuxCustomizer,
-    }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
-    
-    customizer.updateUserData()
-    #public_ip = execute_command("neuca-get-public-ip")
-    public_ip = customizer.getPublicIP()
-
-    #prepare config
-    ibp_config = ibp_sample_config.format(ip_address, output, public_ip)
-    with open(IBP_CONFIG_FILE, 'w') as f:
-      f.write(ibp_config)
+      
+  ibp_config = ibp_sample_config.format(ip_address, resource, public_ip)
+  with open(IBP_CONFIG_FILE, 'w') as f:
+    f.write(ibp_config)
 
   sys.exit(0)
