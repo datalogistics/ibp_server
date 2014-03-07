@@ -91,7 +91,43 @@ def format_ip(addr):
            str(ord(addr[3]))
 
 
-#TODO: after every restart check and see if ip has been changed and then update it
+def get_default_iface_name_linux():
+  route = "/proc/net/route"
+  with open(route) as f:
+    for line in f.readlines():
+      try:
+        iface, dest, _, flags, _, _, _, _, _, _, _, =  line.strip().split()
+        if dest != '00000000' or not int(flags, 16) & 2:
+          continue
+        return iface
+      except:
+        continue
+
+def get_public_facing_ip_nauca():
+  distro = "debian"
+  customizer = {
+      "debian": neuca.NEucaLinuxCustomizer,
+      "Ubuntu": neuca.NEucaLinuxCustomizer,
+      "redhat": neuca.NEucaLinuxCustomizer,
+      "fedora": neuca.NEucaLinuxCustomizer,
+      "centos": neuca.NEucaLinuxCustomizer,
+      }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
+
+  customizer.updateUserData()
+  return customizer.getPublicIP()
+
+def get_public_facing_ip_using_default_interface():
+  public_iface = get_default_iface_name_linux()
+  return get_ip_address(public_iface)
+
+def get_public_facing_ip():
+  try:
+    return get_public_facing_ip_nauca()
+  except:
+    print "nauca get public ip failed, so trying to get ip of default interface"
+    return get_public_facing_ip_using_default_interface()
+
+
 if __name__ == "__main__":
   resource = ""
   # check if we have allocated resources before
@@ -100,30 +136,30 @@ if __name__ == "__main__":
   else:
     print 'INFO: This text file ({}) not found, so allocating the resources'.format(ALLOCATION_SUCCESS_FILE)
 
-    # check if already allocated
-    if os.path.exists(RESOURCE_BASE_DIR):
-      shutil.rmtree(RESOURCE_BASE_DIR)
+  # check if already allocated
+  if os.path.exists(RESOURCE_BASE_DIR):
+    shutil.rmtree(RESOURCE_BASE_DIR)
 
-    if os.path.exists(RESOURCE_DB):
-      shutil.rmtree(RESOURCE_DB)
+  if os.path.exists(RESOURCE_DB):
+    shutil.rmtree(RESOURCE_DB)
 
-    # now init the resources
-    os.makedirs(RESOURCE_BASE_DIR)
-    os.makedirs(RESOURCE_DB)
-    resource = execute_command(RESOURCE_INIT_COMMAND)
+  # now init the resources
+  os.makedirs(RESOURCE_BASE_DIR)
+  os.makedirs(RESOURCE_DB)
+  resource = execute_command(RESOURCE_INIT_COMMAND)
 
-    # save resource for later runs
-    with open(ALLOCATION_SUCCESS_FILE, 'w') as f:
-      f.write(resource)
+  # save resource for later runs
+  with open(ALLOCATION_SUCCESS_FILE, 'w') as f:
+    f.write(resource)
 
   # Need to sleep because network prob fails if we do not wait for them
-  time.sleep(60)
+  #time.sleep(60)
 
   # get ip address of eth0
   ip_address = ""
   for name, ip in all_interfaces():
-      if name != "lo" or ip.startswith("127."):
-          ip_address += format_ip(ip) + ":" + str(IBP_PORT) + ";"
+    if name != "lo" or ip.startswith("127."):
+      ip_address += format_ip(ip) + ":" + str(IBP_PORT) + ";"
   print ip_address
 
   if ip_address == "":
@@ -131,17 +167,7 @@ if __name__ == "__main__":
     sys.exit(1)
 
   # get the public ip
-  distro = "debian"
-  customizer = {
-      "debian": neuca.NEucaLinuxCustomizer,
-      "Ubuntu": neuca.NEucaLinuxCustomizer,
-      "redhat": neuca.NEucaLinuxCustomizer,
-      "fedora": neuca.NEucaLinuxCustomizer,
-      "centos": neuca.NEucaLinuxCustomizer,
-  }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
-  
-  customizer.updateUserData()
-  public_ip = customizer.getPublicIP()
+  public_ip = get_public_facing_ip()
 
   #prepare config
   if resource == "":
@@ -151,7 +177,7 @@ if __name__ == "__main__":
     else:
       print "ERROR: No resource allocation information found. Quitting...!"
       sys.exit(1)
-      
+
   ibp_config = ibp_sample_config.format(ip_address, resource, public_ip)
   with open(IBP_CONFIG_FILE, 'w') as f:
     f.write(ibp_config)
