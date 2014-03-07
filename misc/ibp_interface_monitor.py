@@ -10,7 +10,6 @@ This is hack which restarts the server if there is any changes in network interf
 import sys
 import time
 import daemon
-import requests
 import argparse
 import ConfigParser
 import logging

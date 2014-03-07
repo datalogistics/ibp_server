@@ -13,6 +13,7 @@ void parse_unis_config(inip_file_t *kf)
   char* unis_name = inip_get_string(kf, "unis", "name", NULL);
   char* unis_type = inip_get_string(kf, "unis", "type", NULL);
   char* unis_endpoint = inip_get_string(kf, "unis", "endpoint", NULL);
+  char* unis_proto_name = inip_get_string(kf, "unis", "protocol_name", NULL);
   //Todo: Do we need to support more than one ips here?
   char* unis_publicip = inip_get_string(kf, "unis", "publicip", NULL);
   int unis_publicport = inip_get_integer(kf, "unis", "publicport", -1);
@@ -28,13 +29,14 @@ void parse_unis_config(inip_file_t *kf)
   config->name = unis_name;
   config->type = unis_type;
   config->endpoint = unis_endpoint;
+  config->protocol_name = unis_proto_name;
   config->iface = unis_publicip;
   config->port = unis_publicport;
   config->do_register = unis_do_register;
   config->registration_interval = unis_reg_interval;
   config->refresh_timer = UNIS_REFRESH_TO;
 
-  log_printf(5, "UNIS: %s:%s:%s%s:%d:%d:%d:%d", config->name, config->type, config->endpoint, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer);
+  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer);
 }
 
 //*************************************************************************

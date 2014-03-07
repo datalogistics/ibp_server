@@ -42,6 +42,7 @@ password=ibp
 name = IBP Server
 type = ibp_server
 endpoint = http://monitor.incntre.iu.edu:9000
+protocol_name= ibp
 registration_interval = 120
 publicip = {}
 publicport = 6714
