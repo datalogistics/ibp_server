@@ -17,7 +17,7 @@ ALLOCATION_SIZE = 8000  #mb
 ALLOCATION_SUCCESS_FILE = "/root/.allocations_do_not_remove"
 RESOURCE_BASE_DIR = "/root/ibp_resources"
 RESOURCE_DB = RESOURCE_BASE_DIR + "/db"
-RESOURCE_INIT_COMMAND = "/usr/local/bin/mkfs.resource database dir " + RESOURCE_BASE_DIR + " " + RESOURCE_DB + " " + str(ALLOCATION_SIZE)
+RESOURCE_INIT_COMMAND = "/usr/local/bin/mkfs.resource 0 dir " + RESOURCE_BASE_DIR + " " + RESOURCE_DB + " " + str(ALLOCATION_SIZE)
 IBP_CONFIG_FILE = "/usr/local/etc/ibp.cfg"
 START_IBP_SERVER = "bash /usr/local/etc/init.d/ibp-server start"
 START_IBP_INTERFACE_MONITOR = "/usr/local/bin/ibp_interface_monitor.py -l -d"
@@ -32,6 +32,7 @@ lazy_allocate=1
 threads=16
 log_file=/var/log/ibp_server.log
 password=ibp
+big_alloc_enable=1
 
 #[phoebus]
 #gateway=localhost/5006
@@ -121,6 +122,9 @@ def get_public_facing_ip_using_default_interface():
   return get_ip_address(public_iface)
 
 def get_public_facing_ip():
+  # Need to sleep because network prob fails if we do not wait for them
+  time.sleep(60)
+
   try:
     return get_public_facing_ip_nauca()
   except:

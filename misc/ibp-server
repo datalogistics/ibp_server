@@ -67,6 +67,7 @@ do
         echo $IBP
 
         if $IBP ; then
+            echo `pidof ibp_server` > $PIDFILE
             echo "$0 $ARG: ibp_server started"
         else
             echo "$0 $ARG: ibp_server could not be started"
