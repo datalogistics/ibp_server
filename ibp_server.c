@@ -168,9 +168,22 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
 
   char *iface_str = inip_get_string(keyfile, "server", "interfaces", iface_default);
 
+  char *sub_iface_str = inip_get_string(keyfile, "server", "substitute_map", NULL);
+  char *sub_ip_list[100];
+  i = 0; k = 0; bstate = NULL;
+  if (sub_iface_str != NULL) {
+    //** sub_iface_str format: <interface_ip1>:<substitute_ip1>;<interface_ip2>:<substitute_ip2>
+    sub_ip_list[i] = string_token(sub_iface_str, ";", &bstate, &k);
+    while (strcmp(sub_ip_list[i], "") != 0) {
+       i++;
+       sub_ip_list[i] = string_token(NULL, ";", &bstate, &k);
+    }
+  }
+  unsigned int num_sub_ip_list = i;
+
   //** Determine the number of interfaces
   char *list[100];
-  i = 0;
+  i = 0; k = 0; bstate = NULL;
   list[i] = string_token(iface_str, ";", &bstate, &k);
   while (strcmp(list[i], "") != 0) {
      i++;
@@ -182,11 +195,22 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   //** Now parse and store them
   server->iface = (interface_t *)malloc(sizeof(interface_t)*server->n_iface);
   interface_t *iface;
+  int j = 0;
+  i = 0; k = 0; bstate = NULL;
   for (i=0; i<server->n_iface; i++) {
       iface = &(server->iface[i]);
       iface->hostname = string_token(list[i], ":", &bstate, &k);
       if (sscanf(string_token(NULL, " ", &bstate, &k), "%d", &(iface->port)) != 1) {
          iface->port = server->port;
+      }
+      iface->sub_hostname = NULL;
+      for (j=0; j<num_sub_ip_list; ++j) {
+         if(strstr(sub_ip_list[j], iface->hostname) != NULL) {
+            //** sub_iface_str format: <interface_ip1>:<substitute_ip1>
+            int size_to_adv = strlen(iface->hostname) + 1;
+            //** we need to find <substitute_ip1>
+            iface->sub_hostname = strdup(sub_ip_list[j] + size_to_adv);
+         }
       }
   }
 
@@ -299,6 +323,7 @@ void cleanup_config(Config_t *cfg)
 
   for (i=0; i<server->n_iface; i++) {
     free(server->iface[i].hostname);
+    free(server->iface[i].sub_hostname);
   }
   free(server->iface);
 }

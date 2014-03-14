@@ -72,6 +72,7 @@ http://www.accre.vanderbilt.edu
 typedef struct {  //** bind ports
   char *hostname;
   int port;
+  char *sub_hostname; //if set, used as replacement hostname during ibp_commands
 } interface_t;
 
 typedef struct {    //*** forms the fn table for a depot command

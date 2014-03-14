@@ -191,7 +191,7 @@ void lock_ns(NetStream_t *ns);
 void unlock_ns(NetStream_t *ns);
 int network_counter(Network_t *net);
 int net_connect(NetStream_t *ns, const char *host, int port, Net_timeout_t timeout);
-int bind_server_port(Network_t *net, NetStream_t *ns, char *address, int port, int max_pending);
+int bind_server_port(Network_t *net, NetStream_t *ns, char *address, int port, int max_pending, char *sub_address);
 Network_t *network_init();
 void close_netstream(NetStream_t *ns);
 void destroy_netstream(NetStream_t *ns);

@@ -501,7 +501,7 @@ void *monitor_thread(apr_thread_t *th, void *data)
 // bind_server_port - Creates the main port for listening
 //*********************************************************************
 
-int bind_server_port(Network_t *net, NetStream_t *ns, char *address, int port, int max_pending)
+int bind_server_port(Network_t *net, NetStream_t *ns, char *address, int port, int max_pending, char *substitute_address)
 {
    int err, slot;
    ns_monitor_t *nm;
@@ -532,7 +532,10 @@ int bind_server_port(Network_t *net, NetStream_t *ns, char *address, int port, i
    nm->shutdown_request = 0;
    nm->is_pending = 0;
    nm->ns = ns;
-   nm->address = strdup(address);
+   if (substitute_address == NULL)
+      nm->address = strdup(address);
+   else
+      nm->address = strdup(substitute_address);
    nm->port = port;
    nm->trigger_cond = net->cond;
    nm->trigger_lock = net->ns_lock;

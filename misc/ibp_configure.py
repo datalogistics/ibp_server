@@ -33,6 +33,7 @@ threads=16
 log_file=/var/log/ibp_server.log
 password=ibp
 big_alloc_enable=1
+substitute_map={}
 
 #[phoebus]
 #gateway=localhost/5006
@@ -122,9 +123,6 @@ def get_public_facing_ip_using_default_interface():
   return get_ip_address(public_iface)
 
 def get_public_facing_ip():
-  # Need to sleep because network prob fails if we do not wait for them
-  time.sleep(60)
-
   try:
     return get_public_facing_ip_nauca()
   except:
@@ -135,29 +133,33 @@ def get_public_facing_ip():
 if __name__ == "__main__":
   resource = ""
   # check if we have allocated resources before
+  need_to_allocate = False
   if os.path.isfile(ALLOCATION_SUCCESS_FILE):
     print 'INFO: This text file ({}) acts as a lock for resource allocation. Delete it for reallocation.!'.format(ALLOCATION_SUCCESS_FILE)
   else:
     print 'INFO: This text file ({}) not found, so allocating the resources'.format(ALLOCATION_SUCCESS_FILE)
+    need_to_allocate = True
 
-  # check if already allocated
-  if os.path.exists(RESOURCE_BASE_DIR):
-    shutil.rmtree(RESOURCE_BASE_DIR)
+  if need_to_allocate:
+    # check if already allocated
+    if os.path.exists(RESOURCE_BASE_DIR):
+      shutil.rmtree(RESOURCE_BASE_DIR)
 
-  if os.path.exists(RESOURCE_DB):
-    shutil.rmtree(RESOURCE_DB)
+    if os.path.exists(RESOURCE_DB):
+      shutil.rmtree(RESOURCE_DB)
 
-  # now init the resources
-  os.makedirs(RESOURCE_BASE_DIR)
-  os.makedirs(RESOURCE_DB)
-  resource = execute_command(RESOURCE_INIT_COMMAND)
+    # now init the resources
+    os.makedirs(RESOURCE_BASE_DIR)
+    os.makedirs(RESOURCE_DB)
+    resource = execute_command(RESOURCE_INIT_COMMAND)
 
-  # save resource for later runs
-  with open(ALLOCATION_SUCCESS_FILE, 'w') as f:
-    f.write(resource)
+    # save resource for later runs
+    with open(ALLOCATION_SUCCESS_FILE, 'w') as f:
+      f.write(resource)
 
   # Need to sleep because network prob fails if we do not wait for them
-  #time.sleep(60)
+  print 'INFO: Sleeping for 60 seconds. This allows network interfaces to come up'
+  time.sleep(60)
 
   # get ip address of eth0
   ip_address = ""
@@ -173,6 +175,10 @@ if __name__ == "__main__":
   # get the public ip
   public_ip = get_public_facing_ip()
 
+  # also prepare substitute_map option as 
+  default_interface_ip = get_public_facing_ip_using_default_interface()
+  sub_ip_list = default_interface_ip + ":" + public_ip + ";"
+
   #prepare config
   if resource == "":
     if os.path.isfile(ALLOCATION_SUCCESS_FILE):
@@ -182,7 +188,7 @@ if __name__ == "__main__":
       print "ERROR: No resource allocation information found. Quitting...!"
       sys.exit(1)
 
-  ibp_config = ibp_sample_config.format(ip_address, resource, public_ip)
+  ibp_config = ibp_sample_config.format(ip_address, sub_ip_list, resource, public_ip)
   with open(IBP_CONFIG_FILE, 'w') as f:
     f.write(ibp_config)
 

@@ -851,7 +851,8 @@ log_printf(0, "shutdown_now=%d\n", shutdown_now);
   for (i=0; i<config->server.n_iface; i++) {
      bns = new_netstream();
      ns_config_sock(bns, 0);
-     if (bind_server_port(network, bns, config->server.iface[i].hostname, config->server.iface[i].port, config->server.max_pending) != 0) {
+     if (bind_server_port(network, bns, config->server.iface[i].hostname, config->server.iface[i].port,
+           config->server.max_pending, config->server.iface[i].sub_hostname) != 0) {
         log_printf(0, "ERROR binding iface[%d]=%s:%d so shutting down!\n", i, config->server.iface[i].hostname, config->server.iface[i].port);
         shutdown_now =1;  //** Trigger a shutdown
      }

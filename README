@@ -65,6 +65,13 @@ interfaces=host1:port1;host2:port2;
   You can have as many host/port combinations as you want.  If interfaces is
   not used then it defaults to using the hostname.
 
+substitute_map=interface_ip_1:substitute_ip_1;interface_ip_2:substitute_ip_2;
+  If ibp_servers are behind NAT, then they will send bind_ip in the CAP instead of client
+  rechable ip. This causes problem if client tries to use bind_ip from CAP to contact the
+  server for the next command. i.e. ibp_alloc then ibp_store 
+  This substitution mapping allows ibp_server to send substitute ip instead of bind ip. This
+  should be used to replace default interface ip with public ip.
+
 port=my_port
   Default port to use.  Only used if interfaces is missing.  Default is 6714.
 
