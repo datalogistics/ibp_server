@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <assert.h>
 #include <stdlib.h>
@@ -59,7 +59,7 @@ void init_stats(int n)
   int i;
 
   assert((stats.table = (Transfer_stat_t *)malloc(sizeof(Transfer_stat_t)*n)) != NULL);
-  
+
   apr_pool_create(&(stats.pool), NULL);
   apr_thread_mutex_create(&(stats.lock), APR_THREAD_MUTEX_DEFAULT,stats.pool);
 
@@ -73,7 +73,7 @@ void init_stats(int n)
   for (i=0; i<stats.size; i++) {
      stats.table[i].start = 0;
      stats.table[i].end = 0;
-  }  
+  }
 }
 
 //****************************************************************
@@ -130,7 +130,7 @@ void add_stat(Transfer_stat_t *s)
    entry = &(stats.table[stats.pos]);
    *entry = *s;
    entry->end = ibp_time_now();
-   log_printf(15, "add_stat: i=%d host=%s start=%d end=%d nbytes=%d dir=%d\n", 
+   log_printf(15, "add_stat: i=%d host=%s start=%d end=%d nbytes=%d dir=%d\n",
         stats.pos, entry->address, entry->start, entry->end, entry->nbytes, entry->dir);
    stats.pos = (stats.pos + 1) % stats.size;
    clear_stat(s);
@@ -188,7 +188,7 @@ log_printf(15, "send_stats: ns=%d start=%lu s[i].start=%d\n", ns->id, start_time
      }
 
 //log_printf(15, "send_stats: ns=%d pos=%d  str=%s\n", ns->id, i, sptr);
-     
+
      sptr = sptr + n;
      nchar += n;
 
@@ -202,7 +202,7 @@ log_printf(15, "send_stats: ns=%d start=%lu s[i].start=%d\n", ns->id, start_time
 
         if (nw < 0) { //** dead connection
            apr_thread_mutex_unlock(stats.lock);
-           return(-1); 
+           return(-1);
         }
 
         sptr = buffer;
@@ -214,7 +214,7 @@ log_printf(15, "send_stats: ns=%d start=%lu s[i].start=%d\n", ns->id, start_time
 
   n = snprintf(sptr, sizeof(buffer) - nchar, "\n");
   sptr = sptr + n;
-  nchar = nchar + n;  
+  nchar = nchar + n;
 
   log_printf(15, "send_stats: ns=%d nchar=%d strlen=" ST " sending: %s\n", ns->id, nchar, strlen(buffer), buffer);
 

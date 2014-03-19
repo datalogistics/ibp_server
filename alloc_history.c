@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include "resource.h"
 #include "allocation.h"
@@ -91,7 +91,7 @@ int fd_put_history_table(Resource_t *r, osd_fd_t *fd, Allocation_history_t *h)
   int n;
 
 //  if (id != h->id) {
-//     if (h->id == 0) { 
+//     if (h->id == 0) {
 //       h->id = id;
 //     } else {
 //       log_printf(0, " put_history_table: h->id=" LU" differs from given id=" LU "\n", h->id, id);

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*********************************************************************
 //*********************************************************************
@@ -67,7 +67,7 @@ NetStream_t *_get_free_conn(Network_t *net);
 int ns_generate_id() {
    int id;
 
-   if (_net_counter_lock == NULL) {      
+   if (_net_counter_lock == NULL) {
       if (_net_counter_pool == NULL) assert(apr_pool_create(&_net_counter_pool, NULL) == APR_SUCCESS);
       assert(apr_thread_mutex_create(&_net_counter_lock, APR_THREAD_MUTEX_DEFAULT, _net_counter_pool) == APR_SUCCESS);
    }
@@ -105,7 +105,7 @@ int connection_is_pending(Network_t *net)
 }
 
 //*********************************************************************
-//  Locks for R/W 
+//  Locks for R/W
 //*********************************************************************
 
 void lock_read_ns(NetStream_t *ns)
@@ -182,7 +182,7 @@ int ns_chksum_set(ns_chksum_t *ncs, chksum_t *cks, size_t blocksize)
 int ns_chksum_is_valid(ns_chksum_t *ncs)
 {
   int i = 0;
-  
+
   if (ncs->is_valid == 1) {
      if (chksum_type(&(ncs->chksum)) != CHKSUM_NONE) i = 1;
   }
@@ -201,7 +201,7 @@ int ns_read_chksum_flush(NetStream_t *ns)
   char ns_value[CHKSUM_MAX_SIZE], chksum_value[CHKSUM_MAX_SIZE];
   int err, n;
 
-  log_printf(15, "ns_read_chksum_flush: Reading chksum!  ns=%d type=%d bleft=" I64T " bsize=" I64T " state=%d\n", 
+  log_printf(15, "ns_read_chksum_flush: Reading chksum!  ns=%d type=%d bleft=" I64T " bsize=" I64T " state=%d\n",
      ns_getid(ns), chksum_type(&(ns->read_chksum.chksum)), ns->read_chksum.bytesleft, ns->read_chksum.blocksize, ns_read_chksum_state(ns));  flush_log();
 
   if (ns_read_chksum_state(ns) == 0) return(0);
@@ -214,7 +214,7 @@ int ns_read_chksum_flush(NetStream_t *ns)
   err = _read_netstream_block(ns, apr_time_now() + apr_time_make(5,0), ns_value, n, 0);
   ns_value[n] = '\0';
   ns->read_chksum.is_running = 1;
-  
+
   log_printf(15, "ns_read_chksum_flush: Finished reading chksum!  ns=%d\n", ns_getid(ns));  flush_log();
 
   if (err != 0) {
@@ -248,7 +248,7 @@ int ns_write_chksum_flush(NetStream_t *ns)
   char chksum_value[CHKSUM_MAX_SIZE];
   int err, n;
 
-  log_printf(15, "ns_write_chksum_flush: injecting chksum!  ns=%d type=%d bytesleft=" I64T " bsize=" I64T "\n", 
+  log_printf(15, "ns_write_chksum_flush: injecting chksum!  ns=%d type=%d bytesleft=" I64T " bsize=" I64T "\n",
      ns_getid(ns), chksum_type(&(ns->write_chksum.chksum)), ns->write_chksum.bytesleft, ns->write_chksum.blocksize);  flush_log();
 
   if (ns_write_chksum_state(ns) == 0) return(0);
@@ -256,8 +256,8 @@ int ns_write_chksum_flush(NetStream_t *ns)
 
   n = chksum_size(&(ns->write_chksum.chksum), CHKSUM_DIGEST_HEX);
   chksum_get(&(ns->write_chksum.chksum), CHKSUM_DIGEST_HEX, chksum_value);
-  
-  ns->write_chksum.is_running = 0;  //** Don't want to get in an endless loop  
+
+  ns->write_chksum.is_running = 0;  //** Don't want to get in an endless loop
   err = _write_netstream_block(ns, apr_time_now() + apr_time_make(5,0), chksum_value, n, 0);
   ns->write_chksum.is_running = 1;
 
@@ -351,7 +351,7 @@ void _ns_init(NetStream_t *ns, int incid)
 
   memset(&(ns->write_chksum), 0, sizeof(ns_chksum_t)); ns->write_chksum.is_valid = 0;
   memset(&(ns->read_chksum), 0, sizeof(ns_chksum_t));  ns->read_chksum.is_valid = 0;
-  
+
   if (incid == 1)  ns->id = ns_generate_id();
 
 //  log_printf(15, "_ns_init: incid=%d ns=%d\n", incid, ns->id);
@@ -400,9 +400,9 @@ int net_connect(NetStream_t *ns, const char *hostname, int port, Net_timeout_t t
   int err;
 
   lock_ns(ns);
-  
+
   //** Simple check on the connection type **
-  switch (ns->sock_type) {          
+  switch (ns->sock_type) {
      case NS_TYPE_SOCK:
      case NS_TYPE_PHOEBUS:
      case NS_TYPE_1_SSL:
@@ -433,7 +433,7 @@ int net_connect(NetStream_t *ns, const char *hostname, int port, Net_timeout_t t
 }
 
 //*********************************************************************
-//  monitor_thread - Thread for monitoring a network connection for 
+//  monitor_thread - Thread for monitoring a network connection for
 //     incoming connection requests.
 //*********************************************************************
 
@@ -455,7 +455,7 @@ void *monitor_thread(apr_thread_t *th, void *data)
          log_printf(15, "monitor_thread: port=%d ns=%d Got a connection request time=" TT "\n", nm->port, ns_getid(ns), apr_time_now());
 
          //** Mark that I have a connection pending
-         apr_thread_mutex_lock(nm->lock); 
+         apr_thread_mutex_lock(nm->lock);
          nm->is_pending = 1;
          apr_thread_mutex_unlock(nm->lock);
 
@@ -468,19 +468,19 @@ void *monitor_thread(apr_thread_t *th, void *data)
          log_printf(15, "monitor_thread: port=%d ns=%d waiting for accept\n", nm->port, ns_getid(ns));
 
          //** Sleep until my connection is accepted
-         apr_thread_mutex_lock(nm->lock); 
+         apr_thread_mutex_lock(nm->lock);
          while ((nm->is_pending == 1) && (nm->shutdown_request == 0)) {
              apr_thread_cond_wait(nm->cond, nm->lock);
              log_printf(15, "monitor_thread: port=%d ns=%d Cond triggered=" TT " trigger_count=%d\n", nm->port, ns_getid(ns), apr_time_now(), *(nm->trigger_count));
          }
-         apr_thread_mutex_unlock(nm->lock);          
+         apr_thread_mutex_unlock(nm->lock);
          log_printf(15, "monitor_thread: port=%d ns=%d Connection accepted time=" TT "\n", nm->port, ns_getid(ns), apr_time_now());
 
          //** Update pending count
 //         apr_thread_mutex_lock(nm->trigger_lock);
 //         *(nm->trigger_count)--;
 //         apr_thread_mutex_unlock(nm->trigger_lock);
-      } 
+      }
 
       apr_thread_mutex_lock(nm->lock);
    }
@@ -648,9 +648,9 @@ void close_netstream(NetStream_t *ns)
    unlock_ns(ns);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // teardown_netstream - closes an NS and also frees the mutex
-//********************************************************************* 
+//*********************************************************************
 
 void teardown_netstream(NetStream_t *ns)
 {
@@ -660,9 +660,9 @@ void teardown_netstream(NetStream_t *ns)
   apr_pool_destroy(ns->mpool);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // destroy_netstream - Completely destroys a netstream created with new_netstream
-//********************************************************************* 
+//*********************************************************************
 
 void destroy_netstream(NetStream_t *ns)
 {
@@ -670,9 +670,9 @@ void destroy_netstream(NetStream_t *ns)
   free(ns);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // new_netstream - Creates a new NS
-//********************************************************************* 
+//*********************************************************************
 
 NetStream_t *new_netstream()
 {
@@ -686,7 +686,7 @@ NetStream_t *new_netstream()
   assert(apr_pool_create(&(ns->mpool), NULL) == APR_SUCCESS);
   apr_thread_mutex_create(&(ns->read_lock), APR_THREAD_MUTEX_DEFAULT,ns->mpool);
   apr_thread_mutex_create(&(ns->write_lock), APR_THREAD_MUTEX_DEFAULT,ns->mpool);
- 
+
   _ns_init(ns, 0);
   ns->id = ns->cuid = -1;
 
@@ -694,9 +694,9 @@ NetStream_t *new_netstream()
 }
 
 
-//********************************************************************* 
+//*********************************************************************
 // network_close - Closes down all the network connections
-//********************************************************************* 
+//*********************************************************************
 
 void network_close(Network_t *net)
 {
@@ -710,44 +710,44 @@ void network_close(Network_t *net)
   }
 }
 
-//********************************************************************* 
+//*********************************************************************
 // network_destroy - Closes and destroys the network struct
-//********************************************************************* 
+//*********************************************************************
 
 void network_destroy(Network_t *net)
 {
   network_close(net);
 
   //** Free the main net variables
-  apr_thread_mutex_destroy(net->ns_lock);   
-  apr_thread_cond_destroy(net->cond);   
+  apr_thread_mutex_destroy(net->ns_lock);
+  apr_thread_cond_destroy(net->cond);
   apr_pool_destroy(net->mpool);
 
   free(net);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // write_netstream - Writes characters to the stream with a max wait
-//********************************************************************* 
+//*********************************************************************
 
 int _write_netstream(NetStream_t *ns, const char *buffer, int bsize, Net_timeout_t timeout, int dolock)
 {
    int total_bytes, i;
-   
+
    if (dolock == 1) lock_write_ns(ns);
 
-   
-   if (ns->sock_status(ns->sock) != 1) {      
+
+   if (ns->sock_status(ns->sock) != 1) {
       log_printf(15, "write_netstream: Dead connection!  ns=%d\n", ns->id);
       if (dolock == 1) unlock_write_ns(ns);
       return(-1);
    }
 
-   if (bsize == 0) { 
+   if (bsize == 0) {
       if (dolock == 1) unlock_write_ns(ns);
-      return(0); 
+      return(0);
    }
-  
+
    if (ns_write_chksum_state(ns) == 1) {  //** We have chksumming enabled
       if (bsize > ns->write_chksum.bytesleft) bsize = ns->write_chksum.bytesleft;  //** Truncate at the block
    }
@@ -777,27 +777,27 @@ int _write_netstream(NetStream_t *ns, const char *buffer, int bsize, Net_timeout
 
    if (dolock == 1) unlock_write_ns(ns);
 
-   return(total_bytes); 
+   return(total_bytes);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // write_netstream - Writes characters to the stream with a max wait
-//********************************************************************* 
+//*********************************************************************
 
 int write_netstream(NetStream_t *ns, const char *buffer, int bsize, Net_timeout_t timeout)
 {
    return(_write_netstream(ns, buffer, bsize, timeout, 1));
 }
 
-//********************************************************************* 
+//*********************************************************************
 //  _write_netstream_block - Same as write_netstream but blocks until the
 //     data is sent or end_time is reached
-//********************************************************************* 
+//*********************************************************************
 
 int _write_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, int size, int dolock)
 {
   int pos, nleft, nbytes, err;
- 
+
   Net_timeout_t dt;
 
   set_net_timeout(&dt, 1, 0);
@@ -807,7 +807,7 @@ int _write_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, i
   err = NS_OK;
   while ((nleft > 0) && (err == NS_OK)) {
      nbytes = _write_netstream(ns, &(buffer[pos]), nleft, dt, dolock);
-     log_printf(15, "write_netstream_block: ns=%d size=%d nleft=%d nbytes=%d pos=%d time=" TT "\n", 
+     log_printf(15, "write_netstream_block: ns=%d size=%d nleft=%d nbytes=%d pos=%d time=" TT "\n",
              ns_getid(ns), size, nleft, nbytes, pos, apr_time_now());
 
      if (apr_time_now() > end_time) {
@@ -829,25 +829,25 @@ int _write_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, i
   return(err);
 }
 
-//********************************************************************* 
+//*********************************************************************
 //  write_netstream_block - Same as write_netstream but blocks until the
 //     data is sent or end_time is reached
-//********************************************************************* 
+//*********************************************************************
 
 int write_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, int size)
 {
    return(_write_netstream_block(ns, end_time, buffer, size, 1));
 }
 
-//********************************************************************* 
+//*********************************************************************
 //  read_netstream_block - Same as read_netstream but blocks until the
 //     data is sent or end_time is reached
-//********************************************************************* 
+//*********************************************************************
 
 int _read_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, int size, int dolock)
 {
   int pos, nleft, nbytes, err;
- 
+
   Net_timeout_t dt;
 
   set_net_timeout(&dt, 1, 0);
@@ -857,7 +857,7 @@ int _read_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, in
   err = NS_OK;
   while ((nleft > 0) && (err == NS_OK)) {
      nbytes = _read_netstream(ns, &(buffer[pos]), nleft, dt, dolock);
-     log_printf(15, "read_netstream_block: ns=%d size=%d nleft=%d nbytes=%d pos=%d time=" TT "\n", 
+     log_printf(15, "read_netstream_block: ns=%d size=%d nleft=%d nbytes=%d pos=%d time=" TT "\n",
              ns_getid(ns), size, nleft, nbytes, pos, apr_time_now());
 
      if (apr_time_now() > end_time) {
@@ -879,19 +879,19 @@ int _read_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, in
   return(err);
 }
 
-//********************************************************************* 
+//*********************************************************************
 //  read_netstream_block - Same as read_netstream but blocks until the
 //     data is sent or end_time is reached
-//********************************************************************* 
+//*********************************************************************
 
 int read_netstream_block(NetStream_t *ns, apr_time_t end_time, char *buffer, int size)
 {
    return(_read_netstream_block(ns, end_time, buffer, size, 1));
 }
 
-//********************************************************************* 
+//*********************************************************************
 //  scan_and_copy_netstream - Scans the input stream for "\n" or "\r"
-//********************************************************************* 
+//*********************************************************************
 
 int scan_and_copy_stream(char *inbuf, int insize, char *outbuf, int outsize, int *finished)
 {
@@ -925,16 +925,16 @@ int scan_and_copy_stream(char *inbuf, int insize, char *outbuf, int outsize, int
 
 //   log_printf(0, "scan_and_copy_stream: insize=%d nbytes=%d buffer=!", insize, nbytes+1);
 //   int i;
-//   if (insize > nbytes+2) insize = nbytes+2; 
+//   if (insize > nbytes+2) insize = nbytes+2;
 //   for (i=0; i<insize; i++) log_printf(0, "%c", inbuf[i]);
 //   log_printf(0, "!\n");
 
    return(nbytes+1);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // read_netstream - Reads characters fomr the stream with a max wait
-//********************************************************************* 
+//*********************************************************************
 
 int _read_netstream(NetStream_t *ns, char *buffer, int size, Net_timeout_t timeout, int dolock)
 {
@@ -944,14 +944,14 @@ int _read_netstream(NetStream_t *ns, char *buffer, int size, Net_timeout_t timeo
 
    if (dolock == 1) lock_read_ns(ns);
 
-   if (ns->sock_status(ns->sock) != 1) {      
+   if (ns->sock_status(ns->sock) != 1) {
       log_printf(15, "read_netstream: Connection already closed!  ns=%d\n", ns->id);
       if (dolock == 1) unlock_read_ns(ns);
-      return(-1); 
+      return(-1);
    }
 
    total_bytes = 0;
-   
+
    if (ns_read_chksum_state(ns) == 1) {  //** We have chksumming enabled
       if (size > ns->read_chksum.bytesleft) size = ns->read_chksum.bytesleft;  //** Truncate at the block
    }
@@ -973,7 +973,7 @@ int _read_netstream(NetStream_t *ns, char *buffer, int size, Net_timeout_t timeo
       total_bytes = ns->read(ns->sock, (void *)buffer, size, timeout);
    }
 
-   debug_code(  
+   debug_code(
      if (total_bytes > 0) {
 //        debug_printf(10, "read_netstream: Command : !");
 //        for (i=0; i< total_bytes; i++) debug_printf(10, "%c", buffer[i]);
@@ -1005,9 +1005,9 @@ int _read_netstream(NetStream_t *ns, char *buffer, int size, Net_timeout_t timeo
    return(total_bytes);
 }
 
-//********************************************************************* 
+//*********************************************************************
 // read_netstream - Reads characters fomr the stream with a max wait
-//********************************************************************* 
+//*********************************************************************
 
 int read_netstream(NetStream_t *ns, char *buffer, int size, Net_timeout_t timeout)
 {
@@ -1039,7 +1039,7 @@ int readline_netstream_raw(NetStream_t *ns, char *buffer, int bsize, Net_timeout
           ns->start = 0;
           ns->end = -1;
        }
-  
+
        if (finished == 1) {
           *status = 1;
           total_bytes--;
@@ -1066,7 +1066,7 @@ int readline_netstream_raw(NetStream_t *ns, char *buffer, int bsize, Net_timeout
          total_bytes += i;
       }
    }
-  
+
    buffer[total_bytes] = '\0';   //** Make sure and NULL terminate the string
 
    if (finished == 1) {  //*** Push the unprocessed characters back onto the stream buffer ****
@@ -1099,13 +1099,13 @@ int readline_netstream_raw(NetStream_t *ns, char *buffer, int bsize, Net_timeout
       unlock_read_ns(ns);
       debug_printf(15, "readline_stream_raw: Out of buffer space or nothing read! ns=%d nbytes=%d  buffer=%s\n", ns->id, total_bytes, buffer); flush_debug();
 //      return(-1);   //**Force the socket to be closed
-   }         
+   }
 
    return(total_bytes);
 }
 
-//********************************************************************* 
-// readline_netstream - Reads a line of text from the stream 
+//*********************************************************************
+// readline_netstream - Reads a line of text from the stream
 //*********************************************************************
 
 int readline_netstream(NetStream_t *ns, char *buffer, int bsize, Net_timeout_t timeout)
@@ -1143,14 +1143,14 @@ int accept_pending_connection(Network_t *net, NetStream_t *ns)
    err = 0;
    //** Find the port.  Make sure and use the next port in the list
    j = -1;
-   k = net->monitor_index % net->used_ports; 
+   k = net->monitor_index % net->used_ports;
    for (i=0; i<net->used_ports; i++) {
       k = (i + net->monitor_index) % net->used_ports;
       nm = &(net->nm[k]);
       apr_thread_mutex_lock(nm->lock);
       if (nm->is_pending == 1) {   //** Found a slot
-         j = k; 
-         break;  
+         j = k;
+         break;
       }
       apr_thread_mutex_unlock(nm->lock);
    }
@@ -1158,7 +1158,7 @@ int accept_pending_connection(Network_t *net, NetStream_t *ns)
    net->monitor_index = (k + 1) % net->used_ports;
 
    //** Check if there is nothing to do.
-   if (j == -1) {   
+   if (j == -1) {
        apr_thread_mutex_unlock(net->ns_lock);
        return(1);
    }
@@ -1177,7 +1177,7 @@ int accept_pending_connection(Network_t *net, NetStream_t *ns)
    apr_thread_cond_signal(nm->cond);    //** Wake up the pending monitor thread
    apr_thread_mutex_unlock(nm->lock);   //** This was locked in the fop loop above
 
-   if (err == 0) {   
+   if (err == 0) {
       ns->id = ns_generate_id();
       ns->set_peer(ns->sock, ns->peer_address, sizeof(ns->peer_address));
 
@@ -1204,12 +1204,12 @@ log_printf(15, "wait_for_connection: max_wait=%d starttime=" TT " endtime=" TT "
   apr_thread_mutex_lock(net->ns_lock);
 
 log_printf(15, "wait_for_connection: accept_pending=%d\n", net->accept_pending);
- 
+
   while ((end_time > apr_time_now()) && (net->accept_pending == 0)) {
 //    log_printf(15, "wait_for_connection: accept_pending=%d time=" TT "\n", net->accept_pending, apr_time_now());
     set_net_timeout(&t, 1, 0);  //** Wait for at least 1 second
     apr_thread_cond_timedwait(net->cond, net->ns_lock, t);
-  }   
+  }
 
   log_printf(15, "wait_for_connection: exiting loop accept_pending=%d time=" TT "\n", net->accept_pending, apr_time_now());
 
@@ -1218,7 +1218,7 @@ log_printf(15, "wait_for_connection: accept_pending=%d\n", net->accept_pending);
 //  if (net->accept_pending < 0) net->accept_pending = 0;
   apr_thread_mutex_unlock(net->ns_lock);
 
-  return(n);  
+  return(n);
 }
 
 //*********************************************************************

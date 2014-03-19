@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*************************************************************
 //*************************************************************
@@ -61,7 +61,7 @@ typedef struct {  //Resource DB interface
     DB *pdb;               //Primary DB (key=object id)
     DB *cap[3];            //Array of secondary DB holding caps
     DB *expire;            //DB with expiration as the key
-    DB *soft;              //Expiration is used as the key but only soft allocs are stored in it  
+    DB *soft;              //Expiration is used as the key but only soft allocs are stored in it
     DB_env_t *env;
     DB_ENV *dbenv;         //Common DB enviroment to use
     apr_thread_mutex_t *mutex;  // Lock used for creates

@@ -43,7 +43,7 @@ char NULL_TERMINATOR = '\0';
 //   IF no more strings exist finished == 1;
 //*****************************************************************
 
-char *string_token(char *str, const char *sep, char **last, int *finished) 
+char *string_token(char *str, const char *sep, char **last, int *finished)
 {
   char *token = strtok_r(str, sep, last);
 
@@ -59,11 +59,11 @@ char *string_token(char *str, const char *sep, char **last, int *finished)
 
 
 //*****************************************************************
-// escape_string_token - Same as string_token except it supports 
+// escape_string_token - Same as string_token except it supports
 //   parsing escape sequences.
 //*****************************************************************
 
-char *escape_string_token(char *str, const char *delims, char escape_char, int compress_delims, char **last, int *finished) 
+char *escape_string_token(char *str, const char *delims, char escape_char, int compress_delims, char **last, int *finished)
 {
   int n, ndata;
   char *ptr, *token;
@@ -89,7 +89,7 @@ char *escape_string_token(char *str, const char *delims, char escape_char, int c
      if (ptr[n] == escape_char) n++;
      n++;
   }
- 
+
   //** Now null terminate the token
   ptr[n] = '\0';
 
@@ -105,14 +105,14 @@ char *escape_string_token(char *str, const char *delims, char escape_char, int c
   return(token);
 }
 
-//*********************************************************************** 
+//***********************************************************************
 // escape_strchr - Same as strchr but supports escaping of text
 //***********************************************************************
 
 char *escape_strchr(char escape_char, char *data, char match)
 {
   int n, ndata;
-  
+
   //** Cycle trough until we find a match
   ndata = strlen(data);
   n = 0;
@@ -125,7 +125,7 @@ char *escape_strchr(char escape_char, char *data, char match)
 }
 
 
-//*********************************************************************** 
+//***********************************************************************
 // escape_count - Counts the number of escape characters
 //***********************************************************************
 
@@ -142,7 +142,7 @@ int escape_count(char *special_chars, char escape_char, char *data)
   return(count);
 }
 
-//*********************************************************************** 
+//***********************************************************************
 //  escape_text - Simple routine to escape text in a string
 //***********************************************************************
 
@@ -150,7 +150,7 @@ char *escape_text(char *special_chars, char escape_char, char *data)
 {
   char *str;
   int n, i, j, nchar;
-  
+
   n = escape_count(special_chars, escape_char, data);
 
   nchar = strlen(data);
@@ -171,7 +171,7 @@ char *escape_text(char *special_chars, char escape_char, char *data)
   return(str);
 }
 
-//*********************************************************************** 
+//***********************************************************************
 //  unescape_text - Removes the escape text in a string
 //***********************************************************************
 

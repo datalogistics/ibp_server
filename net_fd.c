@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*********************************************************************
 //*********************************************************************
@@ -67,11 +67,11 @@ struct timeval *set_timeval(struct timeval *tv, Net_timeout_t tm)
 
 //*********************************************************************
 // fd_connection_request - Waits for a connection request or times out
-//     If a request is made then 1 is returned otherwise 0 for timeout. 
-//     -1 signifies an error.   
+//     If a request is made then 1 is returned otherwise 0 for timeout.
+//     -1 signifies an error.
 //*********************************************************************
 
-int fd_connection_request(int fd, int timeout) 
+int fd_connection_request(int fd, int timeout)
 {
   struct timeval dt;
   fd_set rfd;
@@ -102,7 +102,7 @@ int fd_accept(int monfd)
    }
 
    //Configure the socket for non-blocking I/O
-   if ((i = fcntl(fd, F_SETFL, O_NONBLOCK)) == -1) {  
+   if ((i = fcntl(fd, F_SETFL, O_NONBLOCK)) == -1) {
       log_printf(0, "fd_accept: Can't configure connection for non-blocking I/O!");
    }
 
@@ -130,13 +130,13 @@ int fd_bind(char *address, int port)
    memset(sport, 0, sizeof(sport));
    snprintf(sport, sizeof(sport)-1, "%d", port);
    if (getaddrinfo(address, sport, &hints, &res)) {
-      log_printf(0, "fd_bind: getaddrinfo() error!\n");    
+      log_printf(0, "fd_bind: getaddrinfo() error!\n");
       return(-1);
    }
 
    if ((fd = socket(res->ai_family, SOCK_STREAM, 0)) < 1) {
       if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 1) {
-         log_printf(0, "fd_bind: socket() error!\n");    
+         log_printf(0, "fd_bind: socket() error!\n");
          return(-1);
       }
    }
@@ -144,7 +144,7 @@ int fd_bind(char *address, int port)
    flag=1;
    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char*)&flag, sizeof(int));
    //Configure the socket for non-blocking I/O
-   if ((err = fcntl(fd, F_SETFL, O_NONBLOCK)) == -1) {  
+   if ((err = fcntl(fd, F_SETFL, O_NONBLOCK)) == -1) {
       log_printf(0, "fd_bind: Can't configure connection for non-blocking I/O!");
    }
 
@@ -169,7 +169,7 @@ int fd_listen(int fd, int max_pending)
 }
 
 //*********************************************************************
-// fd_set_peer - Gets the remote sockets hostname 
+// fd_set_peer - Gets the remote sockets hostname
 //*********************************************************************
 
 void fd_set_peer(int fd, char *address, int add_size)
@@ -178,11 +178,11 @@ void fd_set_peer(int fd, char *address, int add_size)
      struct sockaddr s;
      struct sockaddr_in i;
    };
-   union sock_u psa;  
+   union sock_u psa;
 
    address[0] = '\0';
 
-   socklen_t plen = sizeof(struct sockaddr);            
+   socklen_t plen = sizeof(struct sockaddr);
    if (getpeername(fd, &(psa.s), &plen) != 0) {
       char errmsg[1024];
       strerror_r(errno, errmsg, sizeof(errmsg));
@@ -215,7 +215,7 @@ int fd_close(int fd)
 {
   if (fd == -1) return(0);
 
-log_printf(15, "fd_close: closing fd=%d\n", fd); 
+log_printf(15, "fd_close: closing fd=%d\n", fd);
 
   int err = close(fd);
 
@@ -232,7 +232,7 @@ long int fd_write(int fd, const void *buf, size_t count, Net_timeout_t tm)
   int err;
   fd_set wfd;
   struct timeval tv;
-  
+
   if (fd == -1) return(-1);   //** If closed return
 
   n = write(fd, buf, count);
@@ -254,7 +254,7 @@ log_printf(15, "fd_write2: fd=%d n=%ld select=%d errno=%d\n", fd, n, err,errno);
         } else if ((n==-1) && ((errno == EAGAIN) || (errno == EINTR))) {
            n = 0;     //** Try again later
         }
-     } 
+     }
   }
 
   return(n);
@@ -291,7 +291,7 @@ log_printf(15, "fd_read2: fd=%d n=%ld select=%d errno=%d\n", fd, n, err,errno);
         } else if ((n==-1) && ((errno == EAGAIN) || (errno == EINTR))) {
            n = 0;     //** Try again later
         }
-     } 
+     }
   }
 
   return(n);
@@ -324,7 +324,7 @@ int fd_connect(int *fd, const char *hostname, int port, int tcpsize, Net_timeout
       log_printf(15, "fd_connect: lookup_host failed.  Hostname: %s  Port: %d\n", hostname, port);
       return(1);
    }
-   
+
    // get the socket
    sfd = socket(PF_INET, SOCK_STREAM, 0);
    *fd = sfd;
@@ -359,14 +359,14 @@ int fd_connect(int *fd, const char *hostname, int port, int tcpsize, Net_timeout
    err = connect(sfd, (struct sockaddr *)&addr, sizeof(struct sockaddr));
    if (err != 0) {
       if (errno != EINPROGRESS) {
-         log_printf(0, "fd_connect: connect failed.  Hostname: %s  Port: %d err=%d errno: %d error: %s\n", hostname, port, err, errno, strerror(errno));     
+         log_printf(0, "fd_connect: connect failed.  Hostname: %s  Port: %d err=%d errno: %d error: %s\n", hostname, port, err, errno, strerror(errno));
          return(1);
       }
 //      err = 0;
    }
 
    //Configure the socket for non-blocking I/O
-   if ((err = fcntl(sfd, F_SETFL, O_NONBLOCK)) == -1) {  
+   if ((err = fcntl(sfd, F_SETFL, O_NONBLOCK)) == -1) {
       log_printf(0, "fd_connect: Can't configure connection for non-blocking I/O!");
    }
 

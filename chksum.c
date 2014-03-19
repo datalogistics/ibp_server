@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include "chksum.h"
 #include <openssl/sha.h>
@@ -97,7 +97,7 @@ int chksum_name_type(const char *name)
   }
 
   if (strcasecmp(name, _chksum_name_default) == 0) return(i);
-  
+
   return(-2);
 }
 
@@ -206,14 +206,14 @@ int blank_add(void *state, int type, const char *data) { return(0); }
 
 int blank_chksum_set(chksum_t *cs)
 {
-  cs->reset = blank_reset;    
+  cs->reset = blank_reset;
   cs->size = blank_size;
   cs->add = blank_add;
   cs->get = blank_get;
   cs->type = CHKSUM_NONE;
   cs->name = _chksum_name[CHKSUM_NONE];
 
-  return(0);                                                  
+  return(0);
 }
 
 //*************************************************************************

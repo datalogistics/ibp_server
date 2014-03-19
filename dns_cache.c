@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //**************************************************************************
 //
@@ -178,7 +178,7 @@ void dns_cache_init(int size) {
    _cache->mpool = NULL;
    assert(apr_pool_create(&(_cache->lockpool), NULL) == APR_SUCCESS);
    apr_thread_mutex_create(&(_cache->lock), APR_THREAD_MUTEX_DEFAULT,_cache->lockpool);
-  
+
    wipe_entries(_cache);
 }
 

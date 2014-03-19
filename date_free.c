@@ -35,27 +35,27 @@ void print_manage_history(Allocation_manage_ts_t *ts_list, int start)
      t = ibp2apr_time(ts->ts.time);
      if (t != 0) {
         switch (ts->subcmd) {
-          case IBP_PROBE: subcmd = "IBP_PROBE"; break;        
-          case IBP_INCR : subcmd = "IBP_INCR "; break;        
-          case IBP_DECR : subcmd = "IBP_DECR "; break;        
-          case IBP_CHNG : subcmd = "IBP_CHNG "; break;        
+          case IBP_PROBE: subcmd = "IBP_PROBE"; break;
+          case IBP_INCR : subcmd = "IBP_INCR "; break;
+          case IBP_DECR : subcmd = "IBP_DECR "; break;
+          case IBP_CHNG : subcmd = "IBP_CHNG "; break;
           default : subcmd = "UNKNOWN";
         }
-    
+
         switch (ts->cmd) {
-          case IBP_MANAGE:         cmd = "IBP_MANAGE       "; break;        
-          case IBP_ALIAS_MANAGE:   cmd = "IBP_ALIAS_MANAGE "; break;        
+          case IBP_MANAGE:         cmd = "IBP_MANAGE       "; break;
+          case IBP_ALIAS_MANAGE:   cmd = "IBP_ALIAS_MANAGE "; break;
           case IBP_RENAME:         cmd = "IBP_RENAME        "; subcmd = "        "; break;
           case IBP_ALIAS_ALLOCATE: cmd = "IBP_ALIAS_ALLOCATE"; subcmd = "        "; break;
           default : cmd = "UNKNOWN";
         }
 
         switch (ts->reliability) {
-          case ALLOC_HARD: rel = "IBP_HARD"; break;        
+          case ALLOC_HARD: rel = "IBP_HARD"; break;
           case ALLOC_SOFT: rel = "IBP_SOFT"; break;
           default : rel = "UNKNOWN";
         }
-       
+
         apr_ctime(print_time, t);
         t2 = ibp2apr_time(ts->expiration);
         apr_ctime(print_time2, t2);
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 
   char *host = argv[1];
   int port = atoi(argv[2]);
-  char *rid = argv[3];  
+  char *rid = argv[3];
   char *key = argv[5];
 
   if (strcmp("read", argv[4])==0) {
@@ -143,7 +143,7 @@ int main(int argc, char **argv)
   sprintf(buffer, "1 %d %s %d %s 10\n", INTERNAL_GET_ALLOC, rid, type_key, key);
   n = write_netstream(ns, buffer, strlen(buffer), dt);
   n = readline_netstream(ns, buffer, bufsize, dt);
-  if (n > 0) {  
+  if (n > 0) {
      n = atoi(string_token(buffer, " ", &bstate, &err));
      if (n != IBP_OK) {
         printf("Error %d returned!\n", n);
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
   bufsize = sizeof(Allocation_t);
   while (bufsize > 0) {
      n = read_netstream(ns, &(buffer[npos]), bufsize, dt);
-     if (n > 0) {     
+     if (n > 0) {
         npos = npos + n;
         bufsize = bufsize - n;
      }
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
   //** Print the allocation information
   printf("Allocation summary\n");
   printf("-----------------------------------------\n");
-  printf("ID: " LU "\n", a.id); 
+  printf("ID: " LU "\n", a.id);
   t = ibp2apr_time(a.creation_ts.time);
   apr_ctime(print_time, t);
   address2ipdecstr(hostip, a.creation_ts.host.ip, a.creation_ts.host.atype);
@@ -230,7 +230,7 @@ int main(int argc, char **argv)
   printf("Manage history (slot=%d) (epoch, time, host, id, cmd, subcmd, reliability, size, expiration_epoch, expiration)\n", a.manage_slot);
   printf("---------------------------------------------\n");
   print_manage_history(a.manage_ts, a.manage_slot);
-  
+
   printf("\n");
 
   apr_terminate();

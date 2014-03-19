@@ -28,7 +28,7 @@ int main(int argc, char **argv)
   int n, i;
   NetStream_t *ns;
   Net_timeout_t dt;
-  
+
   if (argc < 4) {
      printf("get_corrupt host port rid [timeout]\n");
      return(0);
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 
   if (argc == 5) timeout = atoi(argv[4]);
 
-  sprintf(cmd, "1 93 %s %d\n", rid, timeout); 
+  sprintf(cmd, "1 93 %s %d\n", rid, timeout);
 
   assert(apr_initialize() == APR_SUCCESS);
 

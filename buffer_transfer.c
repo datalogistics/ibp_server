@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //************************************************************************************
 //************************************************************************************
@@ -63,9 +63,9 @@ void iovec_start(iovec_t *iovec, int *index, ibp_off_t *ioff, ibp_off_t *ileft)
   ibp_off_t n;
 
   for (i=0; i<iovec->n; i++) {
-log_printf(15, "iovec_start: i=%d transfer_total=" I64T " off=" I64T " len=" I64T " cumlen= " I64T "\n", 
+log_printf(15, "iovec_start: i=%d transfer_total=" I64T " off=" I64T " len=" I64T " cumlen= " I64T "\n",
 	i, iovec->transfer_total, iovec->vec[i].off, iovec->vec[i].len, iovec->vec[i].cumulative_len);
-     if (iovec->transfer_total < iovec->vec[i].cumulative_len) break;  
+     if (iovec->transfer_total < iovec->vec[i].cumulative_len) break;
   }
 
   if (i < iovec->n) {
@@ -80,7 +80,7 @@ log_printf(15, "iovec_start: i=%d transfer_total=" I64T " off=" I64T " len=" I64
      *ileft = 0;
   }
 
-log_printf(15, "iovec_start: n=%d transfer_total=" I64T " index= %d ioff=" I64T " ileft=" I64T "\n", 
+log_printf(15, "iovec_start: n=%d transfer_total=" I64T " index= %d ioff=" I64T " ileft=" I64T "\n",
    iovec->n, iovec->transfer_total, *index, *ioff, *ileft);
   return;
 }
@@ -127,7 +127,7 @@ int splice_kernel(ns_native_fd_t src_fd, osd_native_fd_t dest_fd, ibp_off_t *nby
   long bytes_copied, tmp;
   int pipefd[2], err;
   apr_time_t start_time = apr_time_now();
-  
+
   int splice_mode = SPLICE_F_MOVE|SPLICE_F_NONBLOCK;
 //  int splice_mode = SPLICE_F_MOVE|SPLICE_F_MORE;
 
@@ -185,13 +185,13 @@ log_printf(15, "splice_kernel: initial splice error trap bytes_copied=%ld errno=
 
     if (apr_time_now() > end_time) bytes_copied = -1;  //** command expired
 
-    log_printf(15, "splice_kernel: left=" I64T " shortread=%d ntotal=" I64T " bytes_copied=%ld errno=%d sfd=%d time=" TT " end=" TT "\n", 
+    log_printf(15, "splice_kernel: left=" I64T " shortread=%d ntotal=" I64T " bytes_copied=%ld errno=%d sfd=%d time=" TT " end=" TT "\n",
             lenbytes, shortread, ntotal, bytes_copied, errno, src_fd, apr_time_now(), end_time);
 //---  } while ((lenbytes>0) && (shortread < 3) && (bytes_copied > -1));
   } while ((lenbytes>0) && (bytes_copied > -1));
 
   log_printf(15, "splice_kernel: END left=" I64T " shortread=%d ntotal=" I64T " bytes_copied=%ld errno=%d sfd=%d start=" TT " time=" TT " end=" TT "\n", lenbytes, shortread, ntotal, bytes_copied, errno, src_fd, start_time, apr_time_now(), end_time);
- 
+
   close(pipefd[0]); close(pipefd[1]);
 
   err = (bytes_copied >= 0) ?  0 : bytes_copied;
@@ -233,26 +233,26 @@ int disk_to_disk_copy_kernel(Resource_t *src_res, osd_id_t src_id, ibp_off_t src
   int err;
   osd_native_fd_t src_fd, dest_fd;
 
-  log_printf(0, "disk_to_disk_copy_kernel: src_id=" LU " src_offset=" I64T " dest_id=" LU " dest_offset=" I64T " len=" I64T "\n", src_id, src_offset, dest_id, dest_offset, len);   
+  log_printf(0, "disk_to_disk_copy_kernel: src_id=" LU " src_offset=" I64T " dest_id=" LU " dest_offset=" I64T " len=" I64T "\n", src_id, src_offset, dest_id, dest_offset, len);
 return(-2);
 
   //** Open the allocations
   src_fd = resource_native_open_id(src_res, src_id, src_offset, OSD_READ_MODE);
   if (src_fd == -1) {
-     log_printf(0, "disk_to_disk_copy_kernel: Error with src_id open id=" LU " offset=" I64T " len=" I64T ", buffer) = %d\n", src_id, src_offset, len, src_fd);   
+     log_printf(0, "disk_to_disk_copy_kernel: Error with src_id open id=" LU " offset=" I64T " len=" I64T ", buffer) = %d\n", src_id, src_offset, len, src_fd);
      return(IBP_E_FILE_READ);
   }
 
   dest_fd = resource_native_open_id(dest_res, dest_id, dest_offset, OSD_WRITE_MODE);
   if (dest_fd == -1) {
-     log_printf(0, "disk_to_disk_copy_kernel: Error with dest_id open id=" LU " offset=" I64T " len=" I64T ", buffer) = %d\n", dest_id, dest_offset, len, dest_fd);   
+     log_printf(0, "disk_to_disk_copy_kernel: Error with dest_id open id=" LU " offset=" I64T " len=" I64T ", buffer) = %d\n", dest_id, dest_offset, len, dest_fd);
      return(IBP_E_FILE_WRITE);
   }
 
-  //** Do the transfer  
-  err = splice_kernel(src_fd, dest_fd, &len, end_time, 
+  //** Do the transfer
+  err = splice_kernel(src_fd, dest_fd, &len, end_time,
          &(_res_splice_enabled[resource_get_type(src_res)]), &(_res_splice_enabled[resource_get_type(dest_res)]));
-  
+
 posix_fadvise(dest_fd, dest_offset+4096, len, POSIX_FADV_DONTNEED);
 
   //** Close the allocations
@@ -308,7 +308,7 @@ return(-2);
   }
 
   ntotal = *left;
-  err = splice_kernel(fd, sock_fd, left, task->cmd_timeout, 
+  err = splice_kernel(fd, sock_fd, left, task->cmd_timeout,
          &(_res_splice_enabled[resource_get_type(res)]), &(_ns_splice_enabled[ns_get_type(task->ns)]));
   ntotal = ntotal - *left;
 
@@ -372,7 +372,7 @@ return(-2);
   }
 
   ntotal = 0;
-  debug_printf(10, "write_to_disk_kernel(BA): start.... id=" LU " * max_size=" I64T " * curr_size=" I64T " * max_transfer=" I64T " pos=" I64T " left=" I64T " ns=%d\n", 
+  debug_printf(10, "write_to_disk_kernel(BA): start.... id=" LU " * max_size=" I64T " * curr_size=" I64T " * max_transfer=" I64T " pos=" I64T " left=" I64T " ns=%d\n",
          a->id, a->max_size, a->size, nleft, pos, *left, task->ns->id);
 
   if (nleft == 0) {  //** no space to store anything
@@ -416,7 +416,7 @@ return(-2);
   }
 
   return(task_status);
-}  
+}
 
 //************************************************************************************
 // ---------------------------- User space routines ----------------------------------
@@ -439,20 +439,20 @@ int disk_to_disk_copy_user(Resource_t *src_res, osd_id_t src_id, ibp_off_t src_o
   char buffer[bufsize];
 
   log_printf(15, "disk_to_disk_copy_user: src_id=" LU " src_offset=" I64T " dest_id=" LU " dest_offset=" I64T "\n", src_id, src_offset, dest_id, dest_offset);
-  
+
   nleft = len;
   soff = src_offset; doff = dest_offset;
 
   sfd = open_allocation(src_res, src_id, OSD_READ_MODE);
   if (sfd == NULL) {
-     log_printf(0, "disk_to_disk_copy_user: Error with src open_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = %d\n", src_id, soff, len, errno); 
+     log_printf(0, "disk_to_disk_copy_user: Error with src open_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = %d\n", src_id, soff, len, errno);
      return(IBP_E_FILE_READ);
   }
 
   dfd = open_allocation(dest_res, dest_id, OSD_WRITE_MODE);
   if (dfd == NULL) {
      err = errno;
-     log_printf(0, "disk_to_disk_copy_user: Error with dest open_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", dest_id, doff, len, err); 
+     log_printf(0, "disk_to_disk_copy_user: Error with dest open_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", dest_id, doff, len, err);
      close_allocation(dest_res, dfd);
      return(IBP_E_FILE_WRITE);
   }
@@ -462,7 +462,7 @@ int disk_to_disk_copy_user(Resource_t *src_res, osd_id_t src_id, ibp_off_t src_o
      nleft = nleft - bufsize;
      err = read_allocation(src_res, sfd, soff, nbytes, buffer);
      if (err != 0) {
-        log_printf(0, "disk_to_disk_copy_user: Error with read_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", src_id, soff, nbytes, err); 
+        log_printf(0, "disk_to_disk_copy_user: Error with read_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", src_id, soff, nbytes, err);
         close_allocation(src_res, sfd);
         close_allocation(dest_res, dfd);
         return(IBP_E_FILE_READ);
@@ -470,7 +470,7 @@ int disk_to_disk_copy_user(Resource_t *src_res, osd_id_t src_id, ibp_off_t src_o
 
      err = write_allocation(dest_res, dfd, doff, nbytes, buffer);
      if (err != 0) {
-        log_printf(0, "disk_to_disk_copy_user: Error with write_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", dest_id, doff, nbytes, err); 
+        log_printf(0, "disk_to_disk_copy_user: Error with write_allocation(-res-, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n", dest_id, doff, nbytes, err);
         close_allocation(src_res, sfd);
         close_allocation(dest_res, dfd);
         return(IBP_E_FILE_WRITE);
@@ -478,7 +478,7 @@ int disk_to_disk_copy_user(Resource_t *src_res, osd_id_t src_id, ibp_off_t src_o
 
      soff = soff + nbytes;
      doff = doff + nbytes;
-  } 
+  }
 
   close_allocation(src_res, sfd);
   close_allocation(dest_res, dfd);
@@ -522,7 +522,7 @@ flush_log();
 
   fd = open_allocation(res, a->id, OSD_READ_MODE);
   if (fd == NULL) {
-     log_printf(0, "read_disk_user: Error with open_allocation(-res-, " LU ") = %d\n", a->id,  errno); 
+     log_printf(0, "read_disk_user: Error with open_allocation(-res-, " LU ") = %d\n", a->id,  errno);
      return(IBP_E_FILE_READ);
   }
 
@@ -543,7 +543,7 @@ flush_log();
         if (err != 0) {
            char tmp[128];
            log_printf(0, "read_disk: Error with read_allocation(%s, " LU ", " I64T ", " I64T ", buffer) = " I64T "\n",
-                ibp_rid2str(res->rid, tmp), a->id, ioff, cleft, err); 
+                ibp_rid2str(res->rid, tmp), a->id, ioff, cleft, err);
            shortwrite = 100;
            nwrite = err;
         }
@@ -562,7 +562,7 @@ flush_log();
      } while ((bleft > 0) && (finished==0));
 
      //** and send it
-     bleft = bpos; 
+     bleft = bpos;
      bpos = 0; btotal = 0;
      do {  //** Loop until data is completely sent or blocked
         nwrite = write_netstream(task->ns, &(buffer[bpos]), bleft, dt);
@@ -577,7 +577,7 @@ flush_log();
            shortwrite = 100;  //** closed connection
         }
 
-        log_printf(15, "read_from_disk: id=" LU " -- bpos=" I64T " bleft=" I64T ", ntotal=" I64T ", nwrite=" I64T " * shortwrite=" I64T " ns=%d\n", 
+        log_printf(15, "read_from_disk: id=" LU " -- bpos=" I64T " bleft=" I64T ", ntotal=" I64T ", nwrite=" I64T " * shortwrite=" I64T " ns=%d\n",
              a->id, bpos, bleft, btotal, nwrite, shortwrite, task->ns->id);
      } while ((bleft > 0) && (shortwrite < 3));
 
@@ -606,7 +606,7 @@ flush_log();
   }
 
   if (task_status != 0) {  //** Error on send so unwind the iovec buffer
-     
+
   }
 
   return(task_status);
@@ -651,21 +651,21 @@ int write_to_disk_user(ibp_task_t *task, Allocation_t *a, ibp_off_t *left, Resou
   }
 
   ntotal = 0;
-  debug_printf(10, "write_to_disk_user(BA): start.... id=" LU " * max_size=" I64T " * curr_size=" I64T " * max_transfer=" I64T " left=" I64T " ns=%d\n", 
+  debug_printf(10, "write_to_disk_user(BA): start.... id=" LU " * max_size=" I64T " * curr_size=" I64T " * max_transfer=" I64T " left=" I64T " ns=%d\n",
          a->id, a->max_size, a->size, nleft, *left, task->ns->id);
 
   if (nleft == 0) {  //** no space to store anything
      return(0);
-  } 
+  }
 
   fd = open_allocation(res, a->id, OSD_WRITE_MODE);
   if (fd == NULL) {
-     log_printf(0, "write_disk_user: Error with open_allocation(-res-, " LU ") = %d\n", a->id,  errno); 
+     log_printf(0, "write_disk_user: Error with open_allocation(-res-, " LU ") = %d\n", a->id,  errno);
      return(IBP_E_FILE_WRITE);
   }
 
   iovec_start(&(w->iovec), &index, &ioff, &ileft);
-  
+
   do {
      bpos = 0;
      nbytes = (nleft < bufsize) ? nleft : bufsize;
@@ -680,9 +680,9 @@ int write_to_disk_user(ibp_task_t *task, Allocation_t *a, ibp_off_t *left, Resou
         } else {
             shortread = 100;
         }
-log_printf(10, "write_to_disk_user: id=" LU " ns=%d inner loop ncurrread= " I64T " bpos=" I64T " nbytes=" I64T " shortread=%d bufsize=" ST "\n", 
+log_printf(10, "write_to_disk_user: id=" LU " ns=%d inner loop ncurrread= " I64T " bpos=" I64T " nbytes=" I64T " shortread=%d bufsize=" ST "\n",
     a->id, task->ns->id, ncurrread, bpos, nbytes, shortread, sizeof(buffer));
-     } while ((nbytes > 0) && (shortread < 3));        
+     } while ((nbytes > 0) && (shortread < 3));
      nread = bpos;
 
 log_printf(10, "write_to_disk_user: id=" LU " ns=%d after loop ncurrread= " I64T " bpos=" I64T " shortread=%d\n", a->id, task->ns->id, ncurrread, bpos, shortread);
@@ -690,12 +690,12 @@ log_printf(10, "write_to_disk_user: id=" LU " ns=%d after loop ncurrread= " I64T
      if (nread > 0) {
         bpos = 0;
         do {
-           cleft = (nread > ileft) ? ileft : nread; 
+           cleft = (nread > ileft) ? ileft : nread;
            err = write_allocation(res, fd, ioff, cleft, &(buffer[bpos]));
            if (err != 0) {
               char tmp[128];
               log_printf(0, "write_to_disk_user: Error with write_allocation(%s, " LU ", " I64T ", " I64T ", buffer) = " I64T "  tid=" LU "\n",
-                      ibp_rid2str(res->rid, tmp), a->id, ioff, cleft, err, task->tid); 
+                      ibp_rid2str(res->rid, tmp), a->id, ioff, cleft, err, task->tid);
               shortread = 100;
               nread = err;
            }
@@ -707,7 +707,7 @@ log_printf(10, "write_to_disk_user: id=" LU " ns=%d after loop ncurrread= " I64T
            nleft -= cleft;
            bpos += cleft;
            nread -= cleft;
-  
+
            if (a->type == IBP_BYTEARRAY) {  //** Update the size before moving on
              if (ioff > a->size) a->size = ioff;
            }
@@ -722,7 +722,7 @@ log_printf(10, "write_to_disk_user: id=" LU " ns=%d after loop ncurrread= " I64T
          shortread++;
       }
 
-     log_printf(15, "write_to_disk_user: id=" LU " left=" I64T " -- pos=" I64T ", nleft=" I64T ", ntotal=" I64T ", nread=" I64T " ns=%d shortread=%d\n", 
+     log_printf(15, "write_to_disk_user: id=" LU " left=" I64T " -- pos=" I64T ", nleft=" I64T ", ntotal=" I64T ", nread=" I64T " ns=%d shortread=%d\n",
               a->id, *left, ioff, nleft, ntotal, nread, task->ns->id, shortread);
   } while ((nleft > 0) && (shortread < 3));
 //  } while ((ntotal < nleft) && (shortread < 3));
@@ -748,7 +748,7 @@ log_printf(10, "write_to_disk_user: id=" LU " ns=%d after loop ncurrread= " I64T
 //free(buffer);
 
   return(task_status);
-}  
+}
 
 //************************************************************************************
 // ------------------------------ Wrapper routines------------------------------------
@@ -785,11 +785,11 @@ int read_from_disk(ibp_task_t *task, Allocation_t *a, ibp_off_t *left, Resource_
 
   if (_init_table == 1) _buffer_transfer_init();
 
-log_printf(15, "read_from_disk_ ns=%d splice=%d res=%s splice=%d\n", 
+log_printf(15, "read_from_disk_ ns=%d splice=%d res=%s splice=%d\n",
    ns_getid(task->ns), _ns_splice_enabled[ns_type],
    res->name, _res_splice_enabled[res_type]);
 
-  if ((_ns_splice_enabled[ns_type] == 1) && (_res_splice_enabled[res_type] == 1)) { 
+  if ((_ns_splice_enabled[ns_type] == 1) && (_res_splice_enabled[res_type] == 1)) {
      err = read_from_disk_kernel(task, a, left, res);
      if (err < -1) return(read_from_disk_user(task, a, left, res));
   } else if ((_ns_splice_enabled[ns_type] == -1) || (_res_splice_enabled[res_type] == -1)) {
@@ -830,11 +830,11 @@ int write_to_disk(ibp_task_t *task, Allocation_t *a, ibp_off_t *left, Resource_t
 
   if (_init_table == 1) _buffer_transfer_init();
 
-log_printf(15, "write_to_disk_ ns=%d splice=%d res=%s splice=%d\n", 
+log_printf(15, "write_to_disk_ ns=%d splice=%d res=%s splice=%d\n",
    ns_getid(task->ns), _ns_splice_enabled[ns_type],
    res->name, _res_splice_enabled[res_type]);
 
-  if ((_ns_splice_enabled[ns_type] == 1) && (_res_splice_enabled[res_type] == 1)) { 
+  if ((_ns_splice_enabled[ns_type] == 1) && (_res_splice_enabled[res_type] == 1)) {
      err = write_to_disk_kernel(task, a, left, res);
      if (err < -1) return(write_to_disk_user(task, a, left, res));
   } else if ((_ns_splice_enabled[ns_type] == -1) || (_res_splice_enabled[res_type] == -1)) {
@@ -876,11 +876,11 @@ int disk_to_disk_copy(Resource_t *src_res, osd_id_t src_id, ibp_off_t src_offset
 
   if (_init_table == 1) _buffer_transfer_init();
 
-log_printf(15, "disk_to_disk_copy src_res=%s splice=%d dest_res=%s splice=%d\n", 
+log_printf(15, "disk_to_disk_copy src_res=%s splice=%d dest_res=%s splice=%d\n",
    src_res->name, _res_splice_enabled[src_type],
    dest_res->name, _res_splice_enabled[dest_type]);
 
-  if ((_res_splice_enabled[src_type] == 1) && (_res_splice_enabled[dest_type] == 1)) { 
+  if ((_res_splice_enabled[src_type] == 1) && (_res_splice_enabled[dest_type] == 1)) {
      err = disk_to_disk_copy_kernel(src_res, src_id, src_offset, dest_res, dest_id, dest_offset, len, end_time);
      if (err != IBP_OK) return(disk_to_disk_copy_user(src_res, src_id, src_offset, dest_res, dest_id, dest_offset, len, end_time));
   } else if ((_res_splice_enabled[src_type] == -1) || (_res_splice_enabled[dest_type] == -1)) {

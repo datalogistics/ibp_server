@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //***************************************************************************
 //***************************************************************************
@@ -59,7 +59,7 @@ char *_blanks[_RESOURCE_BUF_SIZE];
 const char *_res_types[] = {DEVICE_UNKNOWN, DEVICE_DIR};
 
 typedef struct {    //*** Used to store usage info on a resource to keep from having to rescan the DB
- int version;        
+ int version;
  int state;
  ibp_off_t used_space[2];
  ibp_off_t n_allocs;
@@ -128,7 +128,7 @@ int write_usage_file(Resource_t *r, int state)
    osd_close(r->dev, fd);
 
    ibp_off_t mb;
-   log_printf(10, "write_usage_file: rid=%s\n",r->name); 
+   log_printf(10, "write_usage_file: rid=%s\n",r->name);
    mb = r->used_space[ALLOC_SOFT]/1024/1024; log_printf(10, "\n#soft_used = " LU " mb\n", mb);
    mb = r->used_space[ALLOC_HARD]/1024/1024; log_printf(10, "#hard_used = " LU " mb\n", mb);
    mb = r->used_space[ALLOC_SOFT]; log_printf(10, "#soft_used = " LU " b\n", mb);
@@ -176,7 +176,7 @@ int read_usage_file(Resource_t *r)
          r->n_alias = usage.n_alias;
 
          ibp_off_t mb;
-         log_printf(10, "read_usage_file: rid=%s\n",r->name); 
+         log_printf(10, "read_usage_file: rid=%s\n",r->name);
          mb = r->used_space[ALLOC_SOFT]/1024/1024; log_printf(10, "\n#soft_used = " LU "\n", mb);
          mb = r->used_space[ALLOC_HARD]/1024/1024; log_printf(10, "#hard_used = " LU "\n", mb);
          log_printf(10, "#n_allocations = " LU "\n", r->n_allocs);
@@ -494,7 +494,7 @@ int rebuild_get_next(res_iterator_t *ri, Allocation_t *a)
 //    --NOTE:  Any blank allocations will be lost!!! --
 //***************************************************************************
 
-int rebuild_resource(Resource_t *r, DB_env_t *env, inip_file_t *kfd, int remove_expired, int wipe_clean, 
+int rebuild_resource(Resource_t *r, DB_env_t *env, inip_file_t *kfd, int remove_expired, int wipe_clean,
      int truncate_expiration)
 {
    char db_group[2048];
@@ -509,7 +509,7 @@ int rebuild_resource(Resource_t *r, DB_env_t *env, inip_file_t *kfd, int remove_
 
    t = apr_time_now();
    apr_ctime(print_time, t);
-   log_printf(0, "rebuild_resource(rid=%s):  Rebuilding Resource rid=%s.  Starting at %s  remove_expired=%d wipe_clean=%d truncate_expiration=%d\n", 
+   log_printf(0, "rebuild_resource(rid=%s):  Rebuilding Resource rid=%s.  Starting at %s  remove_expired=%d wipe_clean=%d truncate_expiration=%d\n",
         r->name, r->name, print_time, remove_expired, wipe_clean, truncate_expiration);
 
 
@@ -1932,7 +1932,7 @@ int validate_allocation(Resource_t *r, osd_id_t id, int correct_errors)
 // get_allocation_chksums - Retreives the chksums for the allocation
 //***************************************************************************
 
-ibp_off_t get_allocation_chksum(Resource_t *r, osd_id_t id, char *disk_buffer, char *calc_buffer, ibp_off_t buffer_size, 
+ibp_off_t get_allocation_chksum(Resource_t *r, osd_id_t id, char *disk_buffer, char *calc_buffer, ibp_off_t buffer_size,
      osd_off_t *block_len, char *good_block, ibp_off_t start_block, ibp_off_t end_block)
 {
   atomic_inc(r->counter);

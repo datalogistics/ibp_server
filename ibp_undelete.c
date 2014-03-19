@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
   trash_id = argv[i]; i++;
   duration = atoi(argv[i]); i++;
-  
+
   timeout = 15;
 
   if (argc < i) timeout = atoi(argv[i]);

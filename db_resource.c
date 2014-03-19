@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //***************************************************************************
 //***************************************************************************
@@ -116,7 +116,7 @@ void dbr_unlock(DB_resource_t *dbr)
 
 int get_rcap_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
    Allocation_t *a = (Allocation_t *)pdata->data;
-  
+
    memset((void *)skey, 0, sizeof(DBT));
    skey->data = a->caps[READ_CAP].v;
    skey->size = CAP_SIZE+1;
@@ -131,7 +131,7 @@ int get_rcap_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
 
 int get_wcap_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
    Allocation_t *a = (Allocation_t *)pdata->data;
-  
+
    memset(skey, 0, sizeof(DBT));
    skey->data = a->caps[WRITE_CAP].v;
    skey->size = CAP_SIZE+1;
@@ -147,7 +147,7 @@ int get_wcap_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
 
 int get_mcap_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
    Allocation_t *a = (Allocation_t *)pdata->data;
-  
+
    memset(skey, 0, sizeof(DBT));
    skey->data = a->caps[MANAGE_CAP].v;
    skey->size = CAP_SIZE+1;
@@ -165,7 +165,7 @@ int get_expire_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
    Allocation_t *a = (Allocation_t *)pdata->data;
 
 //   return(DB_DONOTINDEX);
-  
+
    memset(skey, 0, sizeof(DBT));
    skey->data = &(a->expirekey);
    skey->size = sizeof(DB_timekey_t);
@@ -182,7 +182,7 @@ int get_expire_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
 
 int get_soft_key(DB *sdb, const DBT *pkey, const DBT *pdata, DBT *skey) {
    Allocation_t *a = (Allocation_t *)pdata->data;
-  
+
    memset(skey, 0, sizeof(DBT));
 
    if (a->reliability == ALLOC_SOFT) {
@@ -236,7 +236,7 @@ int print_db_resource(char *buffer, int *used, int nbytes, DB_resource_t *dbr)
   append_printf(buffer, used, nbytes, "[%s]\n", dbr->kgroup);
   i = append_printf(buffer, used, nbytes, "loc = %s\n", dbr->loc);
 
-  return(i);   
+  return(i);
 }
 
 
@@ -337,7 +337,7 @@ int mkfs_db(DB_resource_t *dbres, char *loc, const char *kgroup, FILE *fd) {
    apr_pool_create(&(dbres->pool), NULL);
    apr_thread_mutex_create(&(dbres->mutex), APR_THREAD_MUTEX_DEFAULT,dbres->pool);
 
-   used = 0;   
+   used = 0;
    print_db_resource(buffer, &used, sizeof(buffer), dbres);
    if (fd != NULL) fprintf(fd, "%s", buffer);
 
@@ -370,12 +370,12 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
       log_printf(10, "mount_db_generic:  Creating local DB environment. loc=%s max_size=" ST " wipe_clean=%d\n", dbres->loc, env->max_size, wipe_clean);
       lenv = create_db_env(dbres->loc, env->max_size, wipe_clean);
       lenv->local = 1;
-      dbres->env = lenv; 
+      dbres->env = lenv;
    }
-   
+
    dbres->dbenv = dbres->env->dbenv;
    dbenv = dbres->dbenv;
-   
+
    //** Now open everything up and associate it **
    if (strlen(dbres->loc) > 2000) {
       printf("mount_db:  Need to increase fname size.  strlen(loc)=" ST "\n", strlen(dbres->loc));
@@ -385,7 +385,7 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    flags = DB_AUTO_COMMIT | DB_THREAD | DB_CREATE;  //** Inheriting most from the environment
 //   flags = DB_AUTO_COMMIT | DB_THREAD | DB_CREATE;  //** Inheriting most from the environment
 //   if (wipe_clean == 2)  flags = flags | DB_CREATE; //**Only wipe the id DB if wipe_clean=2
-   
+
    //*** Create/Open the primary DB containing the ID's ***
    assert(db_create(&(dbres->pdb), dbenv, 0) == 0);
    psize = 32 * 1024;
@@ -400,7 +400,7 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    //** Wipe all other DB's **
    if (wipe_clean != 0)  flags = flags | DB_CREATE;
    bflags = flags;
-   
+
    //*** Create/Open DB containing the READ_CAPs ***
    assert(db_create(&db, dbenv, 0) == 0);
    dbres->cap[READ_CAP] = db;
@@ -412,11 +412,11 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    }
    if (dbres->pdb->associate(dbres->pdb, NULL, db, get_rcap_key, 0) != 0) {
       printf("mount_db: Can't associate read DB: %s\n", fname);
-      abort();     
+      abort();
    }
 
    //*** Create/Open DB containing the WRITE_CAPs ***
-   
+
    assert(db_create(&db, dbenv, 0) == 0);
    dbres->cap[WRITE_CAP] = db;
    snprintf(fname, sizeof(fname), "%s/write.db", dbres->loc);
@@ -427,7 +427,7 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    }
    if (dbres->pdb->associate(dbres->pdb, NULL, db, get_wcap_key, 0) != 0) {
       printf("mount_db: Can't associate write DB: %s\n", fname);
-      abort();     
+      abort();
    }
 
    //*** Create/Open DB containing the MANAGE_CAPs ***
@@ -441,7 +441,7 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    }
    if (dbres->pdb->associate(dbres->pdb, NULL, db, get_mcap_key, 0) != 0) {
       printf("mount_db: Can't associate manage DB: %s\n", fname);
-      abort();     
+      abort();
    }
 
    //*** Create/Open DB containing the expirationss ***
@@ -457,7 +457,7 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    }
    if (dbres->pdb->associate(dbres->pdb, NULL, db, get_expire_key, 0) != 0) {
       printf("mount_db: Can't associate expire DB: %s\n", fname);
-      abort();     
+      abort();
    }
 
    //*** Create/Open DB containing the soft allocations ***
@@ -473,14 +473,14 @@ int mount_db_generic(inip_file_t *kf, const char *kgroup, DB_env_t *env, DB_reso
    }
    if (dbres->pdb->associate(dbres->pdb, NULL, db, get_soft_key, 0) != 0) {
       printf("mount_db: Can't associate soft DB: %s\n", fname);
-      abort();     
+      abort();
    }
 
    //** and make the mutex
    apr_pool_create(&(dbres->pool), NULL);
    apr_thread_mutex_create(&(dbres->mutex), APR_THREAD_MUTEX_DEFAULT,dbres->pool);
 
-   return(0);  
+   return(0);
 }
 
 //***************************************************************************
@@ -527,7 +527,7 @@ int umount_db(DB_resource_t *dbres)
 //---------------------------------------------------------------------------
 
 //***************************************************************************
-// wipe_db_env - Removes all env files in the provided dir 
+// wipe_db_env - Removes all env files in the provided dir
 //***************************************************************************
 
 void wipe_db_env(const char *loc)
@@ -590,7 +590,7 @@ DB_env_t *create_db_env(const char *loc, int db_mem, int wipe_clean)
 
    if (wipe_clean > 0) wipe_db_env(loc);  //** Wipe if requested
 
-   flags = DB_CREATE   | DB_INIT_LOCK | DB_INIT_LOG    | DB_INIT_MPOOL | 
+   flags = DB_CREATE   | DB_INIT_LOCK | DB_INIT_LOG    | DB_INIT_MPOOL |
            DB_INIT_TXN | DB_THREAD    | DB_AUTO_COMMIT | DB_RECOVER;
 
    assert(db_env_create(&dbenv, 0) == 0);
@@ -615,7 +615,7 @@ DB_env_t *create_db_env(const char *loc, int db_mem, int wipe_clean)
       if ((err=dbenv->open(dbenv, loc, flags, 0)) != 0) {
          printf("create_db_env: Error opening DB environment!  loc=%s\n", loc);
          printf("create_db_env: %s\n", db_strerror(err));
-      } 
+      }
    }
 
    return(env);
@@ -664,9 +664,9 @@ int get_num_allocations_db(DB_resource_t *db)
 //  u_int32_t flags = DB_FAST_STAT;
   u_int32_t flags = DB_READ_COMMITTED;
 
-  
+
   dbr_lock(db);
-  err = db->pdb->stat(db->pdb, NULL, (void *)&dstat, flags);   
+  err = db->pdb->stat(db->pdb, NULL, (void *)&dstat, flags);
   if (err != 0) {
      log_printf(0, "get_allocations_db:  error=%d  (%s)\n", err, db_strerror(err));
   }
@@ -676,7 +676,7 @@ int get_num_allocations_db(DB_resource_t *db)
   if (err == 0) {
      n = dstat->hash_nkeys;
      free(dstat);
-     log_printf(10, "get_allocations_db: nkeys=%d\n", n);     
+     log_printf(10, "get_allocations_db: nkeys=%d\n", n);
   }
 
   return(n);
@@ -756,7 +756,7 @@ int _put_alloc_db(DB_resource_t *dbr, Allocation_t *a)
 //db_commit("_put_alloc_db", err)
 
   apr_time_t t = ibp2apr_time(a->expiration);
-  debug_printf(10, "put_alloc_db: err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expire=" TT "\n", 
+  debug_printf(10, "put_alloc_db: err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expire=" TT "\n",
       err, a->id, a->caps[READ_CAP].v, a->caps[WRITE_CAP].v, a->caps[MANAGE_CAP].v, a->size, a->max_size, t);
 
   return(0);
@@ -776,9 +776,9 @@ int put_alloc_db(DB_resource_t *dbr, Allocation_t *a)
 
 //Allocation_t a2;
 //err=get_alloc_with_cap_db(dbr, MANAGE_CAP, &(a->caps[MANAGE_CAP]), &a2);
-  
+
 //apr_time_t t = ibp2apr_time(a2.expiration);
-//debug_printf(10, "put_alloc_db: READ err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expireation=" TT "\n", 
+//debug_printf(10, "put_alloc_db: READ err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expireation=" TT "\n",
 //      err, a2.id, a2.caps[READ_CAP].v, a2.caps[WRITE_CAP].v, a2.caps[MANAGE_CAP].v, a2.size, a2.max_size, t);
 
 
@@ -906,7 +906,7 @@ int _lookup_id_with_cap_db(DB_resource_t *dbr, Cap_t *cap, int cap_type, osd_id_
      *is_alias = a.is_alias;
   }
 
-  return(err);      
+  return(err);
 }
 
 //***************************************************************************
@@ -929,21 +929,21 @@ int get_alloc_with_cap_db(DB_resource_t *dbr, int cap_type, Cap_t *cap, Allocati
   data.ulen = sizeof(Allocation_t);
   data.flags = DB_DBT_USERMEM;
 
-  dbr_lock(dbr); 
+  dbr_lock(dbr);
 
-  log_printf(10, "get_alloc_with_cap_db:  After lock\n"); 
+  log_printf(10, "get_alloc_with_cap_db:  After lock\n");
   int err = dbr->cap[cap_type]->get(dbr->cap[cap_type], NULL, &key, &data, 0);
   if (err != 0) {
      log_printf(0, "get_alloc_with_cap_db: cap=%s err = %s\n", cap->v, db_strerror(err));
-     dbr_unlock(dbr); 
+     dbr_unlock(dbr);
      return(err);
   }
 
 //apr_time_t t = ibp2apr_time(alloc->expiration);
-//debug_printf(10, "get_alloc_db: err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expireation=" TT "\n", 
+//debug_printf(10, "get_alloc_db: err=%d  id=" LU ", r=%s w=%s m=%s a.size=" LU " a.max_size=" LU " expireation=" TT "\n",
 //      err, alloc->id, alloc->caps[READ_CAP].v, alloc->caps[WRITE_CAP].v, alloc->caps[MANAGE_CAP].v, alloc->size, alloc->max_size, t);
 
-  dbr_unlock(dbr); 
+  dbr_unlock(dbr);
 
   return(err);
 }
@@ -960,7 +960,7 @@ int create_alloc_db(DB_resource_t *dbr, Allocation_t *a)
    char key[CAP_SIZE], b64[CAP_SIZE+1];
 //   osd_id_t id;
 
-   dbr_lock(dbr); 
+   dbr_lock(dbr);
 
    for (i=0; i<3; i++) {   //** Get the differnt caps
 //==      do {
@@ -973,7 +973,7 @@ int create_alloc_db(DB_resource_t *dbr, Allocation_t *a)
              } else {
                 a->caps[i].v[j] = b64[j];
              }
-         } 
+         }
          a->caps[i].v[CAP_SIZE] = '\0';
 //         free(b64);
 //===      } while (_lookup_id_with_cap_db(dbr, &(a->caps[i]), i, &id) != DB_NOTFOUND);
@@ -985,7 +985,7 @@ int create_alloc_db(DB_resource_t *dbr, Allocation_t *a)
       log_printf(0, "create_alloc_db:  Error in DB put - %s\n",db_strerror(err));
    }
 
-   dbr_unlock(dbr); 
+   dbr_unlock(dbr);
 
    return(err);
 }
@@ -1003,20 +1003,20 @@ DB_iterator_t *db_iterator_begin(DB_resource_t *dbr, DB *db, DB_ENV *dbenv, int 
 
    assert((it = (DB_iterator_t *)malloc(sizeof(DB_iterator_t))) != NULL);
    err = dbenv->txn_begin(dbenv, NULL, &(it->transaction), 0);
-   if (err != 0) {                     
-      log_printf(0, "db_iterator_begin: index=%d Transaction begin failed with err %s (%d)\n", index, db_strerror(err), err); 
-      return(NULL);                     
+   if (err != 0) {
+      log_printf(0, "db_iterator_begin: index=%d Transaction begin failed with err %s (%d)\n", index, db_strerror(err), err);
+      return(NULL);
     }
 
    err = db->cursor(db, it->transaction, &(it->cursor), 0);
-   if (err != 0) {                     
-      log_printf(0, "db_iterator_begin: index=%d cursor failed with err %s (%d)\n", index, db_strerror(err), err); 
-      return(NULL);                     
+   if (err != 0) {
+      log_printf(0, "db_iterator_begin: index=%d cursor failed with err %s (%d)\n", index, db_strerror(err), err);
+      return(NULL);
     }
 
 
    it->id = rand();
-   it->db_index = index; 
+   it->db_index = index;
    it->dbr = dbr;
 
    debug_printf(10, "db_iterator_begin:  id=%d\n", it->id);
@@ -1039,13 +1039,13 @@ int db_iterator_end(DB_iterator_t *it)
 //  dbr_unlock(it->dbr);
 
   err = it->transaction->commit(it->transaction, DB_TXN_SYNC);
-  if (err != 0) {             
-     log_printf(0, "db_iterator_end: Transaction commit failed with err %s (%d)\n", db_strerror(err), err); 
-  }                 
+  if (err != 0) {
+     log_printf(0, "db_iterator_end: Transaction commit failed with err %s (%d)\n", db_strerror(err), err);
+  }
 
   free(it);
 
-  
+
   return(err);
 }
 
@@ -1057,7 +1057,7 @@ int db_iterator_end(DB_iterator_t *it)
 //        is on the same record as another command is.
 //
 //  **** If the direction changes in mid-stride this command will not work***
-// 
+//
 //***************************************************************************
 
 int db_iterator_next(DB_iterator_t *it, int direction, Allocation_t *a)
@@ -1070,7 +1070,7 @@ int db_iterator_next(DB_iterator_t *it, int direction, Allocation_t *a)
 
   err = -1234;
 
-  memset(&key, 0, sizeof(DBT));  
+  memset(&key, 0, sizeof(DBT));
   memset(&data, 0, sizeof(DBT));
 
   key.flags = DB_DBT_USERMEM;
@@ -1083,7 +1083,7 @@ int db_iterator_next(DB_iterator_t *it, int direction, Allocation_t *a)
     case (DB_INDEX_ID):
         key.data = &id;
         key.ulen = sizeof(id);
- 
+
         err = it->cursor->get(it->cursor, &key, &data, direction);  //** Read the 1st
         if (err != 0) {
            log_printf(10, "db_iterator_next: key_index=%d err = %s\n", it->db_index, db_strerror(err));
@@ -1095,7 +1095,7 @@ int db_iterator_next(DB_iterator_t *it, int direction, Allocation_t *a)
     case (DB_INDEX_MANAGE):
         key.data = cap.v;
         key.ulen = sizeof(Cap_t);
- 
+
         err = it->cursor->get(it->cursor, &key, &data, direction);  //** Read the 1st
         if (err != 0) {
            log_printf(10, "db_iterator_next: key_index=%d err = %s\n", it->db_index, db_strerror(err));
@@ -1118,13 +1118,13 @@ int db_iterator_next(DB_iterator_t *it, int direction, Allocation_t *a)
         return(-1);
   }
 
-  return(0);   
+  return(0);
 }
 
 
 //***************************************************************************
 // expire_iterator - Returns a handle to iterate through the expire DB from
-//     oldest to newest times 
+//     oldest to newest times
 //***************************************************************************
 
 DB_iterator_t *expire_iterator(DB_resource_t *dbr)
@@ -1134,7 +1134,7 @@ DB_iterator_t *expire_iterator(DB_resource_t *dbr)
 
 //***************************************************************************
 // soft_iterator - Returns a handle to iterate through the soft DB from
-//     oldest to newest times 
+//     oldest to newest times
 //***************************************************************************
 
 DB_iterator_t *soft_iterator(DB_resource_t *dbr)
@@ -1143,7 +1143,7 @@ DB_iterator_t *soft_iterator(DB_resource_t *dbr)
 }
 
 //***************************************************************************
-// id_iterator - Returns a handle to iterate through all the id's 
+// id_iterator - Returns a handle to iterate through all the id's
 //***************************************************************************
 
 DB_iterator_t *id_iterator(DB_resource_t *dbr)
@@ -1152,7 +1152,7 @@ DB_iterator_t *id_iterator(DB_resource_t *dbr)
 }
 
 //***************************************************************************
-// cap_iterator - Returns a handle to iterate through the given cp index 
+// cap_iterator - Returns a handle to iterate through the given cp index
 //***************************************************************************
 
 DB_iterator_t *cap_iterator(DB_resource_t *dbr, int cap_type)
@@ -1170,11 +1170,11 @@ int set_expire_iterator(DB_iterator_t *dbi, ibp_time_t t, Allocation_t *a)
   DB_timekey_t tk;
   DBT key, data;
 
-  memset(&key, 0, sizeof(DBT)); 
-  memset(&data, 0, sizeof(DBT)); 
+  memset(&key, 0, sizeof(DBT));
+  memset(&data, 0, sizeof(DBT));
 
-  key.flags = DB_DBT_USERMEM; 
-  data.flags = DB_DBT_USERMEM; 
+  key.flags = DB_DBT_USERMEM;
+  data.flags = DB_DBT_USERMEM;
 
   key.ulen = sizeof(DB_timekey_t);
   key.data = fill_timekey(&tk, t, 0);

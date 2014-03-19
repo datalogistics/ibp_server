@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <stdint.h>
 #include <stdio.h>
@@ -64,7 +64,7 @@ void envelope_encode(const envelope_t *env, unsigned char *buffer)
    uint32_t val;
 
    memcpy(&(buffer[0]), &(env->cmd), 4);
-  
+
    val = env->size;
    buffer[4] = val % 256; val = val >> 8;
    buffer[5] = val % 256; val = val >> 8;
@@ -82,19 +82,19 @@ void envelope_set_size(envelope_t *env, uint32_t size) { env->size = size; }
 
 env_command_t envelope_get_command(envelope_t *env) { return(env->cmd); }
 void envelope_set_command(envelope_t *env, env_command_t cmd) { env->cmd = cmd; }
- 
-void envelope_set(envelope_t *env, const env_command_t cmd, uint32_t size) 
+
+void envelope_set(envelope_t *env, const env_command_t cmd, uint32_t size)
 {
   env->cmd = cmd;
   env->size = size;
 }
 
-void envelope_get(envelope_t *env, env_command_t *cmd, uint32_t *size) 
+void envelope_get(envelope_t *env, env_command_t *cmd, uint32_t *size)
 {
   *cmd = env->cmd;
   *size = env->size;
 }
- 
+
 void set_env_command(env_command_t *cmd, int b0, int b1, int b2, int b3)
 {
   cmd->byte[0] = b0;
@@ -103,8 +103,8 @@ void set_env_command(env_command_t *cmd, int b0, int b1, int b2, int b3)
   cmd->byte[3] = b3;
 }
 
-void set_env_command_uint32(env_command_t *cmd, uint32_t val) 
-{ 
+void set_env_command_uint32(env_command_t *cmd, uint32_t val)
+{
   cmd->byte[0] = val % 256; val = val >> 8;
   cmd->byte[1] = val % 256; val = val >> 8;
   cmd->byte[2] = val % 256; val = val >> 8;
@@ -119,15 +119,15 @@ void get_env_command(env_command_t *cmd, int *b0, int *b1, int *b2, int *b3)
   *b3 = cmd->byte[3];
 }
 
-uint32_t get_env_command_uint32(env_command_t *cmd) 
-{ 
+uint32_t get_env_command_uint32(env_command_t *cmd)
+{
  return(cmd->byte[0] + 256*cmd->byte[1] + 65536*cmd->byte[2] + 16777216*cmd->byte[3]);
 }
 
 
 //****************************************************************
 //  env_cmd_within_subnet - Verifies if the command is within
-//    the provided subnet range.  REturns 0 if true 
+//    the provided subnet range.  REturns 0 if true
 //****************************************************************
 
 int env_cmd_within_subnet(env_command_t *cmd, env_command_t *cmd_net, int bits)
@@ -151,8 +151,8 @@ int env_cmd_within_subnet(env_command_t *cmd, env_command_t *cmd_net, int bits)
 }
 
 //****************************************************************
-//  env_cmd_compare - similar to strcmp but for commands.  
-//      Returns -1 if cmd1 < cmd2 0 if cmd1 == cmd2 
+//  env_cmd_compare - similar to strcmp but for commands.
+//      Returns -1 if cmd1 < cmd2 0 if cmd1 == cmd2
 //      and +1 if cmd1 > cmd2.
 //****************************************************************
 

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //******************************************************************
 //******************************************************************
@@ -161,7 +161,7 @@ int reserve_pigeon_hole(pigeon_hole_t *ph)
      return(-1);
   }
 
-  for (i=0; i < ph->nholes; i++) {  
+  for (i=0; i < ph->nholes; i++) {
      slot = (ph->next_slot + i) % ph->nholes; //** Start scanning at the last hole
      if (ph->hole[slot] == 0) {
         ph->hole[slot] = 1;

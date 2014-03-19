@@ -70,10 +70,10 @@ int main(int argc, char **argv)
   n = NS_OK;
   while (n == NS_OK) {
      n = readline_netstream(ns, buffer, bufsize, dt);
-     if (n == NS_OK) {     
+     if (n == NS_OK) {
         if (strcmp(buffer, "END") == 0) {
            n = NS_OK+1;
-        } else {  
+        } else {
            printf("%s\n", buffer);
         }
      }

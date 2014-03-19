@@ -61,7 +61,7 @@ void parse_line(char *buffer, apr_time_t *t, osd_id_t *id, uint64_t *bytes)
   *id = 0;
   *bytes = 0;
 
-  sscanf(string_token(buffer, " ", &bstate, &fin), TT, t); 
+  sscanf(string_token(buffer, " ", &bstate, &fin), TT, t);
   sscanf(string_token(NULL, " ", &bstate, &fin), LU, id);
   sscanf(string_token(NULL, " ", &bstate, &fin), LU, bytes);
 
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
   int port = atoi(argv[i]); i++;
   char *rid = argv[i]; i++;
   mode = 0;
-  if (strcmp(argv[i], "abs") == 0) mode = 1; 
+  if (strcmp(argv[i], "abs") == 0) mode = 1;
   i++;
   it = apr2ibp_time(parse_time(argv[i])); i++;
   int count = atoi(argv[i]);
@@ -130,13 +130,13 @@ int main(int argc, char **argv)
 
   printf("n Time date ID  mb_max total_max_mb\n");
   printf("------------------------------------------------------------------------------------------------------\n");
-  err = 0;  
+  err = 0;
   i = 0;
   while (err != -1) {
      buffer[0] = '\0';
      err = readline_netstream(ns, buffer, bufsize, dt);
 //printf("err=%d buf=%s\n", err, buffer);
-     if (err == NS_OK) {     
+     if (err == NS_OK) {
         if (strcmp("END", buffer) == 0) { //** Finished
            err = -1;
         } else {

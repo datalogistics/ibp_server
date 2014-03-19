@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*********************************************************************
 //*********************************************************************
@@ -69,7 +69,7 @@ void ns_config_phoebus(NetStream_t *ns, phoebus_t *path, int tcpsize)
 
 
 //*********************************************************************
-// phoebus_set_peer - Gets the remote sockets hostname 
+// phoebus_set_peer - Gets the remote sockets hostname
 //*********************************************************************
 
 void phoebus_set_peer(net_sock_t *nsock, char *address, int add_size)
@@ -124,7 +124,7 @@ int phoebus_close(net_sock_t *nsock)
 
 long int phoebus_write(net_sock_t *nsock, const void *buf, size_t count, Net_timeout_t tm)
 {
-  network_phoebus_t *sock = (network_phoebus_t *)nsock;   
+  network_phoebus_t *sock = (network_phoebus_t *)nsock;
 
   if (sock == NULL) return(-1);   //** If closed return
 
@@ -137,7 +137,7 @@ long int phoebus_write(net_sock_t *nsock, const void *buf, size_t count, Net_tim
 
 long int phoebus_read(net_sock_t *nsock, void *buf, size_t count, Net_timeout_t tm)
 {
-  network_phoebus_t *sock = (network_phoebus_t *)nsock;   
+  network_phoebus_t *sock = (network_phoebus_t *)nsock;
 
   if (sock == NULL) return(-1);   //** If closed return
 
@@ -178,8 +178,8 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
    sock->family = AF_INET;
    i = (sock->family == AF_INET) ? 4 : 16;
    memcpy(&(sock->address[0]), in_addr, i);
-   
-   if (sock->p_path != NULL) { 
+
+   if (sock->p_path != NULL) {
       sock->sess = xsp_session();
 
       if (sock->tcpsize > 0) {
@@ -191,12 +191,12 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
             log_printf(0, "phoebus_connect: Can't configure SO_RCVBUF to %d!\n", sock->tcpsize);
          }
       }
-      
+
       for (i=0; i<sock->p_path->p_count; i++) {
             log_printf(15, "phoebus_connect: hop %d : %s\n", i, sock->p_path->path[i]);
 	    xsp_sess_appendchild(sock->sess, sock->p_path->path[i], XSP_HOP_NATIVE);
       }
-      
+
       xsp_sess_appendchild(sock->sess, dest, 0);
 
       sock->sec = xsp_sess_new_security("ibp", NULL, "somecert.pem", "somekey.pem", NULL);
@@ -204,7 +204,7 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
 	    fprintf(stderr, "could not set requested xsp security method\n");
 	    return (1);
       }
-      
+
       if (xsp_connect(sock->sess)) {
 	    log_printf(0, "phoebus_connect: failed as could not connect to %s\n", dest);
 	    return (1);
@@ -214,8 +214,8 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
 	  fprintf(stderr, "phoebus_connect: failed to signal infinite length SPDU\n");
 	  return (1);
       }
-      
-      sfd = xsp_get_session_socket(sock->sess);      
+
+      sfd = xsp_get_session_socket(sock->sess);
    }
    else {
       log_printf(0, "phoebus_connect: failed as called without valid phoebus path!\n");
@@ -230,7 +230,7 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
 
 
    //Configure the socket for non-blocking I/O
-   if ((err = fcntl(sfd, F_SETFL, O_NONBLOCK)) == -1) {  
+   if ((err = fcntl(sfd, F_SETFL, O_NONBLOCK)) == -1) {
       log_printf(0, "phoebus_connect: failed as can't configure connection for non-blocking I/O!");
    }
 
@@ -258,7 +258,7 @@ int phoebus_connect(net_sock_t *nsock, const char *hostname, int port, Net_timeo
 }
 
 //*********************************************************************
-// ns_config_phoebus - Configure the connection to use "phoebus" sockets 
+// ns_config_phoebus - Configure the connection to use "phoebus" sockets
 //*********************************************************************
 
 void ns_config_phoebus(NetStream_t *ns, phoebus_t *path, int tcpsize)
@@ -266,7 +266,7 @@ void ns_config_phoebus(NetStream_t *ns, phoebus_t *path, int tcpsize)
   network_phoebus_t *sock = (network_phoebus_t *)malloc(sizeof(network_phoebus_t));
 
   _ns_init(ns, 0);
-  
+
   ns->sock_type = NS_TYPE_PHOEBUS;
   ns->sock = (net_sock_t *)sock;
 

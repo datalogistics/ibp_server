@@ -25,13 +25,13 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*** Handles statfs header mangling
 
 #ifdef _DARWIN
-#include <sys/param.h>     
-#include <sys/mount.h>     
+#include <sys/param.h>
+#include <sys/mount.h>
 #else
 #include <sys/vfs.h>
 #endif

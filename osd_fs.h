@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //**************************************************
 //
@@ -64,7 +64,7 @@ http://www.accre.vanderbilt.edu
 
 #define XFS_MOUNT 1
 
-typedef struct { 
+typedef struct {
   osd_id_t id;
   int      block;
 } __attribute__((__packed__)) fs_cache_key_t;

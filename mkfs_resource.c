@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include "allocation.h"
 #include "resource.h"
@@ -46,7 +46,7 @@ int main(int argc, const char **argv)
       printf("device - Device to be used for the resource.\n");
       printf("db_location - Base directory to use for storing the DBes for the resource.\n");
       printf("max_mbytes  - Max number of MB to use.  If missing it defaults to the entire disk.\n");
-      printf("\n");      
+      printf("\n");
       return(1);
    }
 

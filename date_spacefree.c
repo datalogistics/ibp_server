@@ -100,17 +100,17 @@ int main(int argc, char **argv)
      printf("Time date Ttotal mb_max Ntotal total_max_mb\n");
   }
   printf("------------------------------------------------------------------------------------------------------\n");
-  err = 0;  
+  err = 0;
   while (err != -1) {
      buffer[0] = '\0';
      err = readline_netstream(ns, buffer, bufsize, dt);
 //printf("err=%d buf=%s\n", err, buffer);
-     if (err == NS_OK) {     
+     if (err == NS_OK) {
         if (strcmp("END", buffer) == 0) { //** Finished
            err = -1;
         } else {
           parse_line(buffer, &t, &a_count, &p_count, &bytes_used, &bytes);
-          apr_ctime(print_time, ibp2apr_time(t)); 
+          apr_ctime(print_time, ibp2apr_time(t));
           count = a_count + p_count;
           a_total = a_total + a_count; p_total = p_total + p_count;
           total_bytes_used = total_bytes_used + bytes_used;
@@ -123,10 +123,10 @@ int main(int argc, char **argv)
           fb4 = total_bytes  * units;
 
           if (print_full) {
-              printf(TT " * %s " LU " * " LU " * " LU " * %lf * %lf * " LU " * " LU " * " LU " * %lf * %lf\n", 
+              printf(TT " * %s " LU " * " LU " * " LU " * %lf * %lf * " LU " * " LU " * " LU " * %lf * %lf\n",
                       t, print_time, a_count, p_count, count, fb1, fb2, a_total, p_total, total, fb3, fb4);
           } else {
-             printf(TT " * %s * " LU " * %lf * " LU " * %lf\n", 
+             printf(TT " * %s * " LU " * %lf * " LU " * %lf\n",
                      t, print_time, count, fb2, total,fb4);
           }
         }

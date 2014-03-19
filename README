@@ -68,7 +68,7 @@ interfaces=host1:port1;host2:port2;
 substitute_map=interface_ip_1:substitute_ip_1;interface_ip_2:substitute_ip_2;
   If ibp_servers are behind NAT, then they will send bind_ip in the CAP instead of client
   rechable ip. This causes problem if client tries to use bind_ip from CAP to contact the
-  server for the next command. i.e. ibp_alloc then ibp_store 
+  server for the next command. i.e. ibp_alloc then ibp_store
   This substitution mapping allows ibp_server to send substitute ip instead of bind ip. This
   should be used to replace default interface ip with public ip.
 
@@ -178,8 +178,8 @@ return_cap_id=[0|1]
 -------------------------------
 gateway=phoebus_host1/port1,phoebus_host2/port2,....
    This is the default Phoebus path to use if you have phoebus compatible binary. For non phoebus
-   binary, this option does not matter and all network operation commands will user normal socket. 
-   For Phoebus compatible binary, if this option is not specified, then user must specify phoebus path 
+   binary, this option does not matter and all network operation commands will user normal socket.
+   For Phoebus compatible binary, if this option is not specified, then user must specify phoebus path
    in the command otherwise command will fail.
    This is the only way to specify the gateway, old deprecated way of setting environment variables like
    PHOEBUS_GW or PHOEBUS_PATH are not supported.

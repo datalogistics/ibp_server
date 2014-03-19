@@ -14,7 +14,7 @@ int main(int argc, char **argv)
   char *data;
   int n, i, repcount;
   chksum_t cs;
-  
+
   if (argc < 4) {
      printf("chksum_test type data rep_count\n");
      return(0);
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
   i++;
 
   data = argv[i]; i++;
-  
+
 
   repcount = atoi(argv[i]); i++;
 

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include "allocation.h"
 
@@ -35,7 +35,7 @@ http://www.accre.vanderbilt.edu
 
 void set_alloc_timestamp(Allocation_timestamp_t *ts, Allocation_address_t *add);
 void set_rw_ts(Allocation_rw_ts_t *ts, int *slot, Allocation_address_t *add, uint64_t offset, uint64_t size, osd_id_t id);
-void set_manage_ts(Allocation_manage_ts_t *ts, int *slot, Allocation_address_t *add, int cmd, int subcmd, 
+void set_manage_ts(Allocation_manage_ts_t *ts, int *slot, Allocation_address_t *add, int cmd, int subcmd,
         int reliability, uint32_t expiration, uint64_t size, osd_id_t pid);
 
 
