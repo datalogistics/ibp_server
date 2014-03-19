@@ -12,7 +12,7 @@ int main(int argc, const char **argv)
 
   FILE *fd1 = fopen("dummy.txt", "w+"); fclose(fd1); fd1 = fopen("dummy.txt", "r+");
   FILE *fd2 = fopen("dummy.txt", "r+");
-  
+
   text="0123456789";
   i = fwrite(text, 1, strlen(text), fd1); fflush(fd1);
 

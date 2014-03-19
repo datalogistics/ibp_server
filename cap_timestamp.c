@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <string.h>
 #include <unistd.h>
@@ -72,7 +72,7 @@ void set_rw_ts(Allocation_rw_ts_t *tsarray, int *slot, Allocation_address_t *add
 // set_manage_ts - Stores a timestamp
 //*************************************************************************
 
-void set_manage_ts(Allocation_manage_ts_t *tsarray, int *slot, Allocation_address_t *add, int cmd, int subcmd, 
+void set_manage_ts(Allocation_manage_ts_t *tsarray, int *slot, Allocation_address_t *add, int cmd, int subcmd,
         int reliability, uint32_t expiration, uint64_t size, osd_id_t pid)
 {
   Allocation_manage_ts_t *ts;

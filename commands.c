@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include "ibp_server.h"
 #include "log.h"
@@ -49,7 +49,7 @@ void generate_command_acl(char *peer_name, int *acl)
      } else {
         acl[i] = 0;
      }
-  }  
+  }
 }
 
 
@@ -58,8 +58,8 @@ void generate_command_acl(char *peer_name, int *acl)
 //  If a collision occurs with a command occurs the program aborts.
 //*************************************************************************
 
-void add_command(int cmd, const char *cmd_keyword, inip_file_t *kf,  
-   void (*load_config)(inip_file_t *keyfile), 
+void add_command(int cmd, const char *cmd_keyword, inip_file_t *kf,
+   void (*load_config)(inip_file_t *keyfile),
    void (*init)(void),
    void (*destroy)(void),
    int (*print_cmd)(char *buffer, int *used, int nbytes),
@@ -80,7 +80,7 @@ void add_command(int cmd, const char *cmd_keyword, inip_file_t *kf,
    if (command->used != 0) {
       printf("add_command: Command collision for slot %d!\n", cmd);
       fflush(stdout);
-      abort();     
+      abort();
    }
 
    //*** Ok now install it in the table ***
@@ -118,7 +118,7 @@ void add_command(int cmd, const char *cmd_keyword, inip_file_t *kf,
 //  print_command_config - Prints the config for all commands
 //*************************************************************************
 
-int print_command_config(char *buffer, int *used, int nbytes) 
+int print_command_config(char *buffer, int *used, int nbytes)
 {
 
   int i;
@@ -140,7 +140,7 @@ int print_command_config(char *buffer, int *used, int nbytes)
   if (global_config->server.default_acl != NULL) {
     append_printf(buffer, used, nbytes, "default = %s\n", global_config->server.default_acl);
   }
-  
+
   for (i=0; i<=COMMAND_TABLE_MAX; i++) {
      cmd = &(global_config->command[i]);
      if (cmd->used == 1) {
@@ -162,7 +162,7 @@ int print_command_config(char *buffer, int *used, int nbytes)
 void initialize_commands() {
   int i;
   command_t *cmd;
-  
+
   for (i=0; i<=COMMAND_TABLE_MAX; i++) {
      cmd = &(global_config->command[i]);
      if (cmd->used == 1) {
@@ -179,7 +179,7 @@ void initialize_commands() {
 void destroy_commands() {
   int i;
   command_t *cmd;
-  
+
   for (i=0; i<=COMMAND_TABLE_MAX; i++) {
      cmd = &(global_config->command[i]);
      if (cmd->used == 1) {
@@ -187,5 +187,5 @@ void destroy_commands() {
         if (cmd->acl != NULL) free(cmd->acl);
         destroy_subnet_list(cmd->subnet);
      }
-  }  
+  }
 }

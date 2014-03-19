@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <stdint.h>
 #include <stdio.h>
@@ -151,7 +151,7 @@ int alog_append_internal_get_config(int tid);
 int alog_append_internal_expire_list(int tid, int ri, apr_time_t start_time, int max_rec);
 int alog_append_internal_date_free(int tid, int ri, uint64_t size);
 int alog_append_dd_copy(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id,
-        uint64_t size, uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, int port, 
+        uint64_t size, uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, int port,
         int family, const char *address, const char *key, const char *typekey);
 int alog_append_read(int tid, int ri, osd_id_t pid, osd_id_t id, uint64_t offset, uint64_t size);
 int alog_append_write(int tid, int cmd, int ri, osd_id_t pid, osd_id_t id, uint64_t offset, uint64_t size);
@@ -213,6 +213,6 @@ void activity_log_close(activity_log_t *alog);
 
 
 
- 
 
-   
+
+

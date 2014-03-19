@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <apr_time.h>
 #include "chksum.h"
@@ -61,35 +61,35 @@ void print_manage_history(char *buffer, int *used, int nbytes, Allocation_manage
      t = ibp2apr_time(ts->ts.time);
      if (t != 0) {
         switch (ts->subcmd) {
-          case IBP_PROBE: subcmd = "IBP_PROBE   "; break;        
-          case IBP_INCR : subcmd = "IBP_INCR    "; break;        
-          case IBP_DECR : subcmd = "IBP_DECR    "; break;        
-          case IBP_CHNG : subcmd = "IBP_CHNG    "; break;        
-          case IBP_TRUNCATE : subcmd = "IBP_TRUNCATE"; break;        
-          default : 
+          case IBP_PROBE: subcmd = "IBP_PROBE   "; break;
+          case IBP_INCR : subcmd = "IBP_INCR    "; break;
+          case IBP_DECR : subcmd = "IBP_DECR    "; break;
+          case IBP_CHNG : subcmd = "IBP_CHNG    "; break;
+          case IBP_TRUNCATE : subcmd = "IBP_TRUNCATE"; break;
+          default :
              sprintf(subbuf, "UNKNOWN(%d)", ts->subcmd);
              subcmd = subbuf;
         }
-    
+
         switch (ts->cmd) {
-          case IBP_MANAGE:         cmd = "IBP_MANAGE        "; break;        
-          case IBP_ALIAS_MANAGE:   cmd = "IBP_ALIAS_MANAGE  "; break;        
+          case IBP_MANAGE:         cmd = "IBP_MANAGE        "; break;
+          case IBP_ALIAS_MANAGE:   cmd = "IBP_ALIAS_MANAGE  "; break;
           case IBP_RENAME:         cmd = "IBP_RENAME        "; subcmd = "        "; break;
           case IBP_SPLIT_ALLOCATE: cmd = "IBP_SPLIT_ALLOCATE"; subcmd = "        "; break;
           case IBP_ALIAS_ALLOCATE: cmd = "IBP_ALIAS_ALLOCATE"; subcmd = "        "; break;
-          default : 
+          default :
              sprintf(cmdbuf, "UNKNOWN(%d)", ts->cmd);
              cmd = cmdbuf;
         }
         switch (ts->reliability) {
-          case ALLOC_HARD: rel = "IBP_HARD"; break;        
+          case ALLOC_HARD: rel = "IBP_HARD"; break;
           case ALLOC_SOFT: rel = "IBP_SOFT"; break;
           default :
              n = ts->reliability;
              sprintf(relbuf, "UNKNOWN(%d)", n);
              rel = relbuf;
         }
-       
+
         apr_ctime(print_time, t);
         t2 = ibp2apr_time(ts->expiration);
         apr_ctime(print_time2, t2);
@@ -144,21 +144,21 @@ void print_allocation(char *buffer, int *used, int nbytes, Allocation_t *a, Allo
 
   append_printf(buffer, used, nbytes, "Allocation summary\n");
   append_printf(buffer, used, nbytes, "-----------------------------------------\n");
-  append_printf(buffer, used, nbytes, "ID: " LU "\n", a->id); 
-  append_printf(buffer, used, nbytes, "Master ID: " LU " (only used if split)\n", a->split_parent_id); 
+  append_printf(buffer, used, nbytes, "ID: " LU "\n", a->id);
+  append_printf(buffer, used, nbytes, "Master ID: " LU " (only used if split)\n", a->split_parent_id);
   t = ibp2apr_time(a->creation_ts.time);
   apr_ctime(print_time, t);
   address2ipdecstr(hostip, a->creation_ts.host.ip, a->creation_ts.host.atype);
   append_printf(buffer, used, nbytes, "Created on: " TT " -- %s by host %s\n", t, print_time, hostip);
 
   address2ipdecstr(hostip, a->creation_cert.ca_host.ip, a->creation_cert.ca_host.atype);
-  append_printf(buffer, used, nbytes, "Certifed by %s with CA id: " LU ":" LU ":" LU ":" LU " (", hostip, 
+  append_printf(buffer, used, nbytes, "Certifed by %s with CA id: " LU ":" LU ":" LU ":" LU " (", hostip,
        a->creation_cert.id[0], a->creation_cert.id[1], a->creation_cert.id[2], a->creation_cert.id[3]);
   for (i=0; i<32-1; i++) { n = (unsigned char)(a->creation_cert.cid[i]); append_printf(buffer, used, nbytes, "%d.", n); };
-  n = (unsigned char)(a->creation_cert.cid[15]); append_printf(buffer, used, nbytes, "%d)\n", n); 
-  
+  n = (unsigned char)(a->creation_cert.cid[15]); append_printf(buffer, used, nbytes, "%d)\n", n);
+
   t = ibp2apr_time(a->expiration);
-  apr_ctime(print_time, t); 
+  apr_ctime(print_time, t);
   if (apr_time_now() > t) {
      append_printf(buffer, used, nbytes, "Expiration: " TT " -- %s (EXPIRED)\n", t, print_time);
   } else {
@@ -206,9 +206,9 @@ void print_allocation(char *buffer, int *used, int nbytes, Allocation_t *a, Allo
      i = chksum_size(&cs, CHKSUM_DIGEST_BIN);
      n = chksum_size(&cs, CHKSUM_DIGEST_HEX);
      append_printf(buffer, used, nbytes, "State: %d\n", state);
-     append_printf(buffer, used, nbytes, "Chksum Type: %s(%d)  Binary length: %d   Hex length: %d\n", chksum_name(&cs), 
+     append_printf(buffer, used, nbytes, "Chksum Type: %s(%d)  Binary length: %d   Hex length: %d\n", chksum_name(&cs),
         cs_type, i, n);
-     append_printf(buffer, used, nbytes, "Chksum Header size: " I64T "   Block size: " I64T "\n", hbs, bs);      
+     append_printf(buffer, used, nbytes, "Chksum Header size: " I64T "   Block size: " I64T "\n", hbs, bs);
   } else {
      append_printf(buffer, used, nbytes, "State: %d\n", state);
      append_printf(buffer, used, nbytes, "Chksum Type: %s(%d)\n", chksum_name(&cs), CHKSUM_NONE);

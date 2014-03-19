@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //************************************************************************
 //************************************************************************
@@ -70,7 +70,7 @@ typedef struct {
   ibp_off_t total_len;
   ibp_off_t transfer_total;
 //  ibp_off_t curr_offset;
-//  ibp_off_t curr_nleft;  
+//  ibp_off_t curr_nleft;
   iovec_ele_t vec[IOVEC_MAX];
 }  iovec_t;
 
@@ -94,7 +94,7 @@ typedef struct {          //**Allocate args
    rid_t     rid;            //RID to use (0=don't care)
    Cap_t     master_cap;     //Master cap for IBP_SPLIT_ALLOCATE
    char      crid[128];      //** Character version of the RID for querying
-   int       cs_type;        //** disk Chksum type 
+   int       cs_type;        //** disk Chksum type
    ibp_off_t cs_blocksize;   //** disk Chksum blocksize
    Allocation_t a;           //Allocation being created
 } Cmd_allocate_t;
@@ -114,7 +114,7 @@ typedef struct {          //** Status Args
   int   start_time;         //** Start time used by status call
   int   subcmd;            //** Subcommand
   long int new_duration;      //** New max duration for allocation
-  char password[PASSLEN];  //** Password  
+  char password[PASSLEN];  //** Password
 } Cmd_status_t;
 
 typedef struct {
@@ -122,8 +122,8 @@ typedef struct {
   char    crid[128];       //** Character version of the RID for querying
   char    cid[64];         //** Character version of the ID for querying
   Cap_t   cap;             //** Manage cap of original allocation
-  ibp_off_t   offset;          //** Offset into original allocation 
-  ibp_off_t   len;             //** Length in original alloc if offset=len=0 then full range is given  
+  ibp_off_t   offset;          //** Offset into original allocation
+  ibp_off_t   len;             //** Length in original alloc if offset=len=0 then full range is given
   uint32_t expiration;       //** Duration of alias allocation
 } Cmd_alias_alloc_t;
 
@@ -189,9 +189,9 @@ typedef struct {
   osd_id_t  id;            //** Object id
   char    crid[128];        //** Character version of the RID for querying
   char    cid[64];         //** Character version of the ID for querying
-  Resource_t *r;           //** Resource being used 
+  Resource_t *r;           //** Resource being used
   int     key_type;
-  Cap_t   cap; 
+  Cap_t   cap;
   int     print_blocks;
   int64_t   offset;          //** Offset into allocation to start reading
   uint64_t  len;             //** Length of read
@@ -203,25 +203,25 @@ typedef struct {
   int   trash_type;
   char    crid[128];        //** Character version of the RID for querying
   char    trash_id[1024];  //** Trash file id
-} Cmd_internal_undelete_t;  
+} Cmd_internal_undelete_t;
 
 typedef struct {
   rid_t rid;                //** RID for rescanning or 0 if all
   char    crid[128];        //** Character version of the RID for querying
-} Cmd_internal_rescan_t;  
+} Cmd_internal_rescan_t;
 
 typedef struct {
   rid_t rid;                //** RID for rescanning or 0 if all
   char    crid[128];        //** Character version of the RID for querying
   int   force_rebuild;      //** Only used for mount command
   int   delay;              //** Only used for umount command
-} Cmd_internal_mount_t;  
+} Cmd_internal_mount_t;
 
 typedef struct {
   rid_t rid;                //** RID for setting/getting the mode
   char    crid[128];        //** Character version of the RID for querying
   int   mode;               //** New RWM mode
-} Cmd_internal_mode_t;  
+} Cmd_internal_mode_t;
 
 
 typedef union {            //** Union of command args

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //******************************************************************
 //******************************************************************
@@ -81,14 +81,14 @@ typedef struct {
 typedef struct {  //** R/W ops
   uint64_t offset;
   uint64_t size;
-  osd_id_t id;   
+  osd_id_t id;
   Allocation_timestamp_t ts;
 } Allocation_rw_ts_t;
 
 typedef struct {  //** Manage ops
   short int cmd;
   short int subcmd;
-  uint32_t expiration;    
+  uint32_t expiration;
   uint64_t reliability;   //** This duals as the offset for IBP_ALIAS_ALLOCATE/MANAGE calls
   uint64_t size;          //** This duals as the alias size for IBP_ALIAS_ALLOCATE/MANAGE calls
   osd_id_t id;    //** This is the alias ID for a IBP_ALIAS_ALLOCATE call

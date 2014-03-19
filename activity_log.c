@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*** Make sure I get the limits macros
 #define __STDC_LIMIT_MACROS
@@ -86,7 +86,7 @@ http://www.accre.vanderbilt.edu
       _alog_send_data(); \
    }
 
-void _alog_send_data();  
+void _alog_send_data();
 
 //***** Global variables used by singleton *******
 apr_thread_mutex_t  *_alog_lock = NULL;
@@ -101,7 +101,7 @@ size_t _alog_size;
 int    _alog_count = 0;
 Stack_t *_alog_pending_stack = NULL;
 
-const env_command_t ECMD_ALOG_SEND = {{{0,0,2,0}}}; 
+const env_command_t ECMD_ALOG_SEND = {{{0,0,2,0}}};
 
 const char *_ibp_error_map[61];
 const char *_ibp_subcmd_map[45];
@@ -154,7 +154,7 @@ int alog_append_internal_get_config(int tid)
    alog_checksize();
 
    _alog->append_header(_alog->fd, tid, ALOG_REC_INT_GET_CONFIG);
-   
+
    alog_unlock();
    return(0);
 }
@@ -176,7 +176,7 @@ int alog_read_internal_get_config(activity_log_t *alog, int cmd, FILE *outfd)
 
 typedef struct {
    uint32_t max_rec;
-   uint64_t time;   
+   uint64_t time;
    uint8_t ri;
 } __attribute__((__packed__)) _alog_internal_expire_list_t;
 
@@ -197,7 +197,7 @@ int alog_append_internal_expire_list(int tid, int ri, apr_time_t start_time, int
 
    _alog->append_header(_alog->fd, tid, ALOG_REC_INT_EXPIRE_LIST);
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_int_expire_list: Error with write!\n");
-   
+
    alog_unlock();
    return(0);
 }
@@ -251,7 +251,7 @@ int alog_append_internal_date_free(int tid, int ri, uint64_t size)
 
    _alog->append_header(_alog->fd, tid, ALOG_REC_INT_DATE_FREE);
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_int_date_free: Error with write!\n");
-   
+
    alog_unlock();
    return(0);
 }
@@ -302,7 +302,7 @@ int alog_append_validate_get_chksum(int tid, int command, int ri, osd_id_t pid, 
 
    _alog->append_header(_alog->fd, tid, ALOG_REC_VALIDATE_GET_CHKSUM);
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_validate_get_chksum: Error with write!\n");
-   
+
    alog_unlock();
    return(0);
 }
@@ -425,7 +425,7 @@ int _alog_append_cap(int port, int family, const char *address, const char *key,
   awrite_ul(_alog->fd, address, n, "alog_append_cap: Error with write!\n");
   awrite_ul(_alog->fd, key, a.key_size, "alog_append_cap: Error with write!\n");
   awrite_ul(_alog->fd, typekey, a.typekey_size, "alog_append_cap: Error with write!\n");
-  
+
   return(0);
 }
 
@@ -445,13 +445,13 @@ int _alog_read_cap(activity_log_t *alog, int *port, int *family, char *address, 
   aread(alog->fd, address, n, "alog_read_cap: Error with read!\n");
   aread(alog->fd, key, a.key_size, "alog_read_cap: Error with read!\n");
   aread(alog->fd, typekey, a.typekey_size, "alog_read_cap: Error with read!\n");
-  
+
   return(0);
 }
 
 //------------------------------------------------------------------------
 
-int _alog_append_alias_copy32(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id, uint64_t size, 
+int _alog_append_alias_copy32(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id, uint64_t size,
      uint64_t offset, uint64_t off2, int write_mode, int ctype, char *path, int port, int family, const char *address, const char *key, const char *typekey)
 {
    _alog_alias_copy_append32_t a;
@@ -465,7 +465,7 @@ int _alog_append_alias_copy32(int cmd, int tid, int ri, osd_id_t pid, osd_id_t i
    a.size = size;
    a.ri = ri;
    a.offset = offset;
-   
+
    offset2 = off2;
    ca.cmd = cmd;
    ca.wmode = write_mode;
@@ -507,22 +507,22 @@ int alog_read_alias_copy32(activity_log_t *alog, int cmd, FILE *outfd)
      sprintf(path, "PATH:%s", tmp);
    } else {
      path[0] = '\0';
-   }    
+   }
 
    if (outfd != NULL) {
       if (a.ri == 255) a.ri = alog->nres;
       offset2 = off32; offset = a.offset; size = a.size;
       address2ipdecstr(host, address, family);
-      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s pid:" LU " id:" LU " offset:" LU " size:" LU 
+      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s pid:" LU " id:" LU " offset:" LU " size:" LU
          " host:%s:%d key:%s typekey:%s offset2:" LU "\n",
-         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name, 
+         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name,
          a.pid, a.id, offset, size, host, port, key, typekey, offset2);
    }
 
    return(0);
 }
 
-int _alog_append_alias_copy64(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id, uint64_t size, 
+int _alog_append_alias_copy64(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id, uint64_t size,
      uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, int port, int family, const char *address, const char *key, const char *typekey)
 {
    _alog_alias_copy_append64_t a;
@@ -569,18 +569,18 @@ int alog_read_alias_copy64(activity_log_t *alog, int cmd, FILE *outfd)
    _alog_read_cap(alog, &port, &family, address, key, typekey);
 
    if (ca.ctype != IBP_TCP) {
-     _alog_read_string16(alog, &nbytes, tmp);   
+     _alog_read_string16(alog, &nbytes, tmp);
      sprintf(path, "PATH:%s", tmp);
    } else {
      path[0] = '\0';
-   }    
+   }
 
    if (outfd != NULL) {
       if (a.ri == 255) a.ri = alog->nres;
       address2ipdecstr(host, address, family);
-      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s pid:" LU " id:" LU " offset:" LU " size:" LU 
+      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s pid:" LU " id:" LU " offset:" LU " size:" LU
          " host:%s:%d key:%s typekey:%s offset2:" LU "\n",
-         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name, 
+         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name,
          a.pid, a.id, a.offset, a.size, host, port, key, typekey, offset2);
    }
 
@@ -589,7 +589,7 @@ int alog_read_alias_copy64(activity_log_t *alog, int cmd, FILE *outfd)
 
 //------------------------------------------------------------------------
 
-int _alog_append_copy64(int cmd, int tid, int ri, osd_id_t id, uint64_t size, 
+int _alog_append_copy64(int cmd, int tid, int ri, osd_id_t id, uint64_t size,
      uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, int port, int family, const char *address, const char *key, const char *typekey)
 {
    _alog_copy_append64_t a;
@@ -635,18 +635,18 @@ int alog_read_copy64(activity_log_t *alog, int cmd, FILE *outfd)
    _alog_read_cap(alog, &port, &family, address, key, typekey);
 
    if (ca.ctype != IBP_TCP) {
-     _alog_read_string16(alog, &nbytes, tmp);   
+     _alog_read_string16(alog, &nbytes, tmp);
      sprintf(path, "PATH:%s", tmp);
    } else {
      path[0] = '\0';
-   }    
+   }
 
    if (outfd != NULL) {
       if (a.ri == 255) a.ri = alog->nres;
       address2ipdecstr(host, address, family);
-      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s id:" LU " offset:" LU " size:" LU 
+      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s id:" LU " offset:" LU " size:" LU
          " host:%s:%d key:%s typekey:%s offset2:" LU "\n",
-         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name, 
+         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name,
          a.id, a.offset, a.size, host, port, key, typekey, offset2);
    }
 
@@ -656,7 +656,7 @@ int alog_read_copy64(activity_log_t *alog, int cmd, FILE *outfd)
 
 //------------------------------------------------------------------------
 
-int _alog_append_copy32(int cmd, int tid, int ri, osd_id_t id, uint64_t size, 
+int _alog_append_copy32(int cmd, int tid, int ri, osd_id_t id, uint64_t size,
      uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, int port, int family, const char *address, const char *key, const char *typekey)
 {
    _alog_copy_append32_t a;
@@ -706,19 +706,19 @@ int alog_read_copy32(activity_log_t *alog, int cmd, FILE *outfd)
    _alog_read_cap(alog, &port, &family, address, key, typekey);
 
    if (ca.ctype != IBP_TCP) {
-     _alog_read_string16(alog, &nbytes, tmp);   
+     _alog_read_string16(alog, &nbytes, tmp);
      sprintf(path, "PATH:%s", tmp);
    } else {
      path[0] = '\0';
-   }    
+   }
 
    if (outfd != NULL) {
       if (a.ri == 255) a.ri = alog->nres;
       offset2 = off32; offset = a.offset; size = a.size;
       address2ipdecstr(host, address, family);
-      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s id:" LU " offset:" LU " size:" LU 
+      fprintf(outfd, "CMD:%s ctype:%s %s wmode:%s RID:%s id:" LU " offset:" LU " size:" LU
          " host:%s:%d key:%s typekey:%s offset2:" LU "\n",
-         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name, 
+         _ibp_cmd_map[ca.cmd], _ibp_ctype_map[ca.ctype], path, _ibp_wmode_map[ca.wmode], alog->rl_map[a.ri].name,
          a.id, offset, size, host, port, key, typekey, offset2);
    }
 
@@ -728,8 +728,8 @@ int alog_read_copy32(activity_log_t *alog, int cmd, FILE *outfd)
 //------------------------------------------------------------------------
 //------------------------------------------------------------------------
 
-int alog_append_dd_copy(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id, 
-       uint64_t size, uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path, 
+int alog_append_dd_copy(int cmd, int tid, int ri, osd_id_t pid, osd_id_t id,
+       uint64_t size, uint64_t offset, uint64_t offset2, int write_mode, int ctype, char *path,
        int port, int family, const char *address, const char *key, const char *typekey)
 {
 
@@ -800,7 +800,7 @@ int _alog_append_read32(int tid, int ri, osd_id_t id, uint64_t offset, uint64_t 
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -842,7 +842,7 @@ int _alog_append_read64(int tid, int ri, osd_id_t id, uint64_t offset, uint64_t 
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -886,7 +886,7 @@ int _alog_append_alias_read32(int tid, int ri, osd_id_t pid, osd_id_t id, uint64
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -935,7 +935,7 @@ int _alog_append_alias_read64(int tid, int ri, osd_id_t pid, osd_id_t id, uint64
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1059,7 +1059,7 @@ int _alog_append_write32(int tid, int cmd, int ri, osd_id_t id, uint64_t offset,
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1101,7 +1101,7 @@ int _alog_append_write64(int tid, int cmd, int ri, osd_id_t id, uint64_t offset,
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1141,7 +1141,7 @@ int _alog_append_write_append32(int tid, int cmd, int ri, osd_id_t id, uint64_t 
    a.id = id;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1182,7 +1182,7 @@ int _alog_append_write_append64(int tid, int cmd, int ri, osd_id_t id, uint64_t 
    a.id = id;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1225,7 +1225,7 @@ int _alog_append_alias_write32(int tid, int cmd, int ri, osd_id_t pid, osd_id_t 
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1268,7 +1268,7 @@ int _alog_append_alias_write64(int tid, int cmd, int ri, osd_id_t pid, osd_id_t 
    a.offset = offset;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1309,7 +1309,7 @@ int _alog_append_alias_write_append32(int tid, int cmd, int ri, osd_id_t pid, os
    a.id = id;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1351,7 +1351,7 @@ int _alog_append_alias_write_append64(int tid, int cmd, int ri, osd_id_t pid, os
    a.id = id;
    a.size = size;
    a.ri = ri;
-   
+
    alog_lock();
    alog_checksize();
 
@@ -1733,7 +1733,7 @@ int alog_append_manage_incdec(int tid, int cmd, int subcmd, int ri, osd_id_t pid
    }
 
    alog_unlock();
-   return(0);    
+   return(0);
 }
 
 //************************************************************************
@@ -1761,7 +1761,7 @@ int alog_append_manage_bad(int tid, int command, int subcmd)
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_append_manage_bad: Error with write!\n");
 
    alog_unlock();
-   return(0);    
+   return(0);
 }
 
 //------------------------------------------------------------------------
@@ -1839,7 +1839,7 @@ int alog_append_status_stats(int tid, apr_time_t start_time)
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_append_status_stats: Error with write!\n");
 
    alog_unlock();
-   return(0);  
+   return(0);
 }
 
 //------------------------------------------------------------------------
@@ -1878,7 +1878,7 @@ int alog_append_subcmd(int tid, int command, int subcmd)
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_append_subcmd: Error with write!\n");
 
    alog_unlock();
-   return(0);  
+   return(0);
 }
 
 //------------------------------------------------------------------------
@@ -2014,7 +2014,7 @@ int _alog_append_alias_alloc32(int tid, int ri, osd_id_t id, uint64_t offset, ui
 
    alog_lock();
    alog_checksize();
-   
+
    _alog->append_header(_alog->fd, tid, ALOG_REC_ALIAS_ALLOC32);
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_append_alias_alloc32: Error with write!\n");
 
@@ -2039,7 +2039,7 @@ int alog_read_alias_alloc32(activity_log_t *alog, int cmd, FILE *outfd)
      apr_ctime(buf, ibp2apr_time(a.expire));
      buf[strlen(buf)-1] = '\0';  //** chomp the \n from ctime_r
 
-     fprintf(outfd, "CMD:IBP_ALIAS_ALLOCATE  RID:%s id:" LU " offset:" LU " size:" LU " expire:%s(" TT ")\n", 
+     fprintf(outfd, "CMD:IBP_ALIAS_ALLOCATE  RID:%s id:" LU " offset:" LU " size:" LU " expire:%s(" TT ")\n",
          alog->rl_map[a.ri].name, a.id, offset, size, buf, t);
   }
 
@@ -2062,7 +2062,7 @@ int _alog_append_alias_alloc64(int tid, int ri, osd_id_t id, uint64_t offset, ui
 
    alog_lock();
    alog_checksize();
-   
+
    _alog->append_header(_alog->fd, tid, ALOG_REC_ALIAS_ALLOC64);
    awrite_ul(_alog->fd, &a, sizeof(a), "alog_append_alias_alloc64: Error with write!\n");
 
@@ -2087,7 +2087,7 @@ int alog_read_alias_alloc64(activity_log_t *alog, int cmd, FILE *outfd)
      apr_ctime(buf, ibp2apr_time(a.expire));
      buf[strlen(buf)-1] = '\0';  //** chomp the \n from ctime_r
 
-     fprintf(outfd, "CMD:IBP_ALIAS_ALLOCATE  RID:%s id:" LU " offset:" LU " size:" LU " expire:%s(" TT ")\n", 
+     fprintf(outfd, "CMD:IBP_ALIAS_ALLOCATE  RID:%s id:" LU " offset:" LU " size:" LU " expire:%s(" TT ")\n",
          alog->rl_map[a.ri].name, a.id, offset, size, buf, t);
   }
 
@@ -2106,7 +2106,7 @@ int alog_append_alias_alloc(int tid, int ri, osd_id_t id, uint64_t offset, uint6
       _alog_append_alias_alloc32(tid, ri, id, offset, size, expire);
    } else {
       _alog_append_alias_alloc64(tid, ri, id, offset, size, expire);
-   } 
+   }
 
    return(0);
 }
@@ -2192,7 +2192,7 @@ int alog_read_ibp_merge(activity_log_t *alog, int cmd, FILE *outfd)
    if (outfd != NULL) {
       if (a.ri == 255) a.ri = alog->nres;
       ri = a.ri;
-      fprintf(outfd, "CMD:IBP_MERGE_ALLOCATE RID: %s mid:" LU " cid:" LU "\n", 
+      fprintf(outfd, "CMD:IBP_MERGE_ALLOCATE RID: %s mid:" LU " cid:" LU "\n",
          alog->rl_map[ri].name, a.id, cid);
    }
 
@@ -2222,7 +2222,7 @@ int alog_append_osd_id(int tid, osd_id_t id)
 int alog_read_osd_id(activity_log_t *alog, int cmd, FILE *outfd)
 {
   osd_id_t id;
-  
+
   aread(alog->fd, &id, sizeof(id), "alog_read_osd_id: Error with read!\n");
 
   if (outfd != NULL) {
@@ -2265,7 +2265,7 @@ int alog_append_ibp_allocate(int tid, int rindex, uint64_t max_size, int atype, 
 
    alog_lock();
    alog_checksize();
-     
+
    if (max_size < UINT32_MAX) {
       nbytes = sizeof(a32);
       cmd = ALOG_REC_IBP_ALLOCATE32;
@@ -2276,11 +2276,11 @@ int alog_append_ibp_allocate(int tid, int rindex, uint64_t max_size, int atype, 
       cmd = ALOG_REC_IBP_ALLOCATE64;
       d = (void *)&a64;
       a64.ri=rindex; a64.atype=atype; a64.rel=rel; a64.expiration=expiration; a64.size=max_size;
-   } 
+   }
 
    _alog->append_header(_alog->fd, tid, cmd);
    awrite_ul(_alog->fd, d, nbytes, "alog_append_ibp_allocate: Error with write!\n");
- 
+
    alog_unlock();
    return(0);
 }
@@ -2295,20 +2295,20 @@ int alog_read_ibp_allocate(activity_log_t *alog, int cmd, FILE *outfd)
    apr_time_t t;
    uint64_t msize;
    char buffer[256];
-   
+
    if (cmd == ALOG_REC_IBP_ALLOCATE32) {
      aread(alog->fd, &a32, sizeof(a32), "alog_read_ibp_allocate: Error with read!\n");
      ri=a32.ri; atype=a32.atype; rel=a32.rel; t=a32.expiration; msize=a32.size;
    } else {
      aread(alog->fd, &a64, sizeof(a32), "alog_read_ibp_allocate: Error with read!\n");
      ri=a64.ri; atype=a64.atype; rel=a64.rel; t=a64.expiration; msize=a64.size;
-   }    
+   }
 
    if (outfd != NULL) {
       if (ri == 255) ri = alog->nres;
       apr_ctime(buffer, ibp2apr_time(t));
       buffer[strlen(buffer)-1] = '\0';  //** chomp the \n from ctime_r
-      fprintf(outfd, "CMD:IBP_ALLOCATE RID:%s type:%s rel:%s size=" LU " expiration:%s(" TT ")\n", 
+      fprintf(outfd, "CMD:IBP_ALLOCATE RID:%s type:%s rel:%s size=" LU " expiration:%s(" TT ")\n",
          alog->rl_map[ri].name, _ibp_type_map[atype], _ibp_rel_map[rel], msize, buffer, t);
    }
 
@@ -2329,7 +2329,7 @@ int alog_append_ibp_split_allocate(int tid, int rindex, osd_id_t mid, uint64_t m
 
    alog_lock();
    alog_checksize();
-     
+
    if (max_size < UINT32_MAX) {
       nbytes = sizeof(a32);
       cmd = ALOG_REC_IBP_SPLIT_ALLOCATE32;
@@ -2340,12 +2340,12 @@ int alog_append_ibp_split_allocate(int tid, int rindex, osd_id_t mid, uint64_t m
       cmd = ALOG_REC_IBP_SPLIT_ALLOCATE64;
       d = (void *)&a64;
       a64.ri=rindex; a64.atype=atype; a64.rel=rel; a64.expiration=expiration; a64.size=max_size;
-   } 
+   }
 
    _alog->append_header(_alog->fd, tid, cmd);
    awrite_ul(_alog->fd, &mid, sizeof(mid), "alog_append_ibp_split_allocate: Error with write!\n");
    awrite_ul(_alog->fd, d, nbytes, "alog_append_ibp_split_allocate: Error with write!\n");
- 
+
    alog_unlock();
    return(0);
 }
@@ -2361,22 +2361,22 @@ int alog_read_ibp_split_allocate(activity_log_t *alog, int cmd, FILE *outfd)
    apr_time_t t;
    uint64_t msize;
    char buffer[256];
-   
+
    aread(alog->fd, &mid, sizeof(mid), "alog_read_ibp_split_allocate: Error with read!\n");
-   
+
    if (cmd == ALOG_REC_IBP_SPLIT_ALLOCATE32) {
      aread(alog->fd, &a32, sizeof(a32), "alog_read_ibp_split_allocate: Error with read!\n");
      ri=a32.ri; atype=a32.atype; rel=a32.rel; t=a32.expiration; msize=a32.size;
    } else {
      aread(alog->fd, &a64, sizeof(a32), "alog_read_ibp_split_allocate: Error with read!\n");
      ri=a64.ri; atype=a64.atype; rel=a64.rel; t=a64.expiration; msize=a64.size;
-   }    
+   }
 
    if (outfd != NULL) {
       if (ri == 255) ri = alog->nres;
       apr_ctime(buffer, ibp2apr_time(t));
       buffer[strlen(buffer)-1] = '\0';  //** chomp the \n from ctime_r
-      fprintf(outfd, "CMD:IBP_SPLIT_ALLOCATE MID:" LU " RID:%s type:%s rel:%s size:" LU " expiration:%s(" TT ")\n", 
+      fprintf(outfd, "CMD:IBP_SPLIT_ALLOCATE MID:" LU " RID:%s type:%s rel:%s size:" LU " expiration:%s(" TT ")\n",
          mid, alog->rl_map[ri].name, _ibp_type_map[atype], _ibp_rel_map[rel], msize, buffer, t);
    }
 
@@ -2401,7 +2401,7 @@ int alog_append_cmd_result(int tid, int status)
    n8 = -status;
    if (status > 0) n8 = 0; // ** IBP_OK = 1 but there is no 0 error
    awrite_ul(_alog->fd, &n8, sizeof(n8), "alog_append_cmd_result: Error with write!\n");
-   
+
    alog_unlock();
 
    return(0);
@@ -2425,7 +2425,7 @@ int alog_read_cmd_result(activity_log_t *alog, int cmd, FILE *outfd)
 }
 
 //************************************************************************
-//  alog_append_thread_open - Stores the new thread info 
+//  alog_append_thread_open - Stores the new thread info
 //************************************************************************
 
 int _alog_append_thread_open(int tid, int ns_id, int family, char *address)
@@ -2439,21 +2439,21 @@ int _alog_append_thread_open(int tid, int ns_id, int family, char *address)
 
    //** Add the mapping.
    nsmap = &(_alog->ns_map[tid]);
-   nsmap->id = ns_id;  
-   nsmap->family = family; 
+   nsmap->id = ns_id;
+   nsmap->family = family;
    nsmap->used = 1;
    memcpy(nsmap->address, address, sizeof(nsmap->address));
- 
+
    _alog->append_header(_alog->fd, tid, ALOG_REC_THREAD_OPEN);
 
    n16 = tid; awrite_ul(_alog->fd, &n16, sizeof(n16), "alog_append_thread_open: Error with write!\n");
    n32 = ns_id; awrite_ul(_alog->fd, &n32, sizeof(n32), "alog_append_thread_open: Error with write!\n");
-   
+
    n8 = 0; n16 = 4; if (family != AF_INET) { n8 = 1; n16 = 16; }
    awrite_ul(_alog->fd, &n8, sizeof(n8), "alog_append_thread_open: Error with write!\n");
    awrite_ul(_alog->fd, address, n16, "alog_append_thread_open: Error with write!\n");
 
-   return(0);   
+   return(0);
 }
 
 int alog_append_thread_open(int tid, int ns_id, int family, char *address)
@@ -2510,7 +2510,7 @@ int alog_read_thread_open(activity_log_t *alog, int cmd, FILE *outfd)
 }
 
 //************************************************************************
-//  alog_append_thread_close - Stores the close thread info 
+//  alog_append_thread_close - Stores the close thread info
 //************************************************************************
 
 int alog_append_thread_close(int tid, int ncmds)
@@ -2530,7 +2530,7 @@ int alog_append_thread_close(int tid, int ncmds)
 
    alog_unlock();
 
-   return(0);      
+   return(0);
 }
 
 //--------------------------------------------------------------------------
@@ -2546,7 +2546,7 @@ int alog_read_thread_close(activity_log_t *alog, int cmd, FILE *outfd)
       temp = n;
       fprintf(outfd, "CMD:THREAD_CLOSE  commands: %d -----------------------------------------\n", temp);
    }
-   
+
    return(0);
 }
 
@@ -2572,14 +2572,14 @@ int _alog_config()
 
    //** Preserve the space for the config length
    awrite_ul(_alog->fd, &nbytes, sizeof(nbytes), "_alog_config: Error storing placeholder!\n");
-   
+
    //*** Pring the config **
    print_config(buffer, &used, sizeof(buffer), global_config);
    fprintf(_alog->fd, "%s", buffer);
 
    end_pos = ftell(_alog->fd);    //*** Keep track of my final position
    fseek(_alog->fd, start_pos, SEEK_SET);  //** Move back to the length field
-   nbytes = end_pos - (start_pos + sizeof(nbytes));   //** and write it 
+   nbytes = end_pos - (start_pos + sizeof(nbytes));   //** and write it
    awrite_ul(_alog->fd, &nbytes, sizeof(nbytes), "_alog_config: Error storing config size!\n");
    fseek(_alog->fd, end_pos, SEEK_SET);    //** Move to the end of the record
 
@@ -2603,12 +2603,12 @@ int alog_read_ibp_config_rec(activity_log_t *alog, int cmd, FILE *outfd)
          j = nbytes - i;
          if (j > bufsize) j = bufsize;
          aread(alog->fd, buffer, j,"alog_read_ibp_config_rec:  Short read!\n");
-         fwrite(buffer, j, 1, outfd); 
+         fwrite(buffer, j, 1, outfd);
       }
    } else {
      fseek(alog->fd, nbytes, SEEK_CUR);
    }
-   
+
    return(0);
 }
 
@@ -2625,7 +2625,7 @@ int _alog_resources()
    Resource_t *r;
 
    alog_mode_check();
-   
+
 //   alog_checksize();
 
    _alog->append_header(_alog->fd, 0, ALOG_REC_RESOURCE_LIST);
@@ -2643,7 +2643,7 @@ log_printf(0, "alog_read_res: i=%d rl_index=%d\n", i, r->rl_index);
       awrite_ul(_alog->fd, &n16, sizeof(n16), "_alog_resources: Error storing data!\n");
       n8 = strlen(r->name);
       awrite_ul(_alog->fd, &n8, sizeof(n8), "_alog_resources: Error storing data!\n");
-      awrite_ul(_alog->fd, r->name, n8, "_alog_resources: Error storing data!\n");           
+      awrite_ul(_alog->fd, r->name, n8, "_alog_resources: Error storing data!\n");
       i++;
    }
    resource_list_iterator_destroy(global_config->rl, &it);
@@ -2676,8 +2676,8 @@ int alog_read_resource_list(activity_log_t *alog, int cmd, FILE *outfd)
       aread(alog->fd, &n16, sizeof(n16), "alog_read_resource_list: Error reading data!\n");
       index = n16;
 
-      aread(alog->fd, &n8, sizeof(n8), "alog_read_resource_list: Error reading data!\n");     
-      aread(alog->fd, name, n8, "alog_read_resource_list: Error reading data!\n");           
+      aread(alog->fd, &n8, sizeof(n8), "alog_read_resource_list: Error reading data!\n");
+      aread(alog->fd, name, n8, "alog_read_resource_list: Error reading data!\n");
       name[n8] = '\0';
 
       strcpy(alog->rl_map[index].name, name);
@@ -2811,7 +2811,7 @@ void _alog_init_constants()
 void alog_open()
 {
    if (_alog_lock == NULL) alog_init();
-   alog_lock();  
+   alog_lock();
 
    _alog_init_constants();
 
@@ -2827,7 +2827,7 @@ void alog_open()
    _alog_config();
    _alog_resources();
 
-   alog_unlock();  
+   alog_unlock();
 }
 
 //************************************************************************
@@ -2838,11 +2838,11 @@ void alog_close()
 {
    if (_alog_max_size <= 0) return;
 
-   alog_lock();  
+   alog_lock();
 
    activity_log_close(_alog);
 
-   alog_unlock();  
+   alog_unlock();
 }
 
 //************************************************************************
@@ -2871,9 +2871,9 @@ int _alog_transfer_data(char *fname)
   ns_config_sock(ns, 0);
   err = net_connect(ns, global_config->server.alog_host, global_config->server.alog_port, dt);
   if (err != 0) {
-     log_printf(0, "_alog_transfer_Data: Can't connect to %s:%d!\n", 
+     log_printf(0, "_alog_transfer_Data: Can't connect to %s:%d!\n",
            global_config->server.alog_host, global_config->server.alog_port);
-     return(1);    
+     return(1);
   }
 
   set_net_timeout(&dt, 1, 0);
@@ -2910,7 +2910,7 @@ int _alog_transfer_data(char *fname)
      return(4);
   }
 
-  //** Encode the header 
+  //** Encode the header
   envelope_set(&env, ECMD_ALOG_SEND, n);
   envelope_encode(&env, (unsigned char *)buffer);
 
@@ -2919,7 +2919,7 @@ int _alog_transfer_data(char *fname)
 
   //** send the command
   n = n + ENVELOPE_SIZE;
-  err = write_netstream_block(ns, apr_time_now()+apr_time_make(30, 0), buffer, n);    
+  err = write_netstream_block(ns, apr_time_now()+apr_time_make(30, 0), buffer, n);
   if (err != NS_OK) {
      fclose(alog.fd);
      log_printf(0, "_alog_transfer_Data: write_netstream_block failed for sending %s header! err=%d n=%d\n", fname, err, n);
@@ -2928,7 +2928,7 @@ int _alog_transfer_data(char *fname)
   }
 
   //** Wait for the response
-  err = envelope_simple_recv(ns, &response);    
+  err = envelope_simple_recv(ns, &response);
   if (err != NS_OK) {
      fclose(alog.fd);
      log_printf(0, "_alog_transfer_Data: envelope_simple_recv failed reading response header! err=%d n=%d\n", err, n);
@@ -2942,7 +2942,7 @@ int _alog_transfer_data(char *fname)
      destroy_netstream(ns);
      return(6);
   }
-  
+
   //** Transfer the data
   nbytes = -100;
   err = 0;
@@ -2966,7 +2966,7 @@ int _alog_transfer_data(char *fname)
 
      }
   }
-    
+
   fclose(alog.fd);
 
   if (err != 0) {
@@ -2976,7 +2976,7 @@ int _alog_transfer_data(char *fname)
   }
 
   //** Wait for the response
-  err = envelope_simple_recv(ns, &response);    
+  err = envelope_simple_recv(ns, &response);
   if (err != NS_OK) {
      log_printf(0, "_alog_transfer_Data: envelope_simple_recv failed reading response after send! err=%d n=%d\n", err, n);
      destroy_netstream(ns);
@@ -3006,7 +3006,7 @@ void *_send_alog_thread(apr_thread_t *th, void *arg)
 
   apr_thread_mutex_lock(_alog_send_lock);
 
-  //** Check if we have a valid host/port.  If not dump the stack and exit  
+  //** Check if we have a valid host/port.  If not dump the stack and exit
   if ((global_config->server.alog_port <= 0) && (global_config->server.alog_host == NULL)) {
      log_printf(10, "_send_alog_thread: Invalid host/port.  Skipping transfer\n");
      empty_stack(_alog_pending_stack, 1);
@@ -3070,40 +3070,40 @@ void _alog_send_data()
 
   //** Preserve these pointers for the open;
   nsmap = _alog->ns_map; _alog->ns_map = NULL;
-    
+
   activity_log_close(_alog);  //** Close the old activity file
 
   //** Check if we have too much data pending.  If so drop this data
-  apr_thread_mutex_lock(_alog_send_lock);  
+  apr_thread_mutex_lock(_alog_send_lock);
 
   //** Check if this is the 1st time. If so prep the stack
   if (_alog_pending_stack == NULL) _alog_pending_stack = new_stack();
 
   //** No active threads so fire up a new one
-  if (stack_size(_alog_pending_stack) == 0) {  
+  if (stack_size(_alog_pending_stack) == 0) {
      glob_t globbuf;
      char path[4096];
      char *file = NULL;
-     int i, len, n;     
+     int i, len, n;
 
      new_transfer = 1;
-     sprintf(path, "%s.*.[0-9][0-9][0-9][0-9][0-9][0-9]", global_config->server.alog_name); 
+     sprintf(path, "%s.*.[0-9][0-9][0-9][0-9][0-9][0-9]", global_config->server.alog_name);
      i=glob(path, 0, NULL, &globbuf);  //** Get the file list
      log_printf(15, "_alog_send_data: glob(%s, 0, NULL, &globbuf)=%d\n", path, i);
 
      //** Now iterate through them pushing them on the stack and determine _alog_count
-     _alog_count = 0;    
+     _alog_count = 0;
      for (i=0; i<globbuf.gl_pathc; i++) {
         file = globbuf.gl_pathv[i];
         log_printf(15, "_alog_send_data: new transfer.  pushing %s onto send stack\n", file);
         push(_alog_pending_stack, strdup(file));
-       
+
         len = strlen(file);
         sscanf(&(file[len-6]), "%d", &n);
         if (n > _alog_count) _alog_count = n;
-     }    
+     }
 
-     //** Too much data pending so drop the oldest slots 
+     //** Too much data pending so drop the oldest slots
      while (stack_size(_alog_pending_stack) >= global_config->server.alog_max_history) {
         move_to_bottom(_alog_pending_stack);
         file = (char *)get_ele_data(_alog_pending_stack);
@@ -3115,11 +3115,11 @@ void _alog_send_data()
   log_printf(15, "_alog_send_data: stack_size=%d max_history=%d\n", stack_size(_alog_pending_stack), global_config->server.alog_max_history);
 
   //** Transfer already in progress and too much data so drop current
-  if (stack_size(_alog_pending_stack) >= global_config->server.alog_max_history) {  
+  if (stack_size(_alog_pending_stack) >= global_config->server.alog_max_history) {
      remove(_alog_name);
   } else {   //** Now Trigger the transfer
      //** Rename it **
-     _alog_count++;  if (_alog_count > 999999) _alog_count = 0;  
+     _alog_count++;  if (_alog_count > 999999) _alog_count = 0;
      fname[1023] = '\0';
      snprintf(fname, 1023, "%s." TT ".%06d", _alog_name, apr_time_now(), _alog_count);
      rename(_alog_name, fname);
@@ -3130,12 +3130,12 @@ void _alog_send_data()
      if (new_transfer == 1) {
         if (_alog_send_thread != NULL) {
           apr_pool_destroy(_alog_send_mpool);  //** Only way to free the _alog_send_thread memory:(
-        } 
+        }
         assert(apr_pool_create(&_alog_send_mpool, NULL) == APR_SUCCESS);
         apr_thread_create(&_alog_send_thread, NULL, _send_alog_thread, NULL, _alog_send_mpool);
      }
   }
-  apr_thread_mutex_unlock(_alog_send_lock);  
+  apr_thread_mutex_unlock(_alog_send_lock);
 
   //** Now open the fresh log file
   _alog = activity_log_open(_alog_name, 2*global_config->server.max_threads, ALOG_APPEND);
@@ -3181,7 +3181,7 @@ int activity_log_read_next_entry(activity_log_t *alog, FILE *fd)
      n = alog->table[command].process_entry(alog, command, fd);
   } else {
      log_printf(0, "activity_log_read_next_entry: Invalid command: %d\n", command);
-     if (fd != NULL) fprintf(fd, "Invalid header! t=" TT " * id=%d command=%d!!!!!!!!!!!!!!!!\n",t, id, command); 
+     if (fd != NULL) fprintf(fd, "Invalid header! t=" TT " * id=%d command=%d!!!!!!!!!!!!!!!!\n",t, id, command);
      return(-2);
   }
 
@@ -3334,7 +3334,7 @@ int activity_log_read_header_2byte_id(FILE *fd, apr_time_t *t, int *id, int *com
 }
 
 //************************************************************************
-// print_header_date_utime_id - Header variation 
+// print_header_date_utime_id - Header variation
 //  "date(utime) id:xx :"
 //************************************************************************
 
@@ -3350,7 +3350,7 @@ void print_header_date_utime_id(FILE *fd, apr_time_t t, int id)
 }
 
 //************************************************************************
-// print_header_date_id - Header variation 
+// print_header_date_id - Header variation
 //  "date id:xx :"
 //************************************************************************
 
@@ -3366,7 +3366,7 @@ void print_header_date_id(FILE *fd, apr_time_t t, int id)
 }
 
 //************************************************************************
-// print_header_utime_id - Header variation 
+// print_header_utime_id - Header variation
 //  "utime id:xx :"
 //************************************************************************
 
@@ -3540,7 +3540,7 @@ void activity_log_add_commands(activity_log_t *alog)
 
 
 //************************************************************************
-// activity_log_open - Opens a stats log.  If it is an existing log 
+// activity_log_open - Opens a stats log.  If it is an existing log
 //     data is appended
 //************************************************************************
 
@@ -3573,7 +3573,7 @@ activity_log_t * activity_log_open(const char *logname, int max_id, int mode)
   }
 
   alog->curr_size = 0;
-  
+
   if (mode == ALOG_READ) {
      alog->fd = fopen(alog->name, "r");
      if (alog->fd == NULL) {
@@ -3600,7 +3600,7 @@ activity_log_t * activity_log_open(const char *logname, int max_id, int mode)
         read_file_header(alog);
         if (alog->header.state == STATE_BAD) {
            log_printf(0, "activity_log_open: alog %s was not closed properly! Moving to EOF manually.\n", alog->name);
-           update_file_header(alog, STATE_BAD);         
+           update_file_header(alog, STATE_BAD);
            activity_log_move_to_eof(alog);
         } else {
            update_file_header(alog, STATE_BAD);

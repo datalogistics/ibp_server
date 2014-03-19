@@ -25,19 +25,19 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <stdarg.h>
 #include "log.h"
 
 //***************************************************************************
-// append_printf - Appends data to the end of a string and also updates the 
+// append_printf - Appends data to the end of a string and also updates the
 //     length.
 //***************************************************************************
 
 int append_printf(char *buffer, int *used, int nbytes, const char *fmt, ...)
 {
-  va_list args;  
+  va_list args;
   int n, nleft;
 
   nleft = nbytes - *used;

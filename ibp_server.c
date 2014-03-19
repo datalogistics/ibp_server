@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #include <unistd.h>
 #include <string.h>
@@ -62,8 +62,8 @@ void *parallel_mount_resource(apr_thread_t *th, void *data) {
 
    assert((r = (Resource_t *)malloc(sizeof(Resource_t))) != NULL);
 
-   int err = mount_resource(r, pm->keyfile, pm->group, pm->dbenv, 
-        pm->force_resource_rebuild, global_config->server.lazy_allocate, 
+   int err = mount_resource(r, pm->keyfile, pm->group, pm->dbenv,
+        pm->force_resource_rebuild, global_config->server.lazy_allocate,
         global_config->truncate_expiration);
 
    if (err != 0) {
@@ -130,7 +130,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->max_pending = 16;
   server->min_idle = apr_time_make(60, 0);
   server->stats_size = 5000;
-  timeout_ms = 1 * 1000;   //** Wait 1 sec  
+  timeout_ms = 1 * 1000;   //** Wait 1 sec
 //  set_net_timeout(&(server->timeout), 1, 0);  //**Wait 1sec
   server->timeout_secs = timeout_ms / 1000;
   server->logfile = "ibp.log";
@@ -143,7 +143,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->lazy_allocate = 1;
   server->backoff_scale = 1.0/10;
   server->backoff_max = 30;
-  server->big_alloc_enable = (sizeof(off_t) > 4) ? 1 : 0;  
+  server->big_alloc_enable = (sizeof(off_t) > 4) ? 1 : 0;
   server->splice_enable = 0;
   server->alog_name = "ibp_activity.log";
   server->alog_max_size = 50;
@@ -260,12 +260,12 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   cfg->soft_fail = (i==0) ? -1 : 0;
 
   //*** Do some initial config of the log and debugging info ***
-  open_log(cfg->server.logfile);            
+  open_log(cfg->server.logfile);
   set_log_level(cfg->server.log_level);
   set_debug_level(cfg->server.debug_level);
   set_log_maxsize(cfg->server.log_maxsize);
 
-  // *** Now iterate through each resource which is assumed to be all groups beginning with "resource" ***      
+  // *** Now iterate through each resource which is assumed to be all groups beginning with "resource" ***
   apr_pool_t *mount_pool;
   apr_pool_create(&mount_pool, NULL);
   cfg->dbenv = create_db_env(cfg->dbenv_loc, cfg->db_mem, cfg->force_resource_rebuild);
@@ -274,21 +274,21 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   inip_group_t *igrp = inip_first_group(keyfile);
   val = 0;
   for (i=0; i<k; i++) {
-      str = inip_get_group(igrp);      
+      str = inip_get_group(igrp);
       if (strncmp("resource", str, 8) == 0) {
          pm = &(pmarray[val]);
          pm->keyfile = keyfile;
          pm->group = strdup(str);
          pm->dbenv = cfg->dbenv;
          pm->force_resource_rebuild = cfg->force_resource_rebuild;
-  
+
          apr_thread_create(&(pm->thread_id), NULL, parallel_mount_resource, (void *)pm, mount_pool);
 
          val++;
       }
 
       igrp = inip_next_group(igrp);
-  }  
+  }
 
   //** Wait for all the threads to join **
   apr_status_t dummy;
@@ -366,7 +366,7 @@ int ibp_shutdown(Config_t *cfg)
        log_printf(0, "ibp_server: Error closing Resource %s!  Err=%d\n",ibp_rid2str(r->rid, tmp), err);
     }
     free(r);
-  }  
+  }
   resource_list_iterator_destroy(cfg->rl, &it);
 
   //** Now clsoe the DB environment **
@@ -389,10 +389,10 @@ void configure_signals()
   apr_signal(SIGQUIT, signal_shutdown);
 //  if (signal(SIGQUIT, signal_shutdown) == SIG_ERR) {
 //     log_printf(0, "Error installing shutdown signal handler!\n");
-//  }     
+//  }
 //  if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
 //     log_printf(0, "Error installing shutdown signal handler!\n");
-//  }     
+//  }
 
   //** Want everyone to ignore SIGPIPE messages
 #ifdef SIGPIPE
@@ -498,10 +498,10 @@ int main(int argc, const char **argv)
 
   //***Launch as a daemon if needed***
   if (daemon == 1) {    //*** Launch as a daemon ***
-     if ((strcmp(config.server.logfile, "stdout") == 0) || 
+     if ((strcmp(config.server.logfile, "stdout") == 0) ||
          (strcmp(config.server.logfile, "stderr") == 0)) {
-        log_printf(0, "Can't launch as a daemom because log_file is either stdout or stderr\n");  
-        log_printf(0, "Running in normal mode\n");  
+        log_printf(0, "Can't launch as a daemom because log_file is either stdout or stderr\n");
+        log_printf(0, "Running in normal mode\n");
      } else if (fork() == 0) {    //** This is the daemon
         log_printf(0, "Running as a daemon.\n");
         flush_log();
@@ -515,11 +515,11 @@ int main(int argc, const char **argv)
         assert((stdout = fopen(fname, "w")) != NULL);
         snprintf(fname, 1023, "%s.stderr", config.server.logfile);
         assert((stderr = fopen(fname, "w")) != NULL);
-//        stdout = stderr = log_fd();  //** and reassign them to the log device         
+//        stdout = stderr = log_fd();  //** and reassign them to the log device
 printf("ibp_server.c: STDOUT=STDERR=LOG_FD() dnoes not work!!!!!!!!!!!!!!!!!!!!!!!!\n");
      } else {           //** Parent exits
-        exit(0);         
-     }    
+        exit(0);
+     }
   }
 
 //  test_alloc();   //** Used for testing allocation speed only

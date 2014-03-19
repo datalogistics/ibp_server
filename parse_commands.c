@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*****************************************************************
 //*****************************************************************
@@ -53,12 +53,12 @@ http://www.accre.vanderbilt.edu
 
 int get_command_timeout(ibp_task_t *task, char **bstate)
 {
-   apr_time_t t; 
+   apr_time_t t;
    int fin;
 
    t = 0; sscanf(string_token(NULL, " ", bstate, &fin), TT, &t);
    task->cmd_timeout = apr_time_now() + apr_time_make(t, 0);
-   if (t == 0) {        
+   if (t == 0) {
       log_printf(1, "get_command_timeout: Bad timeout value " TT " changing to 2 for LoRS compatibility\n", t);
       task->cmd_timeout = apr_time_now() + apr_time_make(2, 0);
 //      log_printf(1, "get_command_timeout: Bad timeout value " TT "\n", t);
@@ -82,7 +82,7 @@ int parse_key(char **bstate, Cap_t *cap, rid_t *rid, char *crid, int ncrid)
      crid[ncrid-1] = '\0';
      strncpy(crid, tmp, ncrid-1);
   }
-  
+
   //** Check the validity of the RID
   if (ibp_str2rid(tmp, rid) != 0) {
     log_printf(5, "parse_key: Bad RID: %s\n", tmp);
@@ -111,7 +111,7 @@ int parse_chksum(ibp_task_t *task, char **bstate)
 
    type = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &type);
    bsize = -1; sscanf(string_token(NULL, " ", bstate, &fin), I64T, &bsize);
-   
+
    if (chksum_valid_type(type) == 0) {
       log_printf(10, "parse_chksum:  Invalid chksum type!  type=%d\n", type);
       return(IBP_E_CHKSUM_TYPE);
@@ -228,7 +228,7 @@ int read_allocate(ibp_task_t *task, char **bstate)
       log_printf(1, "read_allocate: Bad reliability: %d\n", d);
       send_cmd_result(task, IBP_E_BAD_FORMAT);
       return(-1);
-   } 
+   }
 
    //***Type: IBP_BYTEARRAY | IBP_BUFFER | IBP_FIFO | IBP_CIRQ ***
    d = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &d);
@@ -237,7 +237,7 @@ int read_allocate(ibp_task_t *task, char **bstate)
        log_printf(1, "read_allocate: Bad type: %d\n", d);
        send_cmd_result(task, IBP_E_INVALID_PARAMETER);
        return(-1);
-   } 
+   }
 
    //================ Disabling all allocation types except BYTEARRAYS ================
    if (a->type != IBP_BYTEARRAY) {
@@ -306,7 +306,7 @@ int read_merge_allocate(ibp_task_t *task, char **bstate)
 
    debug_printf(1, "read_merge_allocate:  Starting to process buffer\n");
 
-   //** Parse the master key  
+   //** Parse the master key
    if (parse_key(bstate, &(op->mkey), &(op->rid), op->crid, sizeof(op->crid)) != 0) {
        log_printf(10, "read_merge_allocate: Bad RID/mcap!\n");
        send_cmd_result(task, IBP_E_INVALID_RID);
@@ -314,7 +314,7 @@ int read_merge_allocate(ibp_task_t *task, char **bstate)
    }
    string_token(NULL, " ", bstate, &fin);  //** Drop the WRMkey
 
-   //** Parse the child key  
+   //** Parse the child key
    if (parse_key(bstate, &(op->ckey), &child_rid, NULL, 0) != 0) {
        log_printf(10, "read_merge_allocate: Child RID/mcap!\n");
        send_cmd_result(task, IBP_E_INVALID_RID);
@@ -332,7 +332,7 @@ int read_merge_allocate(ibp_task_t *task, char **bstate)
    get_command_timeout(task, bstate);
 
    debug_printf(1, "read_merge_allocate: Successfully parsed allocate command\n");
-   return(0);   
+   return(0);
 }
 
 
@@ -341,16 +341,16 @@ int read_merge_allocate(ibp_task_t *task, char **bstate)
 //
 // 1.4
 //   version IBP_STATUS RID   IBP_ST_INQ password  TIMEOUT \n
-//      %d       %d     %llu      %d         %31s       %d 
+//      %d       %d     %llu      %d         %31s       %d
 //   version IBP_STATUS RID   IBP_ST_CHANGE password  TIMEOUT \n max_hard max_soft max_duration \n
 //      %d       %d     %llu      %d            %31s       %d      %llu     %llu      %d
 //   version IBP_STATUS  IBP_ST_RES  TIMEOUT \n
-//      %d       %d         %d         %d 
+//      %d       %d         %d         %d
 //   version IBP_STATUS  IBP_ST_STATS  start_time   TIMEOUT \n
 //      %d       %d         %d            %d           %d
 //   version IBP_STATUS  IBP_ST_VERSION TIMEOUT \n
 //      %d       %d           %d           %d
-//   
+//
 //*****************************************************************
 
 int read_status(ibp_task_t *task, char **bstate)
@@ -361,7 +361,7 @@ int read_status(ibp_task_t *task, char **bstate)
    finished = 0;
 
    debug_printf(1, "read_status:  Starting to process buffer\n");
-  
+
    Cmd_status_t *status = &(cmd->cargs.status);
    status->subcmd = 0;
 
@@ -370,7 +370,7 @@ int read_status(ibp_task_t *task, char **bstate)
    char *dupstr = strdup(*bstate);
    char *dstate;
    string_token(dupstr, " ", &dstate, &finished);
-   nargs = 2;    
+   nargs = 2;
    while (finished == 0) {
       nargs++;
       string_token(NULL, " ", &dstate, &finished);
@@ -381,7 +381,7 @@ int read_status(ibp_task_t *task, char **bstate)
 //   log_printf(10, "read_status: ns=%d nargs = %d\n", task->ns->id, nargs);
 
    //** Parse the RID (or the sub command) ***
-   if (cmd->version > IBPv031) {   
+   if (cmd->version > IBPv031) {
       char *tmp;
       tmp = string_token(NULL, " ", bstate, &finished);
       status->crid[sizeof(status->crid)-1] = '\0';
@@ -391,7 +391,7 @@ int read_status(ibp_task_t *task, char **bstate)
       } else {
          if (ibp_str2rid(tmp, &(status->rid)) != 0)   {
             log_printf(1, "read_status: Bad RID: %s\n", tmp);
-            send_cmd_result(task, IBP_E_INVALID_RID);                
+            send_cmd_result(task, IBP_E_INVALID_RID);
             return(-1);
          }
 
@@ -400,7 +400,7 @@ int read_status(ibp_task_t *task, char **bstate)
             log_printf(6, "read_status: Read rid=0 so picking one at random\n");
          }
 
-         ibp_rid2str(status->rid, status->crid); 
+         ibp_rid2str(status->rid, status->crid);
 
          //*** Get the sub command ***
          sscanf(string_token(NULL, " ", bstate, &finished), "%d", &(status->subcmd));
@@ -408,7 +408,7 @@ int read_status(ibp_task_t *task, char **bstate)
    } else {
       //** Pick a random resource to use
       resource_pick(global_config->rl, &(status->rid));
-      ibp_rid2str(status->rid, status->crid); 
+      ibp_rid2str(status->rid, status->crid);
       log_printf(6, "read_status: IBP_v031 doesn't support RID.  Picked one at random rid=%s\n", status->crid);
 
       //*** Get the sub command ***
@@ -417,7 +417,7 @@ int read_status(ibp_task_t *task, char **bstate)
       sscanf(tmp, "%d", &(status->subcmd));
    }
 
-   //*** Process the subcommand ***    
+   //*** Process the subcommand ***
    switch (status->subcmd) {
       case IBP_ST_RES :
          ibp_empty_rid(&(status->rid));
@@ -455,7 +455,7 @@ log_printf(1, "read_status: IBP_ST_CHANGE request ignored! ns=%d\n", task->ns->i
 send_cmd_result(task, IBP_E_INVALID_CMD);
 close_netstream(task->ns);
 return(-1);
-         
+
          int nbytes;
          char buffer[100];
          nbytes = readline_netstream(task->ns, buffer, sizeof(buffer), global_config->server.timeout);
@@ -471,7 +471,7 @@ return(-1);
          //*** Grab the new hard size ***
          status->new_duration = 0; sscanf(string_token(NULL, " ", bstate, &finished), "%ld", &(status->new_duration));
 
-         debug_printf(1, "read_status: change request of h:" LU " s:" LU " d:%ld  ns=%d\n", 
+         debug_printf(1, "read_status: change request of h:" LU " s:" LU " d:%ld  ns=%d\n",
              status->new_size[ALLOC_HARD], status->new_size[ALLOC_SOFT], status->new_duration, task->ns->id);
 
          break;
@@ -688,7 +688,7 @@ int read_rename(ibp_task_t *task, char **bstate)
    strncpy(manage->crid, string_token(NULL, " #", bstate, &finished), sizeof(manage->crid)-1);
    if (ibp_str2rid(manage->crid, &(manage->rid)) != 0) {
       log_printf(1, "read_manage: Bad RID: %s\n", manage->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -731,7 +731,7 @@ int read_alias_allocate(ibp_task_t *task, char **bstate)
    strncpy(cmd->crid, string_token(NULL, " #", bstate, &finished), sizeof(cmd->crid)-1);
    if (ibp_str2rid(cmd->crid, &(cmd->rid)) != 0) {
       log_printf(5, "read_alias_allocate: Bad RID: %s\n", cmd->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -744,31 +744,31 @@ int read_alias_allocate(ibp_task_t *task, char **bstate)
    string_token(NULL, " ", bstate, &finished);  //** Drop the WRMkey
 
    cmd->offset = cmd->len = cmd->expiration == 0;
-   
+
    //** Get the offset **
-   if (sscanf(string_token(NULL, " ", bstate, &finished), I64T , &(cmd->offset)) != 1) { 
+   if (sscanf(string_token(NULL, " ", bstate, &finished), I64T , &(cmd->offset)) != 1) {
       log_printf(5, "read_alias_allocate: Bad offset cap= %s\n", cmd->crid);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
 
    //** Get the len **
-   if (sscanf(string_token(NULL, " ", bstate, &finished), I64T, &(cmd->len)) != 1) { 
+   if (sscanf(string_token(NULL, " ", bstate, &finished), I64T, &(cmd->len)) != 1) {
       log_printf(5, "read_alias_allocate: Bad length cap= %s\n", cmd->crid);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
 
    //** Get the duration **
-   if (sscanf(string_token(NULL, " ", bstate, &finished), LU, &lu) != 1) { 
+   if (sscanf(string_token(NULL, " ", bstate, &finished), LU, &lu) != 1) {
       log_printf(5, "read_alias_allocate: Bad duration cap= %s\n", cmd->crid);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
    cmd->expiration = 0;
-//   log_printf(15, "read_alias_allocate: cmp->expire=%lu\n", lu); 
+//   log_printf(15, "read_alias_allocate: cmp->expire=%lu\n", lu);
    if (lu != 0) cmd->expiration = lu + ibp_time_now();
-  
+
    get_command_timeout(task, bstate);
    return(0);
 }
@@ -792,11 +792,11 @@ int read_validate_get_chksum(ibp_task_t *task, char **bstate)
 
    //** Get the RID, uh I mean the key...... the format is RID#key
    char *tmp;
-   w->crid[sizeof(w->crid)-1] = '\0'; 
+   w->crid[sizeof(w->crid)-1] = '\0';
    tmp = string_token(NULL, " #", bstate, &finished);
    if (ibp_str2rid(tmp, &(w->rid)) != 0) {
       log_printf(1, "read_validate_get_chksum: Bad RID: %s\n", tmp);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
    ibp_rid2str(w->rid, w->crid);
@@ -822,7 +822,7 @@ int read_validate_get_chksum(ibp_task_t *task, char **bstate)
    get_command_timeout(task, bstate);
 
    debug_printf(1, "read_validate_get_chksum: Successfully parsed\n");
-   return(0);   
+   return(0);
 }
 
 //*****************************************************************
@@ -870,11 +870,11 @@ int read_write(ibp_task_t *task, char **bstate)
 
    //** Get the RID, uh I mean the key...... the format is RID#key
    char *tmp;
-   w->crid[sizeof(w->crid)-1] = '\0'; 
+   w->crid[sizeof(w->crid)-1] = '\0';
    tmp = string_token(NULL, " #", bstate, &finished);
    if (ibp_str2rid(tmp, &(w->rid)) != 0) {
       log_printf(1, "read_write: Bad RID: %s\n", tmp);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
    ibp_rid2str(w->rid, w->crid);
@@ -906,7 +906,7 @@ int read_write(ibp_task_t *task, char **bstate)
 
 log_printf(15, "read_write: iovec->n=%d\n", iovec->n);
 
-   //** Read the offsets/lengths      
+   //** Read the offsets/lengths
    iovec->total_len = 0;
    iovec->transfer_total = 0;
    for (i=0; i<iovec->n; i++) {
@@ -916,7 +916,7 @@ log_printf(15, "read_write: iovec->n=%d\n", iovec->n);
          llu = 0; sscanf(string_token(NULL, " ", bstate, &finished), "%llu", &llu);
          iovec->vec[i].off = llu;
          if (llu < 0) {
-            log_printf(10, "read_write:  Invalid vec offset[%d] (%llu)!\n", i, llu);            
+            log_printf(10, "read_write:  Invalid vec offset[%d] (%llu)!\n", i, llu);
             send_cmd_result(task, IBP_E_FILE_SEEK_ERROR);
             return(-1);
          }
@@ -939,7 +939,7 @@ log_printf(15, "read_write: iovec->vec[%d] off=" OT " len=" OT "\n", i, iovec->v
    get_command_timeout(task, bstate);
 
    debug_printf(1, "read_write: Successfully parsed io->n=%d off[0]=" I64T " len[0]=" I64T "\n", w->iovec.n, w->iovec.vec[0].off, w->iovec.vec[0].len);
-   return(0);   
+   return(0);
 }
 
 //*****************************************************************
@@ -992,8 +992,8 @@ int read_read(ibp_task_t *task, char **bstate)
    r->recving = 0;  //** Flag the command as not recving data so the handle will load the res, etc.
 
    //** If a chksum command then pick off the chksum info
-   if ((cmd->command == IBP_PUSH_CHKSUM) || (cmd->command == IBP_PULL_CHKSUM) || 
-       (cmd->command == IBP_SEND_CHKSUM) || (cmd->command == IBP_PHOEBUS_SEND_CHKSUM) || 
+   if ((cmd->command == IBP_PUSH_CHKSUM) || (cmd->command == IBP_PULL_CHKSUM) ||
+       (cmd->command == IBP_SEND_CHKSUM) || (cmd->command == IBP_PHOEBUS_SEND_CHKSUM) ||
        (cmd->command == IBP_LOAD_CHKSUM) || (cmd->command == IBP_VEC_READ_CHKSUM)) {
       task->enable_chksum = 1;
       i = parse_chksum(task, bstate);
@@ -1214,7 +1214,7 @@ int read_internal_get_corrupt(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &finished), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_get_corrupt: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1225,7 +1225,7 @@ int read_internal_get_corrupt(ibp_task_t *task, char **bstate)
 }
 
 //*****************************************************************
-//  read_internal_get_alloc - Private command for getting the raw 
+//  read_internal_get_alloc - Private command for getting the raw
 //    allocation.
 //
 // PRIVATE command
@@ -1253,13 +1253,13 @@ int read_internal_get_alloc(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &finished), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_get_alloc: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
    //*** Get the key type ***
    arg->key_type = atoi(string_token(NULL, " ", bstate, &finished));
-      
+
    //** Get the key ***
    switch(arg->key_type) {
      case IBP_READCAP:
@@ -1291,7 +1291,7 @@ int read_internal_get_alloc(ibp_task_t *task, char **bstate)
 
    //** and the length
    sscanf(string_token(NULL, " ", bstate, &finished), LU, &(arg->len));
-   
+
 
    debug_printf(10, "read_internal_get_alloc: RID=%s\n", arg->crid);
 
@@ -1338,7 +1338,7 @@ int read_internal_date_free(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_date_free: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1349,7 +1349,7 @@ int read_internal_date_free(ibp_task_t *task, char **bstate)
       log_printf(1, "read_internal_date_free: Bad size: " LU "\n", arg->size);
       send_cmd_result(task, IBP_E_BAD_FORMAT);
       return(-1);
-   } 
+   }
 
    get_command_timeout(task, bstate);
 
@@ -1381,7 +1381,7 @@ int read_internal_expire_list(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_expire_list: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1392,7 +1392,7 @@ int read_internal_expire_list(ibp_task_t *task, char **bstate)
       log_printf(1, "read_internal_expire_list: Bad mode: %d\n", arg->mode);
       send_cmd_result(task, IBP_E_BAD_FORMAT);
       return(-1);
-   } 
+   }
 
    //*** Get the time ***
    arg->start_time = 0;
@@ -1401,10 +1401,10 @@ int read_internal_expire_list(ibp_task_t *task, char **bstate)
       log_printf(1, "read_internal_expire_list: Bad time: " TT "\n", arg->start_time);
       send_cmd_result(task, IBP_E_BAD_FORMAT);
       return(-1);
-   } 
-   
+   }
+
    if ((arg->mode == 0) && (arg->start_time != 0)) arg->start_time = arg->start_time + ibp_time_now();
-   
+
    //*** Get the record count ***
    arg->max_rec = 0;
    d = sscanf(string_token(NULL, " ", bstate, &fin), "%d", &(arg->max_rec));
@@ -1412,7 +1412,7 @@ int read_internal_expire_list(ibp_task_t *task, char **bstate)
       log_printf(1, "read_internal_expire_list: Bad recrd count: %d\n", arg->max_rec);
       send_cmd_result(task, IBP_E_BAD_FORMAT);
       return(-1);
-   } 
+   }
 
    arg->direction = DBR_NEXT;
 
@@ -1458,7 +1458,7 @@ int read_internal_undelete(ibp_task_t *task, char **bstate)
       return(-1);
    }
 
-   strncpy(arg->trash_id, string_token(NULL, " ", bstate, &fin), sizeof(arg->trash_id)-1); 
+   strncpy(arg->trash_id, string_token(NULL, " ", bstate, &fin), sizeof(arg->trash_id)-1);
    arg->trash_id[sizeof(arg->trash_id)-1] = '\0';
 
    //*** Get the duration ***
@@ -1500,7 +1500,7 @@ int read_internal_rescan(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_expire_list: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1522,7 +1522,7 @@ int read_internal_set_mode(ibp_task_t *task, char **bstate)
    int fin, opt;
    Cmd_state_t *cmd = &(task->cmd);
    Cmd_internal_mode_t *arg = &(cmd->cargs.mode);
-   
+
    fin = 0;
 
    debug_printf(1, "read_internal_set_mode:  Starting to process buffer\n");
@@ -1532,14 +1532,14 @@ int read_internal_set_mode(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_set_mode: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
    //** Make sure it's not RID 0
    if (ibp_rid_is_empty(arg->rid) == 1) {
       log_printf(1, "read_internal_set_mode: Can't use RID 0!\n");
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1554,11 +1554,11 @@ int read_internal_set_mode(ibp_task_t *task, char **bstate)
    opt = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
    if ((opt < 0) && (opt > 2)) {
       log_printf(1, "read_internal_set_mode: Invalid force_rebuild=%d\n", opt);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
    arg->mode = opt;
-   
+
    get_command_timeout(task, bstate);
 
    debug_printf(1, "read_internal_set_mode: Successfully parsed rescan command\n");
@@ -1587,14 +1587,14 @@ int read_internal_mount(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "read_internal_mount: Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
    //** Make sure it's not RID 0
    if (ibp_rid_is_empty(arg->rid) == 1) {
       log_printf(1, "read_internal_mount: Can't use RID 0!\n");
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1609,11 +1609,11 @@ int read_internal_mount(ibp_task_t *task, char **bstate)
    opt = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
    if ((opt < 0) && (opt > 2)) {
       log_printf(1, "read_internal_mount: Invalid force_rebuild=%d\n", opt);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
    arg->force_rebuild = opt;
-   
+
    get_command_timeout(task, bstate);
 
    debug_printf(1, "read_internal_mount: Successfully parsed rescan command\n");
@@ -1643,14 +1643,14 @@ int read_internal_umount(ibp_task_t *task, char **bstate)
    strncpy(arg->crid, string_token(NULL, " ", bstate, &fin), sizeof(arg->crid)-1);
    if (ibp_str2rid(arg->crid, &(arg->rid)) != 0) {
       log_printf(1, "Bad RID: %s\n", arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
    //** Make sure it's not RID 0
    if (ibp_rid_is_empty(arg->rid) == 1) {
       log_printf(1, "Can't use RID 0!\n");
-      send_cmd_result(task, IBP_E_INVALID_RID);                
+      send_cmd_result(task, IBP_E_INVALID_RID);
       return(-1);
    }
 
@@ -1665,11 +1665,11 @@ int read_internal_umount(ibp_task_t *task, char **bstate)
    opt = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
    if (opt < 1) {
       log_printf(1, "Invalid delay=%d\n", opt);
-      send_cmd_result(task, IBP_E_INVALID_PARAMETER);                
+      send_cmd_result(task, IBP_E_INVALID_PARAMETER);
       return(-1);
    }
    arg->delay = opt;
-   
+
    get_command_timeout(task, bstate);
 
    debug_printf(1, "Successfully parsed rescan command\n");

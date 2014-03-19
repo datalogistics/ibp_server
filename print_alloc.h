@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 #ifndef _PRINT_ALLOC_H_
 #define _PRINT_ALLOC_H_
@@ -34,7 +34,7 @@ http://www.accre.vanderbilt.edu
 
 void print_manage_history(char *buffer, int *used, int nbytes, Allocation_manage_ts_t *ts_list, int start);
 void print_rw_history(char *buffer, int *used, int nbytes, Allocation_rw_ts_t *ts_list, int start);
-void print_allocation(char *buffer, int *used, int nbytes, Allocation_t *a, Allocation_history_t *h, 
+void print_allocation(char *buffer, int *used, int nbytes, Allocation_t *a, Allocation_history_t *h,
       int state, int cs_type, osd_off_t hbs, osd_off_t bs);
 
 #endif

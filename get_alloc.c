@@ -36,7 +36,7 @@ log_printf(15, "1 ptr=%s\n", ptr);
   ptr = &(ptr[1]);  //** Skip the extra "/"
 log_printf(15, "2 ptr=%s\n", ptr);
   *host = ptr; //** This should be the host name
-  sscanf(string_token(NULL, "/", &bstate, &finished), "%d", port);  
+  sscanf(string_token(NULL, "/", &bstate, &finished), "%d", port);
 
   *rid = string_token(NULL, "#", &bstate, &finished);
   *key = string_token(NULL, "/", &bstate, &finished);
@@ -129,7 +129,7 @@ log_printf(15, "get_alloc: parsed=%s:%d/%s#%s/dummy/%d\n", host, port, rid, key,
 //printf("fname=%s offset=%d len=%d\n", fname, offset, len);
      } else if (strcmp("-d", argv[i]) == 0) {
         i++;
-        k = atoi(argv[i]); i++;      
+        k = atoi(argv[i]); i++;
         set_log_level(k);
      }
 log_printf(15, "get_alloc: while loop bottom i=%d argc=%d\n", i, argc);
@@ -141,7 +141,7 @@ log_printf(15, "get_alloc: after while loop\n");
   if (host == NULL) {
      host = argv[i]; i++;
      port = atoi(argv[i]); i++;
-     rid = argv[i]; i++; 
+     rid = argv[i]; i++;
 
      if (strcmp("read", argv[i])==0) {
         type_key = IBP_READCAP;
@@ -184,10 +184,10 @@ log_printf(15, "parsed: nb=%d s=%d cs_type=%d hbs=" I64T " bs=" I64T " ndata=%d\
      abort();
   }
 
-  //** and now the history 
+  //** and now the history
   to = apr_time_now() + apr_time_make(max_wait, 0);
   n = read_netstream_block(ns, to, (char *)&h, sizeof(h));
-  
+
   used = 0;
   print_allocation(buffer, &used, sizeof(buffer)-1, &a, &h, state, cs_type, header_bs, bs);
   printf("%s", buffer);
@@ -196,13 +196,13 @@ log_printf(15, "parsed: nb=%d s=%d cs_type=%d hbs=" I64T " bs=" I64T " ndata=%d\
   if ((nblocks > 0) && (print_blocks == 1)) {
      printf("\n\n");
      printf(" Block      Bytes    State          Chksum (calculated if error)\n");
-     printf("-------  ----------  -----   -----------------------------------------\n");     
+     printf("-------  ----------  -----   -----------------------------------------\n");
      for (i=0; i<nblocks; i++) {
          n = readline_netstream(ns, buffer, bufsize, dt);
-//         if (n != NS_OK) {  
+//         if (n != NS_OK) {
 //             printf("Error reading netstream %d returned!\n", n);
 //             close_netstream(ns);
-//             return(n); 
+//             return(n);
 //         }
 
          printf("%s\n", buffer);

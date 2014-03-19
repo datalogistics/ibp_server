@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*************************************************************************
 //*************************************************************************
@@ -74,9 +74,9 @@ int *_a_thread_id_ptr()
 
 //***************************************************************************
 
-void _atomic_destructor(void *ptr) 
-{ 
-  free(ptr);   
+void _atomic_destructor(void *ptr)
+{
+  free(ptr);
 }
 
 //*************************************************************************
@@ -100,7 +100,7 @@ void atomic_init()
 void atomic_destroy()
 {
   if (atomic_dec(_atomic_times_used) > 0) return;
-  
+
   apr_pool_destroy(_atomic_mpool);
 }
 

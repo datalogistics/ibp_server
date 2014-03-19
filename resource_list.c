@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //****************************************************************
 //****************************************************************
@@ -46,7 +46,7 @@ int resource_list_n_used(Resource_list_t *rl)
   apr_thread_mutex_lock(rl->lock);
   n = rl->n;
   apr_thread_mutex_unlock(rl->lock);
-  
+
   return(n);
 }
 
@@ -426,10 +426,10 @@ Resource_t *resource_pick(Resource_list_t *rl, rid_t *rid)
 void resource_set_pick_policy(Resource_list_t *rl, int policy)
 {
   switch (policy) {
-    case RL_PICK_RANDOM:      rl->pick_routine = resource_pick_random;  break; 
-    case RL_PICK_ROUND_ROBIN: rl->pick_routine = resource_pick_round_robin;  break; 
-    case RL_PICK_MOST_FREE:   rl->pick_routine = resource_pick_most_free;  break; 
+    case RL_PICK_RANDOM:      rl->pick_routine = resource_pick_random;  break;
+    case RL_PICK_ROUND_ROBIN: rl->pick_routine = resource_pick_round_robin;  break;
+    case RL_PICK_MOST_FREE:   rl->pick_routine = resource_pick_most_free;  break;
     default:
-     rl->pick_routine = resource_pick_round_robin;  break; 
+     rl->pick_routine = resource_pick_round_robin;  break;
   }
 }

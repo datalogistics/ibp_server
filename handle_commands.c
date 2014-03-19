@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*****************************************************************
 //*****************************************************************
@@ -162,7 +162,7 @@ int handle_allocate(ibp_task_t *task)
 //log_printf(15, "handle_allocate: create time =" TT " ns=%d\n", a.creation_ts.time, ns_getid(task->ns));
    err = modify_allocation_resource(res, a.id, &a);
    if (err != 0) {
-      log_printf(0, "handle_allocate:  Error with modify_allocation_resource for new queue allocation!  err=%d, type=%d\n", err, a.type); 
+      log_printf(0, "handle_allocate:  Error with modify_allocation_resource for new queue allocation!  err=%d, type=%d\n", err, a.type);
    }
 
    //** Send the result back **
@@ -206,7 +206,7 @@ int handle_merge(ibp_task_t *task)
 {
    int err;
    Resource_t *r;
-   Allocation_t ma, ca; 
+   Allocation_t ma, ca;
    Cmd_state_t *cmd = &(task->cmd);
    Cmd_merge_t *op = &(cmd->cargs.merge);
 
@@ -219,7 +219,7 @@ int handle_merge(ibp_task_t *task)
       alog_append_ibp_merge(task->myid, 0, 0, -1);
       send_cmd_result(task, IBP_E_INVALID_RID);
       return(global_config->soft_fail);
-   }   
+   }
 
    //** Get the master allocation ***
   if ((err = get_allocation_by_cap_resource(r, MANAGE_CAP, &(op->mkey), &ma)) != 0) {
@@ -268,18 +268,18 @@ int handle_merge(ibp_task_t *task)
       //** merge the allocation **
       if ((err = merge_allocation_resource(r, &ma, &ca)) != 0) {
          log_printf(1, "handle_merge: merge_allocation_resource failed on RID %s!  Error=%d\n", r->name, err);
-         unlock_osd_id_pair(ma.id, ca.id);   
+         unlock_osd_id_pair(ma.id, ca.id);
          send_cmd_result(task, IBP_E_GENERIC);
          return(global_config->soft_fail);
       }
    } else {
       log_printf(15, "handle_merge: Bad child refcount! RID=%s  ca.read=%d ca.write=%d\n", r->name, ca.read_refcount, ca.write_refcount);
-      unlock_osd_id_pair(ma.id, ca.id);   
+      unlock_osd_id_pair(ma.id, ca.id);
       send_cmd_result(task, IBP_E_GENERIC);
       return(global_config->soft_fail);
    }
 
-   unlock_osd_id_pair(ma.id, ca.id);   
+   unlock_osd_id_pair(ma.id, ca.id);
 
    send_cmd_result(task, IBP_OK);
 
@@ -300,7 +300,7 @@ int handle_rename(ibp_task_t *task)
    Resource_t *res;
 
    char token[4096];
-   Allocation_t a; 
+   Allocation_t a;
    Cmd_state_t *cmd = &(task->cmd);
    Cmd_manage_t *manage = &(cmd->cargs.manage);
 
@@ -315,7 +315,7 @@ int handle_rename(ibp_task_t *task)
       alog_append_ibp_rename(task->myid, -1, 0);
       send_cmd_result(task, IBP_E_INVALID_RID);
       return(global_config->soft_fail);
-   }   
+   }
 
    //** Get the allocation ***
   if ((err = get_allocation_by_cap_resource(res, MANAGE_CAP, &(manage->cap), &a)) != 0) {
@@ -396,7 +396,7 @@ int handle_internal_get_corrupt(ibp_task_t *task)
    osd_off_t n;
    osd_iter_t *cit;
    Resource_t *res;
-   
+
    Cmd_state_t *cmd = &(task->cmd);
    Cmd_internal_get_alloc_t *arg = &(cmd->cargs.get_alloc);
 
@@ -411,12 +411,12 @@ int handle_internal_get_corrupt(ibp_task_t *task)
 //      alog_append_internal_get_corrupt(task->myid, -1, 0);
       send_cmd_result(task, IBP_E_INVALID_RID);
       return(global_config->soft_fail);
-   }   
+   }
 
    n = osd_get_corrupt_count(res->dev);   //** Get how many are corrupt
 
    //*** Send back the results ***
-   sprintf(buffer, "%d " I64T " \n",IBP_OK, n); 
+   sprintf(buffer, "%d " I64T " \n",IBP_OK, n);
    err = write_netstream_block(task->ns, task->cmd_timeout, buffer, strlen(buffer));
 
    //** Now iterate over all the elements
@@ -424,8 +424,8 @@ int handle_internal_get_corrupt(ibp_task_t *task)
       err = 0;
       cit = osd_new_corrupt_iterator(res->dev);
       while ((osd_corrupt_iterator_next(cit, &id) == 0) && (err == 0)) {
-        sprintf(buffer, LU "\n", id); 
-        err = write_netstream_block(task->ns, task->cmd_timeout, buffer, strlen(buffer));          
+        sprintf(buffer, LU "\n", id);
+        err = write_netstream_block(task->ns, task->cmd_timeout, buffer, strlen(buffer));
       }
       osd_destroy_corrupt_iterator(cit);
    }
@@ -535,7 +535,7 @@ int handle_internal_get_alloc(ibp_task_t *task)
    if ((cs_type != CHKSUM_NONE) && (err == 0)) {
       chksum_set(&chksum, cs_type);
       bin_len = chksum_size(&chksum, CHKSUM_DIGEST_BIN);
- 
+
       nblocks = (a.size / blocksize) + 1;  //** +1 is for the header
       if ((a.size%blocksize) > 0) nblocks++;  //** Handle a partial block
 
@@ -549,7 +549,7 @@ int handle_internal_get_alloc(ibp_task_t *task)
    }
 
    //*** Send back the results ***
-   sprintf(buffer, "%d " I64T " %d %d " I64T " " I64T " " LU " \n", IBP_OK, nblocks, state, cs_type, hbs, blocksize, nbytes); 
+   sprintf(buffer, "%d " I64T " %d %d " I64T " " I64T " " LU " \n", IBP_OK, nblocks, state, cs_type, hbs, blocksize, nbytes);
    err = write_netstream_block(task->ns, task->cmd_timeout, buffer, strlen(buffer));
 
    //** Send the allocation
@@ -572,7 +572,7 @@ log_printf(10, "handle_internal_get_alloc: ns=%d print_blocks=%d nblocks=" I64T 
          } else {
             convert_bin2hex(bin_len, (unsigned char *)calc_chksum, hex_digest2);
             sprintf(buffer, "%7d  %10lld   %2d     %s (%s)\n", i, bytes_used, state, hex_digest, hex_digest2);
-         }      
+         }
 log_printf(10, "handle_internal_get_alloc: ns=%d i=%d buf=%s\n", ns_getid(task->ns), i, buffer);
          err = write_netstream_block(task->ns, task->cmd_timeout, buffer, strlen(buffer));
       }
@@ -602,7 +602,7 @@ log_printf(10, "handle_internal_get_alloc: ns=%d i=%d buf=%s\n", ns_getid(task->
 
 
 //*****************************************************************
-// handle_alias_allocate - Generates a alias allocation 
+// handle_alias_allocate - Generates a alias allocation
 //
 // Results:
 //    status readCap writeCap manageCap
@@ -614,7 +614,7 @@ int handle_alias_allocate(ibp_task_t *task)
    Resource_t *res;
 
    char token[4096];
-   Allocation_t a, alias_alloc; 
+   Allocation_t a, alias_alloc;
    Cmd_state_t *cmd = &(task->cmd);
    Cmd_alias_alloc_t *pa = &(cmd->cargs.alias_alloc);
 
@@ -629,7 +629,7 @@ int handle_alias_allocate(ibp_task_t *task)
       alog_append_alias_alloc(task->myid, -1, 0, 0, 0, 0);
       send_cmd_result(task, IBP_E_INVALID_RID);
       return(global_config->soft_fail);
-   }   
+   }
 
    //** Get the original allocation ***
    if ((err = get_allocation_by_cap_resource(res, MANAGE_CAP, &(pa->cap), &a)) != 0) {
@@ -664,7 +664,7 @@ int handle_alias_allocate(ibp_task_t *task)
       return(global_config->soft_fail);
    }
 
-   if ((pa->len + pa->offset) > a.max_size) {  
+   if ((pa->len + pa->offset) > a.max_size) {
       uint64_t epos = pa->len + pa->offset;
       log_printf(1, "handle_alias_alloc: ALIAS range > actual allocation! alias= " LU " alloc = " LU "\n", epos, a.max_size);
       send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
@@ -738,17 +738,17 @@ int handle_alias_allocate(ibp_task_t *task)
 //      VS:1.4 DT:dm_type RID:rid RT:rtype CT:ct_bytes ST:st_bytes UT:ut_bytes UH:uh_bytes SH:sh_bytes
 //      CH:ch_bytes AT:at_bytes AH:ah_bytes DT:max_duration RE \n
 //
-//  IBP_ST_CHANGE 
+//  IBP_ST_CHANGE
 //      status \n
 //
-//  IBP_ST_RES 
+//  IBP_ST_RES
 //      status RID1 RID2 ... RIDn \n
 //
 //*****************************************************************
 
 int handle_status(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_status_t *status = &(cmd->cargs.status);
 
   char buffer[100*1024];
@@ -881,7 +881,7 @@ int handle_status(ibp_task_t *task)
          r_used_gb = r_used / (1024.0*1024.0*1024.0);
          r_diff_gb = r_diff / (1024.0*1024.0*1024.0);
          r_free_gb = r_free / (1024.0*1024.0*1024.0);
-         snprintf(buffer, sizeof(buffer)-1, "RID: %s Max: " LU " b (%.2lf GB) Used: " LU " b (%.2lf GB) Diff: " LU " b (%.2lf GB) Free: " LU " b (%.2lf GB) Allocations: " LU " (" LU " alias) Corrupt count: " LU " Activity count: %d\n", 
+         snprintf(buffer, sizeof(buffer)-1, "RID: %s Max: " LU " b (%.2lf GB) Used: " LU " b (%.2lf GB) Diff: " LU " b (%.2lf GB) Free: " LU " b (%.2lf GB) Allocations: " LU " (" LU " alias) Corrupt count: " LU " Activity count: %d\n",
              r->name, r_total, r_total_gb, r_used, r_used_gb, r_diff, r_diff_gb, r_free, r_free_gb, r_alloc, r_alias, bad_count, resource_get_counter(r));
          strncat(result, buffer, sizeof(result)-1 - strlen(result));
 
@@ -898,13 +898,13 @@ int handle_status(ibp_task_t *task)
      r_diff_gb = total_diff / (1024.0*1024.0*1024.0);
      r_free_gb = total_free / (1024.0*1024.0*1024.0);
      i = resource_list_n_used(global_config->rl);
-     snprintf(buffer, sizeof(buffer)-1, "Total resources: %d  Max: " LU " b (%.2lf GB) Used: " LU " b (%.2lf GB) Diff: " LU " b (%.2lf GB) Free: " LU " b (%.2lf GB) Allocations: " LU " (" LU " alias)  Corrupt count: " LU "\n", 
+     snprintf(buffer, sizeof(buffer)-1, "Total resources: %d  Max: " LU " b (%.2lf GB) Used: " LU " b (%.2lf GB) Diff: " LU " b (%.2lf GB) Free: " LU " b (%.2lf GB) Allocations: " LU " (" LU " alias)  Corrupt count: " LU "\n",
              i, total, r_total_gb, total_used, r_used_gb, total_diff, r_diff_gb, total_free, r_free_gb, total_alloc, total_alias, bad_total_count);
      strncat(result, buffer, sizeof(result)-1 - strlen(result));
 
      r_free_gb = del_total / (1024.0*1024.0*1024.0);
      r_diff_gb = exp_total / (1024.0*1024.0*1024.0);
-     snprintf(buffer, sizeof(buffer)-1, "Total Trash stats -- Deleted: " LU " b (%.2lf GB) in " LU " files  -- Expired: " LU " b (%.2lf GB) in " LU " files\n", 
+     snprintf(buffer, sizeof(buffer)-1, "Total Trash stats -- Deleted: " LU " b (%.2lf GB) in " LU " files  -- Expired: " LU " b (%.2lf GB) in " LU " files\n",
              del_total, r_free_gb, n_del_total, exp_total, r_diff_gb, n_exp_total);
      strncat(result, buffer, sizeof(result)-1 - strlen(result));
 
@@ -955,7 +955,7 @@ int handle_status(ibp_task_t *task)
      send_stats(task->ns, status->start_time, dt);
      alog_append_cmd_result(task->myid, IBP_OK);
   } else if (status->subcmd == IBP_ST_INQ) {
-     char buffer[2048]; 
+     char buffer[2048];
      char result[32];
      int n, nres;
 
@@ -990,7 +990,7 @@ int handle_status(ibp_task_t *task)
 
      if (cmd->version == IBPv040) {
                                             //***  1       2       3     4      5       6       7       8        9       10      11     12     13   13
-        n = snprintf(buffer, sizeof(buffer), "%s:1.4:1.0 %s:%d  %s:%s %s:%d %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:%d %s \n", 
+        n = snprintf(buffer, sizeof(buffer), "%s:1.4:1.0 %s:%d  %s:%s %s:%d %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:" LU " %s:%d %s \n",
            ST_VERSION,                                   //** 1
            ST_DATAMOVERTYPE, DM_TCP,                     //** 2
            ST_RESOURCEID, r->name,                       //** 3
@@ -1051,7 +1051,7 @@ return(-1);
      r->max_duration = status->new_duration;
      apr_thread_mutex_unlock(r->mutex);
 
-     log_printf(10, "handle_status: Succesfully processed IBP_ST_CHANGE on RID %s hard:" LU " soft:" LU " expiration:%d\n", 
+     log_printf(10, "handle_status: Succesfully processed IBP_ST_CHANGE on RID %s hard:" LU " soft:" LU " expiration:%d\n",
            r->name, r->max_size[ALLOC_HARD], r->max_size[ALLOC_SOFT], r->max_duration);
      cmd->state = CMD_STATE_FINISHED;
      send_cmd_result(task, IBP_OK);
@@ -1106,7 +1106,7 @@ int handle_manage(ibp_task_t *task)
 
   Resource_t *r = resource_lookup(global_config->rl, manage->crid);
   if (r == NULL) {
-     log_printf(10, "handle_manage:  Invalid RID :%s\n",manage->crid); 
+     log_printf(10, "handle_manage:  Invalid RID :%s\n",manage->crid);
      alog_append_manage_bad(task->myid, cmd->command, manage->subcmd);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(global_config->soft_fail);
@@ -1170,7 +1170,7 @@ int handle_manage(ibp_task_t *task)
      }
 
      if (strcmp(ma.caps[MANAGE_CAP].v, manage->master_cap.v) != 0) {
-        log_printf(10, "handle_manage: Master cap doesn't match with alias read: %s actual: %s  rid=%s ns=%d\n", 
+        log_printf(10, "handle_manage: Master cap doesn't match with alias read: %s actual: %s  rid=%s ns=%d\n",
              manage->master_cap.v, ma.caps[MANAGE_CAP].v, r->name, ns_getid(task->ns));
         alog_append_manage_bad(task->myid, cmd->command, manage->subcmd);
         send_cmd_result(task, IBP_E_INVALID_MANAGE_CAP);
@@ -1326,7 +1326,7 @@ int handle_manage(ibp_task_t *task)
 
         if (cmd->command == IBP_MANAGE) {
            alog_append_manage_probe(task->myid, r->rl_index, id);
-           log_printf(15, "handle_manage: poffset=" LU " plen=" LU " a->size=" LU " a->max_size=" LU " ns=%d\n", 
+           log_printf(15, "handle_manage: poffset=" LU " plen=" LU " a->size=" LU " a->max_size=" LU " ns=%d\n",
                    alias_offset, alias_len, a->size, a->max_size, ns_getid(task->ns));
            pmax_size = a->max_size - alias_offset;
            if (pmax_size > alias_len) pmax_size = alias_len;
@@ -1346,7 +1346,7 @@ int handle_manage(ibp_task_t *task)
         update_manage_history(r, a->id, a->is_alias, &(task->ipadd), cmd->command, manage->subcmd, a->reliability, a->expiration, a->max_size, pid);
         err = modify_allocation_resource(r, a->id, a);
         if (err != 0) {
-           log_printf(0, "handle_manage/probe:  Error with modify_allocation_resource for new queue allocation!  err=%d\n", err); 
+           log_printf(0, "handle_manage/probe:  Error with modify_allocation_resource for new queue allocation!  err=%d\n", err);
         }
 
         log_printf(10, "handle_manage: probe results = %s\n",buf);
@@ -1360,13 +1360,13 @@ int handle_manage(ibp_task_t *task)
 //  update_manage_history(r, a->id, a->is_alias, &(task->ipadd), cmd->command, manage->subcmd, a->reliability, a->expiration, a->max_size, pid);
 //  err = modify_allocation_resource(r, a->id, a);
 //  if (err != 0) {
-//     log_printf(0, "handle_manage/probe:  Error with modify_allocation_resource for new queue allocation!  err=%d\n", err); 
+//     log_printf(0, "handle_manage/probe:  Error with modify_allocation_resource for new queue allocation!  err=%d\n", err);
 //  }
 
   cmd->state = CMD_STATE_FINISHED;
   log_printf(10, "handle_manage: Sucessfully processed manage command\n");
 
-  unlock_osd_id(a->id); 
+  unlock_osd_id(a->id);
 
   return(0);
 }
@@ -1381,7 +1381,7 @@ int handle_manage(ibp_task_t *task)
 
 int handle_validate_chksum(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_write_t *w = &(cmd->cargs.write);
   Allocation_t *a = &(w->a);
   osd_id_t id, pid, aid, apid;
@@ -1395,7 +1395,7 @@ int handle_validate_chksum(ibp_task_t *task)
 
   w->r = resource_lookup(global_config->rl, w->crid);
   if (w->r == NULL) {
-     log_printf(10, "handle_validate_chksum:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid); 
+     log_printf(10, "handle_validate_chksum:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid);
      alog_append_write(task->myid, cmd->command, w->r->rl_index, pid, id, w->iovec.vec[0].off, w->iovec.vec[0].len);
      alog_append_validate_get_chksum(task->myid, cmd->command, -1, 0, 0);
      send_cmd_result(task, IBP_E_INVALID_RID);
@@ -1450,7 +1450,7 @@ int handle_validate_chksum(ibp_task_t *task)
   log_printf(10, "handle_validate_chksum: ns=%d Return string: %s", ns_getid(task->ns), buffer);
   log_printf(10, "handle_validate_chksum: Exiting write tid=" LU " err=%d\n", task->tid, err);
 
-  return(0); 
+  return(0);
 }
 
 //*****************************************************************
@@ -1485,7 +1485,7 @@ int handle_get_chksum(ibp_task_t *task)
   pid = 0; id = 0;
   w->r = resource_lookup(global_config->rl, w->crid);
   if (w->r == NULL) {
-     log_printf(10, "handle_get_chksum:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid); 
+     log_printf(10, "handle_get_chksum:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid);
      alog_append_validate_get_chksum(task->myid, cmd->command, -1, 0, 0);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(global_config->soft_fail);
@@ -1545,7 +1545,7 @@ int handle_get_chksum(ibp_task_t *task)
   if ((a->size%blocksize) > 0) nblocks++;  //** Handle a partial block
 //not counted in a->size  nblocks--; //** Don't send the header block
   nbuf = cs_size * nblocks;
-  
+
   //*Format: status cs_type block_size nblocks cs_size nbytes\n
   snprintf(buffer, sizeof(buffer), "%d %d %d " I64T " " I64T " " I64T "\n", IBP_OK, cs_type, cs_size, blocksize, nblocks, nbuf);
   log_printf(10, "handle_get_chksum: ns=%d Sending result: %s", ns_getid(task->ns), buffer);
@@ -1576,7 +1576,7 @@ int handle_get_chksum(ibp_task_t *task)
      }
 
      //** Send the data back
-     err = write_netstream_block(task->ns, task->cmd_timeout, buffer, csbytes);    
+     err = write_netstream_block(task->ns, task->cmd_timeout, buffer, csbytes);
      if (err != 0) {
         log_printf(10, "handle_get_chksum: Command or network error! ns=%d err=%d\n", task->ns->id, err);
         close_netstream(task->ns);
@@ -1586,7 +1586,7 @@ int handle_get_chksum(ibp_task_t *task)
 
   log_printf(10, "handle_validate_chksum: Exiting write tid=" LU " err=%d\n", task->tid, err);
 
-  return(0); 
+  return(0);
 }
 
 
@@ -1622,7 +1622,7 @@ int handle_write(ibp_task_t *task)
 
   w->r = resource_lookup(global_config->rl, w->crid);
   if (w->r == NULL) {
-     log_printf(10, "handle_write:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid); 
+     log_printf(10, "handle_write:  Invalid RID :%s  tid=" LU "\n",w->crid, task->tid);
      alog_append_write(task->myid, cmd->command, -1, 0, 0, w->iovec.vec[0].off, w->iovec.vec[0].len);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(global_config->soft_fail);
@@ -1703,7 +1703,7 @@ int handle_write(ibp_task_t *task)
      //** check if we are inside the alias bounds
      alias_end = alias_offset + alias_len;
      if (((off+len) > alias_end) && (a->type == IBP_BYTEARRAY)) {
-        log_printf(10, "handle_write: Attempt to write beyond end of alias range! cap: %s r = %s  i=%d off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n", 
+        log_printf(10, "handle_write: Attempt to write beyond end of alias range! cap: %s r = %s  i=%d off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n",
                  w->cap.v, w->r->name, i, off, len, alias_offset, alias_len, task->tid);
         send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
         return(global_config->soft_fail);
@@ -1843,7 +1843,7 @@ int handle_read(ibp_task_t *task)
   r->r = resource_lookup(global_config->rl, r->crid);
   if (r->r == NULL) {
      alog_append_read(task->myid, -1, 0, 0, r->iovec.vec[0].off, r->iovec.vec[0].len);
-     log_printf(10, "handle_read:  Invalid RID :%s\n",r->crid); 
+     log_printf(10, "handle_read:  Invalid RID :%s\n",r->crid);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
   }
@@ -1903,7 +1903,7 @@ log_printf(10, "handle_read: mid: " LU " offset=" I64T " len=" I64T " ns=%d\n", 
      //** check if we are inside the alias bounds
      alias_end = alias_offset + alias_len;
      if (((off+len) > alias_end) && (a->type == IBP_BYTEARRAY)) {
-        log_printf(10, "handle_read: Attempt to write beyond end of alias range! cap: %s r = %s i=%d off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n", 
+        log_printf(10, "handle_read: Attempt to write beyond end of alias range! cap: %s r = %s i=%d off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n",
                  r->cap.v, r->r->name, i, off, len, alias_offset, alias_len, task->tid);
         send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
         return(global_config->soft_fail);
@@ -1911,7 +1911,7 @@ log_printf(10, "handle_read: mid: " LU " offset=" I64T " len=" I64T " ns=%d\n", 
 
      //*** and make sure there is data ***
      if (((off+len) > a->size) && (a->type == IBP_BYTEARRAY)) {
-        log_printf(10, "handle_read: Not enough data! cap: %s r = %s i=%d off=" LU " alen=" LU " curr_size=" LU "\n", 
+        log_printf(10, "handle_read: Not enough data! cap: %s r = %s i=%d off=" LU " alen=" LU " curr_size=" LU "\n",
               r->cap.v, r->r->name, i, off, len, a->size);
         send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
         return(0);
@@ -2000,7 +2000,7 @@ log_printf(10, "handle_read: mid: " LU " offset=" I64T " len=" I64T " ns=%d\n", 
 
 int same_depot_copy(ibp_task_t *task, char *rem_cap, int rem_offset, osd_id_t rpid)
 {
-   Cmd_state_t *cmd = &(task->cmd); 
+   Cmd_state_t *cmd = &(task->cmd);
    Cmd_read_t *r = &(cmd->cargs.read);
    Allocation_t *a = &(r->a);
    int alias_end, cmode;
@@ -2040,7 +2040,7 @@ int same_depot_copy(ibp_task_t *task, char *rem_cap, int rem_offset, osd_id_t rp
 
    rem_r = resource_lookup(global_config->rl, dcrid);
    if (rem_r == NULL) {
-      log_printf(10, "same_depot_copy:  Invalid RID :%s\n",dcrid); 
+      log_printf(10, "same_depot_copy:  Invalid RID :%s\n",dcrid);
       send_cmd_result(task, IBP_E_INVALID_RID);
       return(0);
    }
@@ -2086,7 +2086,7 @@ int same_depot_copy(ibp_task_t *task, char *rem_cap, int rem_offset, osd_id_t rp
 
       //** Validate the alias writing range **
       if (((rem_offset + r->iovec.vec[0].len) > alias_end) && (rem_a.type ==IBP_BYTEARRAY)) {
-         log_printf(10, "same_depot_copy: Attempt to write beyond end of alias allocation! cap: %s r = %s off=%d len=" LU "\n", 
+         log_printf(10, "same_depot_copy: Attempt to write beyond end of alias allocation! cap: %s r = %s off=%d len=" LU "\n",
              dcap.v, rem_r->name, rem_offset, r->iovec.vec[0].len);
          send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
          unlock_osd_id(did);
@@ -2097,7 +2097,7 @@ int same_depot_copy(ibp_task_t *task, char *rem_cap, int rem_offset, osd_id_t rp
 
    //** Validate the writing/reading range **
    if (((rem_offset + r->iovec.vec[0].len) > rem_a.max_size) && (rem_a.type ==IBP_BYTEARRAY)) {
-      log_printf(10, "same_depot_copy: Attempt to write beyond end of allocation! cap: %s r = %s off=%d len=" LU "\n", 
+      log_printf(10, "same_depot_copy: Attempt to write beyond end of allocation! cap: %s r = %s off=%d len=" LU "\n",
           dcap.v, rem_r->name, rem_offset, r->iovec.vec[0].len);
       send_cmd_result(task, IBP_E_WOULD_EXCEED_LIMIT);
       unlock_osd_id(did);
@@ -2198,7 +2198,7 @@ log_printf(15, "same_depot_copy: rem_offset=%d r->offset=" OT " ns=%d\n", rem_of
    alog_append_cmd_result(task->myid, err);
    snprintf(result, 511, "%d " LU " \n", err, r->iovec.vec[0].len);
 
-   log_printf(10, "same_depot_copy: ns=%d Completed successfully.  Sending result: %s", task->ns->id, result); 
+   log_printf(10, "same_depot_copy: ns=%d Completed successfully.  Sending result: %s", task->ns->id, result);
    write_netstream_block(task->ns, task->cmd_timeout, result, strlen(result));
    log_printf(15, "handle_copysend: END pns=%d cns=%d---same_depot_copy-------------------------\n", task->ns->id, task->ns->id);
 
@@ -2298,7 +2298,7 @@ log_printf(15, "iovec->n=%d off=" OT " len=" OT " cumulative_len=" OT "\n", iov-
   //** check if we are inside the alias bounds
   alias_end = alias_offset + alias_len;
   if (((r->iovec.vec[0].off + r->iovec.vec[0].len) > alias_end) && (a->type == IBP_BYTEARRAY)) {
-     log_printf(10, "handle_copy: Attempt to write beyond end of alias range! cap: %s r = %s off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n", 
+     log_printf(10, "handle_copy: Attempt to write beyond end of alias range! cap: %s r = %s off=" I64T " len=" I64T " poff = " I64T " plen= " I64T " tid=" LU "\n",
               r->cap.v, r->r->name, r->iovec.vec[0].off, r->iovec.vec[0].len, alias_offset, alias_len, task->tid);
      alog_append_dd_copy(cmd->command, task->myid, r->r->rl_index, apid, aid, r->iovec.vec[0].len, r->iovec.vec[0].off,
            r->remote_offset, r->write_mode, r->ctype, r->path, 0, AF_INET, addr, r->remote_cap, "");
@@ -2678,7 +2678,7 @@ int handle_internal_get_config(ibp_task_t *task)
 
 int handle_internal_date_free(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_internal_date_free_t *arg = &(cmd->cargs.date_free);
   int a_count, p_count, err;
   uint64_t total_bytes, bytes, bytes_used;
@@ -2692,7 +2692,7 @@ int handle_internal_date_free(ibp_task_t *task)
 
   r = resource_lookup(global_config->rl, arg->crid);
   if (r == NULL) {
-     log_printf(10, "handle_internal_date_free:  Invalid RID :%s\n",arg->crid); 
+     log_printf(10, "handle_internal_date_free:  Invalid RID :%s\n",arg->crid);
      alog_append_internal_date_free(task->myid, -1, arg->size);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
@@ -2702,13 +2702,13 @@ int handle_internal_date_free(ibp_task_t *task)
 
   //*** Send back the results ***
   send_cmd_result(task, IBP_OK);
-  
+
   wei = walk_expire_iterator_begin(r);
-  
+
   a_count = p_count = 0;
   bytes = bytes_used = total_bytes = 0;
   curr_time = 0;
-  
+
   err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);
   while ((err == 0) && (arg->size > total_bytes)) {
     if (a.expiration != curr_time) {  //** time change so print the current stats
@@ -2725,9 +2725,9 @@ int handle_internal_date_free(ibp_task_t *task)
 
        curr_time = a.expiration;
        a_count = p_count = bytes = bytes_used = 0;
-    } 
+    }
 
-    if (a.is_alias) { 
+    if (a.is_alias) {
        p_count++;
     } else {
        a_count++;
@@ -2739,7 +2739,7 @@ int handle_internal_date_free(ibp_task_t *task)
 
     log_printf(15, "handle_internal_date_free: ns=%d time=" TT " a_count=%d p_count=%d bytes=" LU " total=" LU "\n", ns_getid(task->ns), ibp2apr_time(curr_time), a_count, p_count, bytes, total_bytes);
 
-    if (err == 0) err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);    
+    if (err == 0) err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);
   }
 
   if (curr_time != 0) {
@@ -2771,7 +2771,7 @@ int handle_internal_date_free(ibp_task_t *task)
 
 int handle_internal_expire_list(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_internal_expire_log_t *arg = &(cmd->cargs.expire_log);
   int i, err;
   ibp_time_t expire_time;
@@ -2784,7 +2784,7 @@ int handle_internal_expire_list(ibp_task_t *task)
 
   r = resource_lookup(global_config->rl, arg->crid);
   if (r == NULL) {
-     log_printf(10, "handle_internal_expire_list:  Invalid RID :%s\n",arg->crid); 
+     log_printf(10, "handle_internal_expire_list:  Invalid RID :%s\n",arg->crid);
      alog_append_internal_expire_list(task->myid, -1, arg->start_time, arg->max_rec);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
@@ -2794,11 +2794,11 @@ int handle_internal_expire_list(ibp_task_t *task)
 
   //*** Send back the results ***
   send_cmd_result(task, IBP_OK);
-  
+
   wei = walk_expire_iterator_begin(r);
 
   set_walk_expire_iterator(wei, arg->start_time);
-  
+
   err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);
   i = 0;
   while ((err == 0) && (i < arg->max_rec)) {
@@ -2812,7 +2812,7 @@ int handle_internal_expire_list(ibp_task_t *task)
        err = 0;
     }
 
-    if (err == 0) err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);    
+    if (err == 0) err = get_next_walk_expire_iterator(wei, DBR_NEXT, &a);
     i++;
   }
 
@@ -2836,7 +2836,7 @@ int handle_internal_expire_list(ibp_task_t *task)
 
 int handle_internal_undelete(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_internal_undelete_t *arg = &(cmd->cargs.undelete);
   int err = IBP_OK;
   ibp_time_t expire_time;
@@ -2846,7 +2846,7 @@ int handle_internal_undelete(ibp_task_t *task)
 
   r = resource_lookup(global_config->rl, arg->crid);
   if (r == NULL) {
-     log_printf(10, "handle_internal_undelete:  Invalid RID :%s\n",arg->crid); 
+     log_printf(10, "handle_internal_undelete:  Invalid RID :%s\n",arg->crid);
 //     alog_append_internal_undelete(task->myid, -1, arg->trash_type, arg->trash_id, arg->duration);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
@@ -2876,7 +2876,7 @@ int handle_internal_undelete(ibp_task_t *task)
 
 int handle_internal_rescan(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_internal_rescan_t *arg = &(cmd->cargs.rescan);
   resource_list_iterator_t it;
   Resource_t *r;
@@ -2886,17 +2886,17 @@ int handle_internal_rescan(ibp_task_t *task)
   if (ibp_rid_is_empty(arg->rid)) {
      it = resource_list_iterator(global_config->rl);
      while ((r = resource_list_iterator_next(global_config->rl, &it)) != NULL) {
-        resource_rescan(r);        
+        resource_rescan(r);
      }
      resource_list_iterator_destroy(global_config->rl, &it);
   } else {
      r = resource_lookup(global_config->rl, arg->crid);
      if (r == NULL) {
-        log_printf(10, "handle_internal_rescn:  Invalid RID :%s\n",arg->crid); 
+        log_printf(10, "handle_internal_rescn:  Invalid RID :%s\n",arg->crid);
         send_cmd_result(task, IBP_E_INVALID_RID);
         return(0);
      }
-     resource_rescan(r);        
+     resource_rescan(r);
   }
 
   //*** Send back the results ***
@@ -3072,14 +3072,14 @@ int handle_internal_umount(ibp_task_t *task)
 }
 
 //*****************************************************************
-//  handle_internal_set_mode  - Handles the internal command for 
+//  handle_internal_set_mode  - Handles the internal command for
 //      setting the Read/Write/Manage mode for the RID
 //
 //*****************************************************************
 
 int handle_internal_set_mode(ibp_task_t *task)
 {
-  Cmd_state_t *cmd = &(task->cmd); 
+  Cmd_state_t *cmd = &(task->cmd);
   Cmd_internal_mode_t *arg = &(cmd->cargs.mode);
   Resource_t *r;
 
@@ -3087,7 +3087,7 @@ int handle_internal_set_mode(ibp_task_t *task)
 
   r = resource_lookup(global_config->rl, arg->crid);
   if (r == NULL) {
-     log_printf(10, "handle_internal_set_mode:  Invalid RID :%s\n",arg->crid); 
+     log_printf(10, "handle_internal_set_mode:  Invalid RID :%s\n",arg->crid);
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
   }

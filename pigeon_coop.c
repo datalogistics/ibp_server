@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //******************************************************************
 //******************************************************************
@@ -85,7 +85,7 @@ pigeon_coop_hole_t pigeon_coop_iterator_next(pigeon_coop_iter_t *pci)
 
 //log_printf(10, "pigeon_coop_iterator_next: pc=%s nothing left 1\n", pc->name); flush_log();
 
-     return(pch);    
+     return(pch);
   }
 
   apr_thread_mutex_lock(pc->lock);
@@ -100,7 +100,7 @@ pigeon_coop_hole_t pigeon_coop_iterator_next(pigeon_coop_iter_t *pci)
      pch.data = NULL;
 
 //log_printf(10, "pigeon_coop_iterator_next: pc=%s nothing left 2\n", pc->name); flush_log();
-     return(pch);    
+     return(pch);
   }
 
   //** Check if the current shelf has anything used
@@ -114,7 +114,7 @@ pigeon_coop_hole_t pigeon_coop_iterator_next(pigeon_coop_iter_t *pci)
 
      apr_thread_mutex_unlock(pc->lock);
 
-     return(pch);    
+     return(pch);
   } else {  //** Nope got to check the next shelf
     pci->shelf++;
     for (i=pci->shelf; i<pc->nshelves; i++)  {
@@ -128,7 +128,7 @@ pigeon_coop_hole_t pigeon_coop_iterator_next(pigeon_coop_iter_t *pci)
                pch.data = (void *)&(pc->data_shelf[pch.shelf][pch.hole*pc->item_size]);
 //log_printf(10, "pigeon_coop_iterator_next: pc=%s FOUND-2 shelf=%d slot=%d\n", pc->name, pch.shelf, pch.hole); flush_log();
                apr_thread_mutex_unlock(pc->lock);
-               return(pch);    
+               return(pch);
             }
         }
     }
@@ -153,7 +153,7 @@ pigeon_coop_hole_t pigeon_coop_iterator_next(pigeon_coop_iter_t *pci)
 
 //***************************************************************************
 //  release_pigeon_hole - releases a pigeon hole for use
-//   
+//
 //***************************************************************************
 
 int release_pigeon_coop_hole(pigeon_coop_t *pc, pigeon_coop_hole_t *pch)
@@ -188,10 +188,10 @@ int release_pigeon_coop_hole(pigeon_coop_t *pc, pigeon_coop_hole_t *pch)
      i = pc->nshelves-1;
      while ((pigeon_holes_used(pc->ph_shelf[i]) == 0) && (i>0)) {
         i--;
-     }    
+     }
 
      log_printf(10, "release_pigeon_coop_hole: pc=%s Attempting to free shelves.  nshelves=%d last_used=%d nused=%d\n", pc->name, pc->nshelves, n, pc->nused); flush_log();
-     n = i+1;      
+     n = i+1;
 
      if (n < pc->nshelves) {
         //** Free up the shelves
@@ -212,7 +212,7 @@ int release_pigeon_coop_hole(pigeon_coop_t *pc, pigeon_coop_hole_t *pch)
 
      }
   }
-   
+
   apr_thread_mutex_unlock(pc->lock);
 
   return(0);
@@ -232,7 +232,7 @@ pigeon_coop_hole_t reserve_pigeon_coop_hole(pigeon_coop_t *pc)
   //** Check for a free slot **
   n = pc->nused / pc->shelf_size;
   start_shelf = (n > pc->check_shelf) ? pc->check_shelf : n;
-  for (n=0; n < pc->nshelves; n++) {  
+  for (n=0; n < pc->nshelves; n++) {
      i = (start_shelf + n) % pc->nshelves;
      slot = reserve_pigeon_hole(pc->ph_shelf[i]);
 //log_printf(10, "reserve_pigeon_coop_hole: pc=%s nshelves=%d i=%d slot=%d\n", pc->name, pc->nshelves, i, slot);
@@ -304,7 +304,7 @@ void destroy_pigeon_coop(pigeon_coop_t *pc)
 //   item_size - Size of each item.
 //***************************************************************************
 
-pigeon_coop_t *new_pigeon_coop(const char *name, int size, int item_size, void *new_arg, void *(*new)(void *arg, int size), 
+pigeon_coop_t *new_pigeon_coop(const char *name, int size, int item_size, void *new_arg, void *(*new)(void *arg, int size),
    void (*free)(void *arg, int size, void *dshelf))
 {
   int i;

@@ -5,7 +5,7 @@
 
 //** Dummy routine and variable
 int print_config(char *buffer, int *used, int nbytes, Config_t *cfg) { return(0); }
-Config_t *global_config; 
+Config_t *global_config;
 
 //*************************************************************************
 //*************************************************************************
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
   printf("Start date: %s (" LU ")\n", start_time, ibp2apr_time(ah.start_time));
   printf("  End date: %s (" LU ")\n", end_time, ibp2apr_time(ah.end_time));
   printf("------------------------------------------------------------------\n\n");
-  
+
 
   do {
     pos = ftell(alog->fd);

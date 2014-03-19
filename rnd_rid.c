@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //**************************************************************************
 //  Returns an unsigned 64-bit random number
@@ -44,17 +44,17 @@ http://www.accre.vanderbilt.edu
 int main(int argc, char *argv[])
 {
   uint64_t llu;
- 
+
   init_random();
 
   get_random(&llu, sizeof(llu));
 
-  printf("%lu\n", llu);  
+  printf("%lu\n", llu);
 
   char addr[16], name[256];
 
   get_random(addr, sizeof(addr));
-  
+
   name[0] = '\0';
   inet_ntop(AF_INET6, addr, name, 256);
   printf("ipv6:%s\n", name);

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //**************************************************
 //
@@ -127,7 +127,7 @@ struct osd_s {
     void *private;  //** All private implementation specific data goes hear
     int (*umount)(osd_t *d);
     osd_id_t (*create_id)(osd_t *d, int chksum_type, int header_size, int block_size);    // Returns an OSD object.  Think of it as a filename
-    osd_native_fd_t (*native_open)(osd_t *d, osd_id_t id, osd_off_t offset, int mode);   //Native open 
+    osd_native_fd_t (*native_open)(osd_t *d, osd_id_t id, osd_off_t offset, int mode);   //Native open
     int (*native_close)(osd_t *d, osd_native_fd_t fd);   //Native close
     int (*validate_chksum)(osd_t *d, osd_id_t id, int correct_errors);
     osd_off_t (*get_chksum)(osd_t *d, osd_id_t id, char *disk_buffer, char *calc_buffer, osd_off_t buffer_size, osd_off_t *block_len, char *good_block, osd_off_t start_block, osd_off_t end_block);

@@ -25,7 +25,7 @@ Advanced Computing Center for Research and Education
 230 Appleton Place
 Nashville, TN 37203
 http://www.accre.vanderbilt.edu
-*/ 
+*/
 
 //*************************************************************************
 //*************************************************************************
@@ -104,7 +104,7 @@ typedef struct {
    struct ns_monitor_s *nm;      //This is only used for an accept call to tell which bind was accepted
    ns_chksum_t read_chksum;      //Read chksum
    ns_chksum_t write_chksum;     //Write chksum
-   ns_native_fd_t (*native_fd)(net_sock_t *sock);  //** Native socket if supported   
+   ns_native_fd_t (*native_fd)(net_sock_t *sock);  //** Native socket if supported
    int (*close)(net_sock_t *sock);  //** Close socket
    long int(*write)(net_sock_t *sock, const void *buf, size_t count, Net_timeout_t tm);
    long int (*read)(net_sock_t *sock, void *buf, size_t count, Net_timeout_t tm);
@@ -127,7 +127,7 @@ typedef struct ns_monitor_s {   //** Struct used to handle ports being monitored
    apr_pool_t *mpool;     //** Memory pool for the thread
    apr_thread_mutex_t *lock;  //** Lock used for blocking pending accept
    apr_thread_cond_t *cond;   //** cond used for blocking pending accept
-   apr_thread_mutex_t *trigger_lock; //** Lock used for sending globabl pending trigger 
+   apr_thread_mutex_t *trigger_lock; //** Lock used for sending globabl pending trigger
    apr_thread_cond_t *trigger_cond;   //** cond used for sending globabl pending accept
    int *trigger_count;             //** Gloabl count of pending requests
 } ns_monitor_t;
@@ -165,7 +165,7 @@ int ns_chksum_is_valid(ns_chksum_t *ncs);
 #define ns_read_chksum_set(ns, ncs) (ns)->read_chksum = (ncs)
 //#define ns_read_chksum_reset(ns)  ns_chksum_reset(&((ns)->read_chksum))
 #define ns_read_chksum_clear(ns)  (ns)->read_chksum.is_valid = 0
-#define ns_read_chksum_enable(ns)  (ns)->read_chksum.is_running = 1 
+#define ns_read_chksum_enable(ns)  (ns)->read_chksum.is_running = 1
 #define ns_read_chksum_disable(ns)  (ns)->read_chksum.is_running = 0
 #define ns_read_chksum_bytesleft(ns) (ns)->read_chksum.bytesleft
 #define ns_read_chksum_state(ns)  (ns)->read_chksum.is_running
@@ -173,8 +173,8 @@ int ns_read_chksum_flush(NetStream_t *ns);
 
 #define ns_write_chksum_set(ns, ncs) (ns)->write_chksum = (ncs)
 #define ns_write_chksum_clear(ns)  (ns)->write_chksum.is_valid = 0
-#define ns_write_chksum_enable(ns)  (ns)->write_chksum.is_running = 1 
-#define ns_write_chksum_disable(ns)  (ns)->write_chksum.is_running = 0 
+#define ns_write_chksum_enable(ns)  (ns)->write_chksum.is_running = 1
+#define ns_write_chksum_disable(ns)  (ns)->write_chksum.is_running = 0
 #define ns_write_chksum_bytesleft(ns) (ns)->write_chksum.bytesleft
 #define ns_write_chksum_state(ns)  (ns)->write_chksum.is_running
 int ns_write_chksum_flush(NetStream_t *ns);

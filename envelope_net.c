@@ -99,8 +99,8 @@ int envelope_simple_recv(NetStream_t *ns, uint32_t *cmd)
 
   envelope_get(&env, &ecmd, &size);
   err = size;
-  log_printf(15, "envelope_simple_recv: cmd=%hhu %hhu %hhu %hhu size=%d\n", 
-        ecmd.byte[0], ecmd.byte[1], ecmd.byte[2], ecmd.byte[3], err); 
+  log_printf(15, "envelope_simple_recv: cmd=%hhu %hhu %hhu %hhu size=%d\n",
+        ecmd.byte[0], ecmd.byte[1], ecmd.byte[2], ecmd.byte[3], err);
   if (size != 0) return(size);
 
   *cmd = get_env_command_uint32(&ecmd);
