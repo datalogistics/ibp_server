@@ -3,14 +3,11 @@ project( IBP_SERVER C )
 
 # User changes should go here
 #----------------------------------------
-if (${CMAKE_BUILD_TYPE})
-    message("Using requested build type: ${CMAKE_BUILD_TYPE}")
-else(${CMAKE_BUILD_TYPE})
-    message("Making a debug build since CMAKE_BUILD_TYPE was unset")
-    message("  This can be changed by adding -DCMAKE_BUILD_TYPE=<type> to the command line")
-    set(CMAKE_BUILD_TYPE "Debug")
-endif(${CMAKE_BUILD_TYPE})
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -O2 -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
+set(CMAKE_BUILD_TYPE "Debug")
+#set(CMAKE_BUILD_TYPE "Release")
+
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -O0 -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
+message("flags_debug1=${CMAKE_C_FLAGS_DEBUG}")
 #list(APPEND CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_REQUIRED_FLAGS} -O                     -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
 #----------------------------------------
@@ -38,7 +35,6 @@ endif(WIN32)
 # get dependancies
 find_package(BerkeleyDB REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(Protobufc REQUIRED)
 find_package(APR REQUIRED)
 find_package(APRUtil REQUIRED)
 find_package(Phoebus)
@@ -57,21 +53,21 @@ list(APPEND LIBS ${BDB_LIBRARIES}  ${OPENSSL_LIBRARIES}
 # config options
 if (PHOEBUS_FOUND)
   set(PHOEBUS_OPT "-D_ENABLE_PHOEBUS")
-  OPTION( _ENABLE_PHOEBUS "Enable Phoebus support" ON )
+  OPTION( _ENABLE_PHOEBUS "Enable PHOEBUS support" ON )
   include_directories(${PHOEBUS_INCLUDE_DIR})
   list(APPEND LIBS ${PHOEBUS_LIBRARY})
 else (PHOEBUS_FOUND)
-  OPTION( _ENABLE_PHOEBUS "Enable Phoebus support" OFF )
+  OPTION( _ENABLE_PHOEBUS "Enable PHOEBUS support" OFF )
 endif (PHOEBUS_FOUND)
 
 # Check if we found unis lib c and the set options
 if (UNIS_C_FOUND)
   set(UNIS_C_OPT "-D_ENABLE_UNIS_C")
-  OPTION( _ENABLE_UNIS_C "Enable Phoebus support" ON )
+  OPTION( _ENABLE_UNIS_C "Enable PHOEBUS support" ON )
   include_directories(${UNIS_C_INCLUDE_DIR})
   list(APPEND LIBS ${UNIS_C_LIBRARY} curl jansson)
 else (UNIS_C_FOUND)
-  OPTION( _ENABLE_UNIS_C "Enable Phoebus support" OFF )
+  OPTION( _ENABLE_UNIS_C "Enable PHOEBUS support" OFF )
 endif (UNIS_C_FOUND)
 
 #message("flags=${CMAKE_C_FLAGS}")
@@ -79,7 +75,7 @@ endif (UNIS_C_FOUND)
 CONFIGURE_FILE( ${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_SOURCE_DIR}/config.h )
 
 #Make the version file
-set(IBP_SERVER_VERSION "ibp_server(no FIFO): v1.5.3")
+set(IBP_SERVER_VERSION "ibp_server(no FIFO): v1.6.8")
 site_name(BUILD_HOST)
 Date(BUILD_DATE)
 CompilerVersion(COMPILER_VERSION)
@@ -93,12 +89,6 @@ SET(RESOURCE_OBJS resource.c alloc_history.c cap_timestamp.c random.c osd_fs.c d
 SET(NETWORK_OBJS network.c net_sock.c net_1_ssl.c net_2_ssl.c net_fd.c net_phoebus.c phoebus.c chksum.c )
 set(STRING_OBJS string_token.c append_printf.c iniparse.c)
 
-# /protobuf stuff
-SET( PROTO_SRC alog.pb-c.c )
-WRAP_PROTO(PROTO_SRC "alog.proto")
-#ADD_EXECUTABLE(server ${server_SRC} ${PROTO_SRC})
-
-#message("proto src is ${PROTO_SRC}")
 # various executables
 ADD_EXECUTABLE(ibp_server ibp_server.c server_lib.c  global_data.c
    parse_commands.c install_commands.c commands.c
@@ -113,6 +103,8 @@ ADD_EXECUTABLE(get_config get_config.c log.c atomic_counter.c stack.c dns_cache.
 ADD_EXECUTABLE(get_version get_version.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(get_alloc get_alloc.c log.c atomic_counter.c stack.c dns_cache.c subnet.c print_alloc.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(read_alloc read_alloc.c stack.c dns_cache.c subnet.c print_alloc.c ${STRING_OBJS} ${NETWORK_OBJS} 
+     ${RESOURCE_OBJS})
+ADD_EXECUTABLE(get_rid_status get_rid_status.c stack.c dns_cache.c subnet.c print_alloc.c ${STRING_OBJS} ${NETWORK_OBJS} 
      ${RESOURCE_OBJS})
 ADD_EXECUTABLE(repair_history repair_history.c stack.c dns_cache.c subnet.c print_alloc.c ${STRING_OBJS} ${NETWORK_OBJS} 
      ${RESOURCE_OBJS})
@@ -133,6 +125,7 @@ TARGET_LINK_LIBRARIES( mkfs.resource ${LIBS})
 TARGET_LINK_LIBRARIES( get_corrupt ${LIBS})
 TARGET_LINK_LIBRARIES( get_config ${LIBS})
 TARGET_LINK_LIBRARIES( get_version ${LIBS})
+TARGET_LINK_LIBRARIES( get_rid_status ${LIBS})
 TARGET_LINK_LIBRARIES( get_alloc ${LIBS})
 TARGET_LINK_LIBRARIES( read_alloc ${LIBS})
 TARGET_LINK_LIBRARIES( repair_history ${LIBS})
@@ -145,26 +138,8 @@ TARGET_LINK_LIBRARIES( ibp_attach_rid ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_rid_mode ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_undelete ${LIBS})
 TARGET_LINK_LIBRARIES( chksum_test ${OPENSSL_LIBRARIES} ${CRYPTO_LIBRARIES})
-# Install target
-INSTALL(TARGETS chksum_test
-               date_spacefree
-               expire_list
-               get_alloc
-               get_config
-               get_corrupt
-               get_version
-               ibp_attach_rid
-               ibp_detach_rid
-               ibp_rescan
-               ibp_rid_mode
-               ibp_server
-               ibp_undelete
-               mkfs.resource
-               print_alog
-               read_alloc
-               repair_history
-        DESTINATION bin)
-INSTALL(FILES misc/ibp.cfg
-        DESTINATION etc)
-INSTALL(FILES misc/ibp-server
-        DESTINATION etc/init.d)
+
+install(TARGETS chksum_test date_spacefree expire_list get_alloc get_config get_corrupt get_version get_rid_status ibp_attach_rid ibp_detach_rid
+    ibp_rescan ibp_rid_mode ibp_server ibp_undelete mkfs.resource print_alog read_alloc repair_history DESTINATION bin)
+
+

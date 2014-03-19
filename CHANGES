@@ -1,3 +1,9 @@
+v1.6.0
+----------------------------------------------------------------------
+-Properly handles bliped drives when doing a trash scans.
+-Automatically detaches a failed drive and updates a log file.
+-Sending activity logs has been switched to a text based framework dropping google proto bufs.
+
 v1.5.3
 ----------------------------------------------------------------------
 -Properly handled osd_open() returning NULL in many locations.

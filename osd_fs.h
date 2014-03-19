@@ -129,6 +129,7 @@ struct osd_fs_fd_s {
 };
 
 struct osd_fs_object_s {
+  int n_pending;                 //** Pending tasks trying to open the object.  This should only be accessed if holding the fs->obj_lock!!!
   int n_opened;                  //** Number of times the object is opened
   int n_read;                    //** Current number of read operations
   int n_write;                   //** Current number of write operations

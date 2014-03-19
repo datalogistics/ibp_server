@@ -2907,6 +2907,31 @@ int handle_internal_rescan(ibp_task_t *task)
   return(0);
 }
 
+//*****************************************************************
+//  rid_log_append - Appends the text to the RID log file
+//*****************************************************************
+
+void rid_log_append(char *crid, char *mode, char *result, char *msg, apr_time_t start, apr_time_t end)
+{
+  FILE *fd;
+  char sbuf[128], ebuf[128];
+
+  fd = fopen(global_config->server.rid_log, "a");
+  if (fd == NULL) {
+     log_printf(0, "ERROR opening RID log!  rid_log=%s\n", global_config->server.rid_log);
+     return;
+  }
+
+  apr_ctime(sbuf, start);
+  apr_ctime(ebuf, end);
+
+  apr_thread_mutex_lock(shutdown_lock);
+  fprintf(fd, "%s (" TT ") - %s (" TT ")|%s|%s|%s|%s\n", sbuf, start, ebuf, end, crid, mode, result, msg);
+  fclose(fd);
+  apr_thread_mutex_unlock(shutdown_lock);
+
+}
+
 
 //*****************************************************************
 //  handle_internal_mount  - Handles the internal command for mounting
@@ -2920,12 +2945,16 @@ int handle_internal_mount(ibp_task_t *task)
   Cmd_internal_mount_t *arg = &(cmd->cargs.mount);
   int fin, found, err;
   char *bstate;
-  char *str, *sgrp, *srid;
+  char *str, *sgrp, *srid, *smode;
+  apr_time_t start;
+
   inip_group_t *igrp;
   Resource_t *r;
   inip_file_t *keyfile;
 
   log_printf(5, "handle_internal_mount: Start of routine.  ns=%d RID=%s\n",ns_getid(task->ns), arg->crid);
+
+  start = apr_time_now();
 
   //* Load the config file
   keyfile = inip_read(global_config->config_file);
@@ -2957,15 +2986,26 @@ int handle_internal_mount(ibp_task_t *task)
   if (found == 0) {
      log_printf(0, "handle_internal_mount:  Can't find RID %s in config file! Exiting\n", arg->crid);
      inip_destroy(keyfile);
+     rid_log_append(arg->crid, "ATTACH", "Not in config", arg->msg, start, apr_time_now());
      send_cmd_result(task, IBP_E_INVALID_RID);
      return(0);
   }
 
   //** Make sure it's not already being added
-  err = resource_list_pending_insert(global_config->rl, arg->crid);
+  apr_thread_mutex_lock(shutdown_lock);
+  if (resource_lookup(global_config->rl, arg->crid) != NULL) {
+     err = 1;
+     smode = "Already mounted";
+     log_printf(10, "handle_internal_mount: Already mounted RID :%s\n",arg->crid);
+  } else {
+     smode = "Pending";
+     err = resource_list_pending_insert(global_config->rl, arg->crid);
+  }
+  apr_thread_mutex_unlock(shutdown_lock);
   if (err != 0) {
      log_printf(0, "Already trying to insert RID=%s\n", arg->crid);
      inip_destroy(keyfile);
+     rid_log_append(arg->crid, "ATTACH", smode, arg->msg, start, apr_time_now());
 
      //*** Send back the results ***
      send_cmd_result(task, IBP_E_WOULD_DAMAGE_DATA);
@@ -2975,9 +3015,9 @@ int handle_internal_mount(ibp_task_t *task)
   //*** Send back the results while I go ahead and process things***
   send_cmd_result(task, IBP_OK);
 
-log_printf(0, "Sleeping for 30\n"); flush_log();
-sleep(30);
-log_printf(0, "Waking up\n"); flush_log();
+//log_printf(0, "Sleeping for 30\n"); flush_log();
+//sleep(30);
+//log_printf(0, "Waking up\n"); flush_log();
 
   //** NOTE: read_internal_mount verified the RID isn't mounted.
   assert((r = (Resource_t *)malloc(sizeof(Resource_t))) != NULL);
@@ -2990,6 +3030,7 @@ log_printf(0, "Waking up\n"); flush_log();
 
   if (err != 0) {
      log_printf(0, "handle_internal_mount:  Error mounting resource!! Exiting\n");
+     rid_log_append(arg->crid, "ATTACH", "ERROR during mount", arg->msg, start, apr_time_now());
      send_cmd_result(task, IBP_E_INTERNAL);
      free(r);
      return(0);
@@ -2998,11 +3039,10 @@ log_printf(0, "Waking up\n"); flush_log();
   //** Activate it
   r->rl_index = resource_list_pending_activate(global_config->rl, arg->crid, r);
 
+  rid_log_append(arg->crid, "ATTACH", "SUCCESS", arg->msg, start, apr_time_now());
+
   //** Launch the garbage collection threads
   launch_resource_cleanup_thread(r);
-
-//  //*** Send back the results ***
-//  send_cmd_result(task, IBP_OK);
 
   log_printf(5, "handle_internal_mount: End of routine.  ns=%d\n",ns_getid(task->ns));
 
@@ -3023,14 +3063,25 @@ int handle_internal_umount(ibp_task_t *task)
   Resource_t *r;
   int err, last_count, count;
   apr_time_t last_change, dt;
+  apr_time_t start;
 
-  log_printf(5, "handle_internal_umount: Start of routine.  ns=%d RID=%s\n",ns_getid(task->ns), arg->crid);
+  log_printf(5, "handle_internal_umount: Start of routine. RID=%s\n", arg->crid);
+
+  start = apr_time_now();
 
   //** Get the RID.... read_internal_umount verified the RID was valid
+  apr_thread_mutex_lock(shutdown_lock);
   r = resource_lookup(global_config->rl, arg->crid);
 
   //** First remove the RID from the resource_list
-  resource_list_delete(global_config->rl, r);
+  if (r != NULL) resource_list_delete(global_config->rl, r);
+  apr_thread_mutex_unlock(shutdown_lock);
+
+  if (r == NULL) {
+     log_printf(5, "Missing resource!  rid=%s\n", arg->crid);
+     err = 1;
+     goto fail;
+  }
 
   //** Now sleep until the RID has quiesced
   last_count = resource_get_counter(r);
@@ -3059,14 +3110,18 @@ int handle_internal_umount(ibp_task_t *task)
 
   free(r);  //** Free the space
 
+fail:
+
   if (err != 0) {
      log_printf(0, "handle_internal_umount:  Error mounting resource!! Exiting\n");
+     rid_log_append(arg->crid, "DETACH", "ERROR", arg->msg, start, apr_time_now());
      send_cmd_result(task, IBP_E_INTERNAL);
   } else {
+     rid_log_append(arg->crid, "DETACH", "SUCCESS", arg->msg, start, apr_time_now());
      send_cmd_result(task, IBP_OK);
   }
 
-  log_printf(5, "handle_internal_umount: End of routine.  ns=%d\n",ns_getid(task->ns));
+  log_printf(5, "handle_internal_umount: End of routine.\n");
 
   return(0);
 }

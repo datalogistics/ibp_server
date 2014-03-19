@@ -35,8 +35,11 @@ http://www.accre.vanderbilt.edu
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <mntent.h>
 #include <assert.h>
 #include <apr_time.h>
 #include "resource.h"
@@ -48,6 +51,7 @@ http://www.accre.vanderbilt.edu
 #include "string_token.h"
 #include "ibp_time.h"
 
+
 #define _RESOURCE_BUF_SIZE 1048576
 char *_blanks[_RESOURCE_BUF_SIZE];
 
@@ -57,14 +61,6 @@ char *_blanks[_RESOURCE_BUF_SIZE];
 #define _RES_USAGE_ID 1
 
 const char *_res_types[] = {DEVICE_UNKNOWN, DEVICE_DIR};
-
-typedef struct {    //*** Used to store usage info on a resource to keep from having to rescan the DB
- int version;
- int state;
- ibp_off_t used_space[2];
- ibp_off_t n_allocs;
- ibp_off_t n_alias;
-} Usage_file_t;
 
 typedef struct {  //** Internal resource iterator
   int mode;
@@ -76,6 +72,48 @@ typedef struct {  //** Internal resource iterator
 
 void *resource_cleanup_thread(apr_thread_t *th, void *data);
 int _remove_allocation_for_make_free(Resource_t *r, int rmode, Allocation_t *alloc, DB_iterator_t *it);
+
+
+//***************************************************************************
+//  fname2dev - Maps the file or directory to the physical device
+//***************************************************************************
+
+char *fname2dev(char *fname)
+{
+  FILE *fd;
+  struct mntent minfo;
+  char buffer[4096];
+  char *apath, *dev;
+  int len;
+
+  apath = realpath(fname, NULL);
+  dev = NULL;
+
+  fd = setmntent("/etc/mtab", "r");
+  assert(fd != NULL);
+
+  while (getmntent_r(fd, &minfo, buffer, sizeof(buffer)) != NULL) {
+     len = strlen(minfo.mnt_dir);
+     if (strncmp(apath, minfo.mnt_dir, len) == 0) {
+        if (strlen(apath) > len) {
+           if ((apath[len] == '/') || (minfo.mnt_dir[len-1] == '/')) {
+              if (dev) free(dev);
+              dev = strdup(minfo.mnt_fsname);
+           }
+        } else {
+          if (dev) free(dev);
+          dev = strdup(minfo.mnt_fsname);
+        }
+     }
+  }
+
+  endmntent(fd);
+
+  free(apath);
+
+  return(dev);
+}
+
 
 //***************************************************************************
 // trash_adjust - Adjusts the trash space
@@ -109,7 +147,7 @@ int write_usage_file(Resource_t *r, int state)
 {
    osd_fd_t *fd;
    osd_id_t id = _RES_USAGE_ID;
-   Usage_file_t usage;
+   resource_usage_file_t usage;
    log_printf(10, "write_usage_file: resource=%s\n", r->name);
 
    usage.version = _RESOURCE_VERSION;
@@ -120,9 +158,14 @@ int write_usage_file(Resource_t *r, int state)
    usage.state = state;
 
    fd = osd_open(r->dev, id, OSD_WRITE_MODE);
-   if (fd == NULL) {
-      log_printf(0, "ERROR:  Can't open usage file! rid=%s\n", r->name);
-      return(1);
+   if (fd == NULL) {  //** Usage doesn't exist so create it
+      osd_create_id(r->dev, CHKSUM_NONE, 0, 0, id);
+
+      fd = osd_open(r->dev, id, OSD_WRITE_MODE);
+      if (fd == NULL) {
+         log_printf(0, "ERROR:  Can't open usage file! rid=%s\n", r->name);
+         return(1);
+      }
    }
    osd_write(r->dev, fd, 0, sizeof(usage), &usage);
    osd_close(r->dev, fd);
@@ -143,11 +186,11 @@ int write_usage_file(Resource_t *r, int state)
 // read_usage_file - reads the usage file
 //***************************************************************************
 
-int read_usage_file(Resource_t *r)
+int read_usage_file(Resource_t *r, resource_usage_file_t *u)
 {
    osd_fd_t *fd;
    osd_id_t id = _RES_USAGE_ID;
-   Usage_file_t usage;
+   resource_usage_file_t usage;
    int n;
    int docalc = 1;
 
@@ -166,6 +209,11 @@ int read_usage_file(Resource_t *r)
       return(docalc);
    }
    osd_close(r->dev, fd);
+
+   if (u != NULL) {  //** Check if a system probe is requested. If so then don;t update the resource
+     *u = usage;
+     return(0);
+   }
 
    if (usage.version == _RESOURCE_VERSION) {
       if (usage.state == _RESOURCE_STATE_GOOD) {
@@ -250,7 +298,7 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
    res.device = device_name;
    res.rwm_mode = RES_MODE_WRITE|RES_MODE_READ|RES_MODE_MANAGE;
    res.preallocate = 0;
-   res.minfree = 100*1024*1024;  //Default to 100MB free
+   res.minfree = (ibp_off_t)10*1024*1024*1024;  //Default to 10GB free
    res.update_alloc = 1;
    res.enable_read_history = 1;
    res.enable_write_history = 1;
@@ -262,7 +310,7 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
    res.preexpire_grace_period = 24*3600;
    res.rescan_interval = 24*3600;
    res.chksum_blocksize = 64*1024;
-   res.enable_chksum = 0;
+   res.enable_chksum = 1;
    chksum_set(&(res.chksum), CHKSUM_MD5);
    res.n_cache = 100000;
    res.cache_expire = apr_time_from_sec(30);
@@ -899,6 +947,7 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
    //*** Load the resource data ***
    assert(parse_resource(res, keyfile, group) == 0);
 
+   res->data_pdev = fname2dev(res->device);
    res->pending = 0;
 
    log_printf(15, "mount_resource: rid=%s force_rebuild=%d device=%s\n", res->name, force_rebuild, res->device);
@@ -938,7 +987,7 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
          default:
             err = rebuild_resource(res, dbenv, keyfile, 1, force_rebuild, truncate_expiration);
       }
-   } else if (read_usage_file(res) == 1) {
+   } else if (read_usage_file(res, NULL) == 1) {
       log_printf(0, "RID %s not cleanly unmounted!  Forcing a rebuild!\n", res->name);
       printf("RID %s not cleanly unmounted!  Forcing a rebuild!\n", res->name);
       err = mount_db_generic(keyfile, db_group, dbenv, &(res->db), 1);
@@ -975,6 +1024,7 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
 int umount_resource(Resource_t *res)
 {
   apr_status_t dummy;
+  int err;
   log_printf(15, "umount_resource:  Unmounting resource %s cleanup_shutdown=%d\n", res->name, res->cleanup_shutdown); flush_log();
 
   //** Kill the cleanup thread
@@ -986,10 +1036,12 @@ int umount_resource(Resource_t *res)
      apr_thread_join(&dummy, res->cleanup_thread);
   }
 
-  write_usage_file(res, _RESOURCE_STATE_GOOD);
-
-  umount_db(&(res->db));
+  err = umount_db(&(res->db));
   umount_history_table(res);
+
+  //** Only update the usage file if the DB closed properly.
+  if (err == 0) write_usage_file(res, _RESOURCE_STATE_GOOD);
+
 
   osd_umount(res->dev);
 
@@ -1002,6 +1054,7 @@ int umount_resource(Resource_t *res)
   free(res->name);
   free(res->keygroup);
   free(res->device);
+  if (res->data_pdev) free(res->data_pdev);
   if (res->device_type != NULL) free(res->device_type);
 
   return(0);
@@ -1314,7 +1367,7 @@ int blank_space(Resource_t *r, osd_id_t id, ibp_off_t off, ibp_off_t size)
   ibp_off_t bcount = size / _RESOURCE_BUF_SIZE;
   ibp_off_t remainder = size - bcount * _RESOURCE_BUF_SIZE;
 
-  debug_printf(10, "blank_space: id=" LU " off=" I64T " size=" I64T " bcount = " I64T " rem = " I64T "\n", id, off,size,bcount,remainder);
+  log_printf(10, "blank_space: id=" LU " off=" I64T " size=" I64T " bcount = " I64T " rem = " I64T "\n", id, off,size,bcount,remainder);
   offset = off;      // Now store the data in chunks
   fd = osd_open(r->dev, id , OSD_WRITE_MODE);
   if (fd == NULL) {
@@ -1594,11 +1647,15 @@ int _new_allocation_resource(Resource_t *r, Allocation_t *a, ibp_off_t size, int
    }
 
    if (blocksize > (int64_t)2147483648) {
-      log_printf(0, "_new_allocation_resouce:  blocksize too large!  bs=" I64T "\n", blocksize);
+      log_printf(0, "blocksize too large!  bs=" I64T "\n", blocksize);
       return(1);
    }
 
-   a->id = osd_create_id(r->dev, cs_type, ALLOC_HEADER, blocksize);
+   a->id = osd_create_id(r->dev, cs_type, ALLOC_HEADER, blocksize, 0);
+   if (a->id == 0) { //** Got an error creating the allocation
+      log_printf(1, "ERROR creating allocation!\n");
+      return(1);;
+   }
 
    create_alloc_db(&(r->db), a);
 
@@ -1646,7 +1703,12 @@ int create_allocation_resource(Resource_t *r, Allocation_t *a, ibp_off_t size, i
    if (err == 0) {
      if (a->is_alias == 0) {
         total_size = ALLOC_HEADER + size;
-        if (preallocate_space == 1) osd_reserve(r->dev, a->id, total_size);       //** Reserve the space
+        if ((preallocate_space & RES_RESERVE_FALLOCATE) > 0) osd_reserve(r->dev, a->id, total_size);
+        if ((preallocate_space & RES_RESERVE_BLANK) > 0) blank_space(r, a->id, 0, total_size);
+
+        apr_thread_mutex_lock(r->mutex);
+        r->pending -= size;
+        apr_thread_mutex_unlock(r->mutex);
      }
 
    }
@@ -1777,7 +1839,8 @@ int split_allocation_resource(Resource_t *r, Allocation_t *ma, Allocation_t *a, 
    if (err == 0) {
      if (a->is_alias == 0) {
         total_size = ALLOC_HEADER + size;
-        if (preallocate_space == 1) osd_reserve(r->dev, a->id, total_size);       //** Reserve the space
+        if ((preallocate_space & RES_RESERVE_FALLOCATE) > 0) osd_reserve(r->dev, a->id, total_size);
+        if ((preallocate_space & RES_RESERVE_BLANK) > 0) blank_space(r, a->id, 0, total_size);
      }
    }
 
@@ -1891,8 +1954,9 @@ int modify_allocation_resource(Resource_t *r, osd_id_t id, Allocation_t *a)
 
         if (err != 0) {
            return(err);  // ** FAiled on make_space
-        } else if ((r->preallocate) && (size > 0)) { //** Actually fill the extra space they requested
-           blank_space(r, a->id, old_a.max_size, size);
+        } else if ((r->preallocate > 0) && (size > 0)) { //** Actually fill the extra space they requested
+           if ((r->preallocate & RES_RESERVE_FALLOCATE) > 0) osd_reserve(r->dev, a->id, size);
+           if ((r->preallocate & RES_RESERVE_BLANK) > 0) blank_space(r, a->id, old_a.max_size, size);
 
            apr_thread_mutex_lock(r->mutex);
            r->pending -= size;
@@ -2179,6 +2243,7 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
         wei->hard_a.expiration = 0;
      } else if (wei->hard_a.is_alias == 0) {
        err = read_allocation_header(wei->r, wei->hard_a.id, &(wei->hard_a));
+       if (err != 0) memset(&(wei->hard_a), 0, sizeof(wei->hard_a)); //** Flag the error
      }
 
      err = db_iterator_next(wei->soft, direction, &(wei->soft_a));
@@ -2187,6 +2252,7 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
         wei->soft_a.expiration = 0;
      } else if (wei->soft_a.is_alias == 0) {
        err = read_allocation_header(wei->r, wei->soft_a.id, &(wei->soft_a));
+       if (err != 0) memset(&(wei->soft_a), 0, sizeof(wei->soft_a)); //** Flag the error
      }
   }
 
@@ -2204,6 +2270,7 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
            wei->soft_a.expiration = 0;
         } else if (wei->soft_a.is_alias == 0) {
            err = read_allocation_header(wei->r, wei->soft_a.id, &(wei->soft_a));
+           if (err != 0) memset(&(wei->soft_a), 0, sizeof(wei->soft_a)); //** Flag the error
         }
 
         log_printf(15, "get_next_walk_expire_iterator: 1 expire= %u\n", a->expiration);
@@ -2216,7 +2283,8 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
         log_printf(10, "get_next_walk_expire_iterator: Error or end with next_hard: %d \n", err);
         wei->hard_a.expiration = 0;
      } else if (wei->hard_a.is_alias == 0) {
-       err = read_allocation_header(wei->r, wei->hard_a.id, &(wei->hard_a));
+        err = read_allocation_header(wei->r, wei->hard_a.id, &(wei->hard_a));
+        if (err != 0) memset(&(wei->hard_a), 0, sizeof(wei->hard_a)); //** Flag the error
      }
 
      log_printf(15, "get_next_walk_expire_iterator: 2 expire= %u\n", a->expiration);
@@ -2238,6 +2306,7 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
         wei->soft_a.expiration = 0;
      } else if (wei->soft_a.is_alias == 0) {
         err = read_allocation_header(wei->r, wei->soft_a.id, &(wei->soft_a));
+        if (err != 0) memset(&(wei->soft_a), 0, sizeof(wei->soft_a)); //** Flag the error
      }
   } else {  //** hard < soft so return the hard a
      *a = wei->hard_a;
@@ -2247,6 +2316,7 @@ int get_next_walk_expire_iterator(walk_expire_iterator_t *wei, int direction, Al
         wei->hard_a.expiration = 0;
      } else if (wei->hard_a.is_alias == 0) {
        err = read_allocation_header(wei->r, wei->hard_a.id, &(wei->hard_a));
+       if (err != 0) memset(&(wei->hard_a), 0, sizeof(wei->hard_a)); //** Flag the error
      }
   }
 
@@ -2305,6 +2375,7 @@ ibp_time_t trash_rescan(Resource_t *r, int tmode)
   atomic_inc(r->counter);
 
   iter = osd_new_trash_iterator(r->dev, rmode);
+  if (iter == NULL) goto fail;
   while (osd_trash_iterator_next(iter, &id, &move_time, trash_id) == 0) {
      if (oldest_time == 0) oldest_time = move_time;
      if (move_time < oldest_time) oldest_time = move_time;
@@ -2316,6 +2387,7 @@ ibp_time_t trash_rescan(Resource_t *r, int tmode)
   }
   osd_destroy_iterator(iter);
 
+fail:
   log_printf(15, "trash_rescan: RID=%s tmode=%d nbytes=" LU " nalloca=%d\n", r->name, tmode, nbytes, nwipe);
 
   //** Update the counts **
@@ -2358,6 +2430,7 @@ time_t trash_cleanup(Resource_t *r, int tmode, ibp_time_t wipe_time, int enforce
   free_bytes = (ibp_off_t)stat.f_bavail*(ibp_off_t)stat.f_bsize;
 
   iter = osd_new_trash_iterator(r->dev, rmode);
+  if (iter == NULL) goto fail;
   while (osd_trash_iterator_next(iter, &id, &move_time, trash_id) == 0) {
      if (oldest_time == 0) oldest_time = move_time;
 
@@ -2376,6 +2449,7 @@ time_t trash_cleanup(Resource_t *r, int tmode, ibp_time_t wipe_time, int enforce
   }
   osd_destroy_iterator(iter);
 
+fail:
   //** Update the counts **
   apr_thread_mutex_lock(r->mutex);
   r->trash_size[tmode] = (r->trash_size[tmode] > nbytes) ? r->trash_size[tmode] - nbytes : 0;
@@ -2405,7 +2479,10 @@ void resource_cleanup(Resource_t *r, ibp_time_t start_grace_time)
   while (n == max_alloc) {
     //** Perform the walk
     wei = walk_expire_iterator_begin(r);
-
+    if (wei == NULL) {
+       n = 0;
+       goto fail;
+    }
     //** First skip all the stuff that has expired while the depot was shut down
     //** using the preexpire_grace_period
     start_index = 0;
@@ -2428,6 +2505,8 @@ void resource_cleanup(Resource_t *r, ibp_time_t start_grace_time)
        if (err != 0) { n = i; break; }
        if ((a[i].expiration + r->preexpire_grace_period) > ibp_time_now()) { n = i; break; }
     }
+
+fail:
     walk_expire_iterator_end(wei);
 
     log_printf(5, "resource_background_cleanup: rid=%s n=%d\n", r->name, n);

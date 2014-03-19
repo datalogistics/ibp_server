@@ -24,12 +24,12 @@ int main(int argc, char **argv)
 {
   int bufsize = 1024*1024;
   char buffer[bufsize], *bstate;
-  int i, port, delay, timeout;
-  char *host, *rid;
+  int i, port, delay, timeout, slen;
+  char *host, *rid, *msg;
   NetStream_t *ns;
 
   if (argc < 5) {
-     printf("ibp_detach_rid host port RID delay_before_umount [timeout]\n");
+     printf("ibp_detach_rid host port RID delay_before_umount [msg]\n");
      printf("\n");
      return(0);
   }
@@ -41,11 +41,13 @@ int main(int argc, char **argv)
   delay = atoi(argv[i]); i++;
 
   timeout = 3600;
-  if (argc > i) timeout = atoi(argv[i]);
   if (timeout < delay) timeout = delay + 30;  //** Make sure the timeout is longer than the delay
 
+  msg = "";
+  if (argc > i) msg = argv[i];
 
-  sprintf(buffer, "1 92 %s %d %d\n", rid, delay, timeout);  // IBP_INTERNAL_RID_UMOUNT command
+  slen = strlen(msg);
+  sprintf(buffer, "1 92 %s %d %d %d %s\n", rid, delay, timeout, slen, msg);  // IBP_INTERNAL_RID_UMOUNT command
 
 //printf("argc=%d i=%d command=%s\n", argc, i, buffer);
 //return(0);
