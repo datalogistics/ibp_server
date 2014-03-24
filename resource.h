@@ -52,6 +52,10 @@ http://www.accre.vanderbilt.edu
 #define RES_MODE_READ   2
 #define RES_MODE_MANAGE 4
 
+   //** Reserve modes.  Bit masks
+#define RES_RESERVE_FALLOCATE 1
+#define RES_RESERVE_BLANK     2
+
 #define RES_EXPIRE_REMOVE OSD_EXPIRE_ID
 #define RES_DELETE_REMOVE OSD_DELETE_ID
 #define RES_PHYSICAL_REMOVE OSD_ID
@@ -76,6 +80,7 @@ extern const char *_res_types[];
 typedef struct {       //Resource structure
    char *keygroup;         //Keyfile group name
    char *name;             //Descriptive resource name
+   char *data_pdev;        //Data physical /dev entry
    rid_t rid;              //Unique resource ID
    int   max_duration;     //MAx duration for an allocation in SECONDS
    int   lazy_allocate;    //If 1 then the actual file is created with the allocation.  Otherwise just the DB entry
@@ -98,6 +103,7 @@ typedef struct {       //Resource structure
    int  rwm_mode;              //Read/Write/Manage mode
    atomic_int_t counter;       //Activity counter
    apr_time_t cache_expire;    //Time before cache expires
+   apr_time_t last_good_check; //Last good check
    ibp_time_t next_rescan;     //Time for next scan
    ibp_off_t max_size[3];     //Soft and Hard limits
    ibp_off_t minfree;         //Minimum amount of free space in KB
@@ -120,6 +126,14 @@ typedef struct {       //Resource structure
    apr_pool_t         *pool;
 } Resource_t;
 
+typedef struct {    //*** Used to store usage info on a resource to keep from having to rescan the DB
+ int version;
+ int state;
+ ibp_off_t used_space[2];
+ ibp_off_t n_allocs;
+ ibp_off_t n_alias;
+} resource_usage_file_t;
+
 typedef struct {
    int reset;
    Allocation_t hard_a;
@@ -135,6 +149,7 @@ typedef struct {
 #define resource_get_type(d) (d)->res_type
 #define resource_get_counter(d) atomic_get((d)->counter)
 
+int read_usage_file(Resource_t *r, resource_usage_file_t *u);
 int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_location, ibp_off_t max_bytes);
 int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t *env, int force_rebuild,
      int lazy_allocate, int truncate_expiration);

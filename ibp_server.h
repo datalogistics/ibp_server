@@ -119,8 +119,13 @@ typedef struct {       // Structure containg the overall server config
    int   alog_max_history;     //** How many alog files to keep before dropping them
    int   alog_port;            //** alog host's port to use
    int   return_cap_id;    //** Returns the cap id in the capability if set
+   int   rid_check_interval;  //** DRive check interval
+   int   eject_timeout;   //** How long to wait for RID check failures before ejecting a drive
+   char *rid_log;         //Where to store the running RID changes
    char *password;        //Depot Password for status change commands
    char *default_acl;     //Default command ACLs
+   char *rid_eject_script; //Script to run when ejecting drives that fail a health check
+   char *rid_eject_tmp_path; //Location to create the temporary files for the eject script
 } Server_t;
 
 typedef struct {      //Main config structure
@@ -149,6 +154,7 @@ typedef struct {     //** Thread data strcuture
 //**************Global control Variables*****************
 extern apr_pool_t *global_pool;
 extern apr_thread_mutex_t *shutdown_lock;
+extern apr_thread_cond_t *shutdown_cond;
 extern int shutdown_now;
 extern Config_t *global_config;
 extern ibp_task_t *global_task;

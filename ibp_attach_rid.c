@@ -24,12 +24,12 @@ int main(int argc, char **argv)
 {
   int bufsize = 1024*1024;
   char buffer[bufsize], *bstate;
-  int i, port, force_rebuild, timeout;
-  char *host, *rid;
+  int i, port, force_rebuild, timeout, slen;
+  char *host, *rid, *msg;
   NetStream_t *ns;
 
   if (argc < 4) {
-     printf("ibp_attach_rid [-r] host port RID [timeout]\n");
+     printf("ibp_attach_rid [-r] host port RID [msg]\n");
      printf("\n");
      return(0);
   }
@@ -42,10 +42,12 @@ int main(int argc, char **argv)
   port = atoi(argv[i]); i++;
   rid = argv[i]; i++;
 
-  timeout = 3600;
-  if (argc < i) timeout = atoi(argv[i]);
+  timeout = 60;
+  msg = "";
+  if (argc > i) msg = argv[i];
 
-  sprintf(buffer, "1 91 %s %d %d\n", rid, force_rebuild, timeout);  // IBP_INTERNAL_RID_MOUNT command
+  slen = strlen(msg);
+  sprintf(buffer, "1 91 %s %d %d %d %s\n", rid, force_rebuild, timeout, slen, msg);  // IBP_INTERNAL_RID_MOUNT command
 
   assert(apr_initialize() == APR_SUCCESS);
 

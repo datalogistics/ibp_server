@@ -5,8 +5,6 @@ For building you need the following packages installed:
   -Apache Portable Runtime Toolkit
   -Apache Portable Runtime Utilities Toolkit
   -Berkeley DB
-  -Google Protocol Buffers and also the protoc-c 3rd party
-   compiler for native C support
   -OpenSSL
   -cmake
 
@@ -91,10 +89,10 @@ max_pending=N
   Max number of pending connections. Default is 8.
 
 max_network_wait_ms=N
-  Max amount of time in ms allowed to read a command before the connection is closed.
+  Max amount of time in ms allowed to read a command before the connection is closed
 
 timestamp_interval=N
-  Log file timestamp interval in sec. Default is 60 sec.
+  Log file timestamp interval in sec. Default is 60 sec
 
 min_idle=N
   Min idle connection time in secs *between commands* before closing a connection.
@@ -173,6 +171,18 @@ soft_fail=[0|1]
 return_cap_id=[0|1]
    The default method, 0, is to return a dummy argument for the typekey since the depot doesn't use it.
    if 1 the allocation's file name, id, is returned.  This facilitates debugging but is less secure.
+
+rid_log=fname
+   Output file to record drive additions/removals from a running ibp_server.  The initial drives
+   in the config file are not flagged only IBP server manually ejected drives and those using
+   the ibp_[attach|detach]_rid routines.  Default is /log/rid.log
+
+rid_check_interval = N
+   How often to check for failed drives.  Defaults to 15 sec
+
+eject_timeout = N
+   Eject a drive that has failed for this length of time in sec.  Defaults to 35 secs or
+   2 checks if using the default check interval.
 
 [phoebus] options
 -------------------------------
@@ -456,7 +466,7 @@ Rescans the resources trash bins and updates the free space.  This is normally
 used after manually removing files from the trash bin.
 
 
-ibp_mount [-r] host port RID [timeout]
+ibp_attach_rid [-r] host port RID [message]
 ----------------------------------------------------------------
 Add a resource to a currently running IBP server.  The RID must occur in the
 depot's configuration file.  The file is reloaded on each command invocation.
@@ -465,7 +475,7 @@ depot's configuration file.  The file is reloaded on each command invocation.
       umounted cleanly.
 
 
-ibp_umount host port RID delay_before_umount [timeout]
+ibp_detach_rid host port RID delay_before_umount [message]
 ----------------------------------------------------------------
 Unmount a resource from a currerntly running IBP server. The resource is
 immediately removed from the list of available resources and then sleeps
@@ -482,3 +492,5 @@ Undelete an expired or deleted allocation currently residing in a trash bin.
 trash_type - Type of allocation to undelete.  Should be either 'expired' or 'deleted'.
 trash_id   - Local filename of the trashed allocation to undelete.
 duration   - New expiration time (seconds) from current time.
+
+

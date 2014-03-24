@@ -88,7 +88,7 @@ typedef struct {
 } osd_fd_t;
 
 #define osd_umount(d) (d)->umount(d)
-#define osd_create_id(d, type, header, block) (d)->create_id(d, type, header, block)
+#define osd_create_id(d, type, header, block, id) (d)->create_id(d, type, header, block, id)
 #define osd_native_open_id(d, id, offset, mode) (d)->native_open(d, id, offset, mode)
 #define osd_native_enabled(d) (d)->native_open
 #define osd_native_close_id(d, fd) (d)->native_close(d, fd)
@@ -126,7 +126,7 @@ typedef struct {
 struct osd_s {
     void *private;  //** All private implementation specific data goes hear
     int (*umount)(osd_t *d);
-    osd_id_t (*create_id)(osd_t *d, int chksum_type, int header_size, int block_size);    // Returns an OSD object.  Think of it as a filename
+    osd_id_t (*create_id)(osd_t *d, int chksum_type, int header_size, int block_size, osd_id_t id);    // Returns an OSD object.  Think of it as a filename
     osd_native_fd_t (*native_open)(osd_t *d, osd_id_t id, osd_off_t offset, int mode);   //Native open
     int (*native_close)(osd_t *d, osd_native_fd_t fd);   //Native close
     int (*validate_chksum)(osd_t *d, osd_id_t id, int correct_errors);

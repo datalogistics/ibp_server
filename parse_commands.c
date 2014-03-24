@@ -1598,12 +1598,7 @@ int read_internal_mount(ibp_task_t *task, char **bstate)
       return(-1);
    }
 
-   //** and that it's not mounted
-   if (resource_lookup(global_config->rl, arg->crid) != NULL) {
-      log_printf(10, "handle_internal_mount: Already mounted RID :%s\n",arg->crid);
-      send_cmd_result(task, IBP_E_INVALID_RID);
-      return(0);
-   }
+   //** Checking if it's already mounted is done by the handle_mountroutines
 
    //** Get the force_rebuild flag
    opt = -1; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
@@ -1616,6 +1611,14 @@ int read_internal_mount(ibp_task_t *task, char **bstate)
 
    get_command_timeout(task, bstate);
 
+   //** Get the optional message
+   opt = 0; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
+   arg->msg[0] = 0;
+   if ((opt > 0) && (opt < sizeof(arg->msg))) {
+     strncpy(arg->msg, (*bstate), opt);
+     arg->msg[opt] = 0;
+     log_printf(5, "msg=!%s!\n", arg->msg);
+   }
    debug_printf(1, "read_internal_mount: Successfully parsed rescan command\n");
    return(0);
 }
@@ -1671,6 +1674,15 @@ int read_internal_umount(ibp_task_t *task, char **bstate)
    arg->delay = opt;
 
    get_command_timeout(task, bstate);
+
+   //** Get the optional message
+   opt = 0; sscanf(string_token(NULL, " ", bstate, &fin), "%d", &opt);
+   arg->msg[0] = 0;
+   if ((opt > 0) && (opt < sizeof(arg->msg))) {
+     strncpy(arg->msg, (*bstate), opt);
+     arg->msg[opt] = 0;
+     log_printf(5, "msg=!%s!\n", arg->msg);
+   }
 
    debug_printf(1, "Successfully parsed rescan command\n");
    return(0);

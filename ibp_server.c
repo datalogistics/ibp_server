@@ -83,6 +83,123 @@ void *parallel_mount_resource(apr_thread_t *th, void *data) {
    return(0);   //** Never gets here but suppresses compiler warnings
 }
 
+
+//*****************************************************************************
+// resource_health_check - Does periodic health checks on the RIDs
+//*****************************************************************************
+
+void *resource_health_check(apr_thread_t *th, void *data) {
+  Resource_t *r;
+  resource_list_iterator_t it;
+  apr_time_t next_check;
+  ibp_task_t task;
+  apr_time_t dt, dt_wait;
+  Cmd_internal_mount_t *cmd;
+  resource_usage_file_t usage;
+  Stack_t *eject;
+  FILE *fd;
+  char *rname, *rid_name, *data_dir, *data_device;
+  int i, j;
+  pid_t pid;
+  int err;
+//int junk = 0;
+
+  eject = new_stack();
+
+  memset(&task, 0, sizeof(task));
+  cmd = &(task.cmd.cargs.mount);
+  dt_wait = apr_time_from_sec(global_config->server.rid_check_interval);
+  next_check = apr_time_now() + dt_wait;
+  dt = apr_time_from_sec(global_config->server.eject_timeout);
+
+  apr_thread_mutex_lock(shutdown_lock);
+  while (shutdown_now == 0) {
+    if (apr_time_now() > next_check) {
+       log_printf(5, "Running RID check\n");
+       it = resource_list_iterator(global_config->rl);
+//junk++;
+       j = 0;
+       while ((r = resource_list_iterator_next(global_config->rl, &it)) != NULL) {
+          err = read_usage_file(r, &usage);
+//if ((junk > 1) && (it == 1)) { err= 1; log_printf(0,"Forcing a failure\n"); }
+          if (err == 0) {
+             r->last_good_check = apr_time_now();  //** this should be done in resource.c But I'm the only one that ever touches the routine
+          } else if (apr_time_now() > (r->last_good_check + dt)) {
+             strncpy(cmd->crid, global_config->rl->res[r->rl_index].crid, sizeof(cmd->crid));
+             strncpy(cmd->msg, "Health check failed. Ejecting drive.", sizeof(cmd->msg));
+
+             //** Push the failed drive on the ejected stack
+             j++;
+             push(eject, strdup(r->data_pdev));
+             push(eject, strdup(r->device));
+             push(eject, strdup(cmd->crid));
+
+             apr_thread_mutex_unlock(shutdown_lock);
+             cmd->delay = 10;
+             handle_internal_umount(&task);
+             apr_thread_mutex_lock(shutdown_lock);
+          }
+       }
+       resource_list_iterator_destroy(global_config->rl, &it);
+
+       log_printf(5, "Finished RID check stack_size(eject)=%d\n", stack_size(eject));
+
+       if ((j > 0) && (global_config->server.rid_eject_script != NULL)) {  //** Ejected something so run the eject program
+          //** Make the RID list file and name
+          i = strlen(global_config->server.rid_eject_tmp_path) + 1 + 6 + 30;
+          assert((rname = malloc(i)) != NULL);
+          snprintf(rname, i, "%s/eject." TT, global_config->server.rid_eject_tmp_path, apr_time_now());
+          fd = fopen(rname, "w");
+          if (fd == NULL) {
+             log_printf(0, "ERROR: failed to create RID eject temp file: %s\n", rname);
+             goto bail;
+          }
+
+          //** Line format: total # of RIDs | Good RIDs | Ejected/Bad RIDs
+          i = j+resource_list_n_used(global_config->rl);
+          fprintf(fd, "%d|%d|%d\n", i, resource_list_n_used(global_config->rl), j);
+
+          //** Cycle though the good RIDs printing RID info
+          //** Line format: RID|data_directory|data_device|status(0=good|1=bad)
+          it = resource_list_iterator(global_config->rl);
+          while ((r = resource_list_iterator_next(global_config->rl, &it)) != NULL) {
+              fprintf(fd, "%s|%s|%s|%d\n", global_config->rl->res[r->rl_index].crid, r->device, r->data_pdev, 0);
+          }
+          resource_list_iterator_destroy(global_config->rl, &it);
+
+          //** Now do the same for the ejected drives
+          for (i=0; i<j; i++) {
+             rid_name = pop(eject);  data_dir = pop(eject);  data_device = pop(eject);
+             fprintf(fd, "%s|%s|%s|%d\n", rid_name, data_dir, data_device, 1);
+             free(rid_name); free(data_dir); free(data_device);
+          }
+          fclose(fd);
+
+          //** Now spawn the child process to do it's magic
+          pid = fork();
+          if (pid == 0) { //** Child process
+             execl(global_config->server.rid_eject_script, global_config->server.rid_eject_script, rname, NULL);
+             exit(0);  //** Should never get here
+          } else if (pid == -1) { //** Fork error
+            log_printf(0, "FORK error!!!! rname=%s\n", rname);
+          }
+       bail:
+          free(rname);
+       }
+
+       next_check = apr_time_now() + apr_time_from_sec(global_config->server.rid_check_interval);
+    }
+
+    apr_thread_cond_timedwait(shutdown_cond, shutdown_lock, dt_wait);
+  }
+  apr_thread_mutex_unlock(shutdown_lock);
+
+  free_stack(eject, 1);
+
+  apr_thread_exit(th, 0);
+  return(0);   //** Never gets here but suppresses compiler warnings
+}
+
 //*****************************************************************************
 // log_preamble - Print the initial log file output
 //*****************************************************************************
@@ -152,6 +269,12 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->alog_port = 0;
   server->port = IBP_PORT;
   server->return_cap_id = 1;
+  server->rid_check_interval = 15;
+  server->eject_timeout = 35;
+  server->rid_log = "/log/rid.log";
+  server->rid_eject_script = NULL;
+  server->rid_eject_tmp_path = "/tmp";
+
   cfg->dbenv_loc = "/tmp/ibp_dbenv";
   cfg->db_mem = 256;
   cfg->force_resource_rebuild = force_rebuild;
@@ -250,6 +373,11 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->alog_host = inip_get_string(keyfile, "server", "activity_host", server->alog_host);
   server->alog_port = inip_get_integer(keyfile, "server", "activity_port", server->alog_port);
 
+  server->rid_check_interval = inip_get_integer(keyfile, "server", "rid_check_interval", server->rid_check_interval);
+  server->eject_timeout = inip_get_integer(keyfile, "server", "eject_timeout", server->eject_timeout);
+  server->rid_log = inip_get_string(keyfile, "server", "rid_log", server->rid_log);
+  server->rid_eject_script = inip_get_string(keyfile, "server", "rid_eject_script", server->rid_eject_script);
+  server->rid_eject_tmp_path = inip_get_string(keyfile, "server", "rid_eject_tmp_path", server->rid_eject_tmp_path);
 
   if (force_rebuild == 0) {  //** The command line option overrides the file
      cfg->force_resource_rebuild = inip_get_integer(keyfile, "server", "force_resource_rebuild", cfg->force_resource_rebuild);
@@ -316,10 +444,13 @@ void cleanup_config(Config_t *cfg)
 
   server = &(cfg->server);
 
+  if (server->rid_eject_script) free(server->rid_eject_script);
+  if (server->rid_eject_tmp_path) free(server->rid_eject_tmp_path);
   free(server->password);
   free(server->logfile);
   free(server->default_acl);
   free(cfg->dbenv_loc);
+  free(server->rid_log);
 
   for (i=0; i<server->n_iface; i++) {
     free(server->iface[i].hostname);
@@ -340,6 +471,7 @@ void signal_shutdown(int sig)
 
   apr_thread_mutex_lock(shutdown_lock);
   shutdown_now = 1;
+  apr_thread_cond_broadcast(shutdown_cond);
   apr_thread_mutex_unlock(shutdown_lock);
 
   signal_taskmgr();
@@ -387,12 +519,6 @@ void configure_signals()
   //***Attach the signal handler for shutdown
   apr_signal_unblock(SIGQUIT);
   apr_signal(SIGQUIT, signal_shutdown);
-//  if (signal(SIGQUIT, signal_shutdown) == SIG_ERR) {
-//     log_printf(0, "Error installing shutdown signal handler!\n");
-//  }
-//  if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-//     log_printf(0, "Error installing shutdown signal handler!\n");
-//  }
 
   //** Want everyone to ignore SIGPIPE messages
 #ifdef SIGPIPE
@@ -409,6 +535,8 @@ int main(int argc, const char **argv)
   Config_t config;
   char *config_file;
   int i, j, k;
+  apr_thread_t *rid_check_thread;
+  apr_status_t dummy;
 
   assert(apr_initialize() == APR_SUCCESS);
   assert(apr_pool_create(&global_pool, NULL) == APR_SUCCESS);
@@ -489,6 +617,7 @@ int main(int argc, const char **argv)
 
   //*** Set up the shutdown variables
   apr_thread_mutex_create(&shutdown_lock, APR_THREAD_MUTEX_DEFAULT, global_pool);
+  apr_thread_cond_create(&shutdown_cond, global_pool);
 
 //  log_printf(0, "Looking up resource 2 and printing info.....\n")
 //  print_resource(resource_lookup(config.rl, "2"), log_fd());
@@ -537,12 +666,18 @@ printf("ibp_server.c: STDOUT=STDERR=LOG_FD() dnoes not work!!!!!!!!!!!!!!!!!!!!!
   }
   resource_list_iterator_destroy(global_config->rl, &it);
 
+  //** Launch the RID health checker thread
+  apr_thread_create(&rid_check_thread, NULL, resource_health_check, NULL, global_pool);
+
   //*** Start the activity log ***
   alog_open();
 
   start_unis_registration();
 
   server_loop(&config);     //***** Main processing loop ******
+
+  //** Wait forthe healther checker thread to complete
+  apr_thread_join(&dummy, rid_check_thread);
 
   //*** Shutdown the activity log ***
   alog_close();

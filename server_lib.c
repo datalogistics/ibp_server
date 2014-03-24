@@ -89,6 +89,8 @@ int send_cmd_result(ibp_task_t *task, int status)
    Net_timeout_t dt;
    int nbytes, nstr;
 
+   if (ns == NULL) return(0);
+
    snprintf(result, sizeof(result), "%d \n", status);
    log_printf(10, "send_cmd_result(tid=" LU " ns=%d): %s", task->tid, ns->id, result);
    convert_epoch_time2net(&dt, task->cmd_timeout);
@@ -242,6 +244,13 @@ int print_config(char *buffer, int *used, int nbytes, Config_t *cfg)
   append_printf(buffer, used, nbytes, "\n");
   append_printf(buffer, used, nbytes, "force_resource_rebuild = %d\n", cfg->force_resource_rebuild);
   append_printf(buffer, used, nbytes, "truncate_duration = %d\n", cfg->truncate_expiration);
+  append_printf(buffer, used, nbytes, "\n");
+  append_printf(buffer, used, nbytes, "rid_check_interval = %d\n", server->rid_check_interval);
+  append_printf(buffer, used, nbytes, "eject_timoeut = %d\n", server->eject_timeout);
+  append_printf(buffer, used, nbytes, "rid_log = %s\n", server->rid_log);
+  append_printf(buffer, used, nbytes, "rid_eject_script = %s\n", server->rid_eject_script);
+  append_printf(buffer, used, nbytes, "rid_eject_tmp_path = %s\n", server->rid_eject_tmp_path);
+  append_printf(buffer, used, nbytes, "\n");
   d = (cfg->soft_fail == -1) ? 0 : 1;
   append_printf(buffer, used, nbytes, "soft_fail = %d\n", d);
   append_printf(buffer, used, nbytes, "\n");
