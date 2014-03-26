@@ -13,7 +13,7 @@ void parse_unis_config(inip_file_t *kf)
   char* unis_name = inip_get_string(kf, "unis", "name", NULL);
   char* unis_type = inip_get_string(kf, "unis", "type", NULL);
   char* unis_endpoint = inip_get_string(kf, "unis", "endpoint", NULL);
-  char* unis_proto_name = inip_get_string(kf, "unis", "protocol_name", NULL);
+  char* unis_proto_name = inip_get_string(kf, "unis", "protocol_name", "ibp");
   //Todo: Do we need to support more than one ips here?
   char* unis_publicip = inip_get_string(kf, "unis", "publicip", NULL);
   int unis_publicport = inip_get_integer(kf, "unis", "publicport", -1);
