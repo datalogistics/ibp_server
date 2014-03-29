@@ -19,6 +19,8 @@ void parse_unis_config(inip_file_t *kf)
   int unis_publicport = inip_get_integer(kf, "unis", "publicport", -1);
   int unis_do_register = 1;
   int unis_reg_interval = inip_get_integer(kf, "unis", "registration_interval", UNIS_REG_INTERVAL);
+  char* client_cert_path = inip_get_string(kf, "unis", "client_certfile", NULL);
+  char* client_key_path = inip_get_string(kf, "unis", "client_keyfile", NULL);
 
   if(!unis_name || !unis_type || !unis_endpoint) {
     log_printf(0, "register_unis: no unis information present. Unis registration will not be done.");
@@ -35,8 +37,16 @@ void parse_unis_config(inip_file_t *kf)
   config->do_register = unis_do_register;
   config->registration_interval = unis_reg_interval;
   config->refresh_timer = UNIS_REFRESH_TO;
+  //ssl params
+  config->certfile = client_cert_path;
+  config->keyfile = client_key_path;
+  config->keypass  = NULL; config->cacerts = NULL;
+  if(config->certfile && config->keyfile)
+    config->use_ssl = 1;
+  else
+    config->use_ssl = 0;
 
-  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer);
+  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer, config->certfile, config->keyfile, config->use_ssl);
 }
 
 //*************************************************************************
@@ -47,7 +57,7 @@ void start_unis_registration(){
     if(unis_init(config) == 0) {
       log_printf(5, "register_unis: unis registration is successful.");
     } else {
-      log_printf(5, "register_unis: error in unis registration.");
+      log_printf(0, "register_unis: error in unis registration.");
     }
   }
 }

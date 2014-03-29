@@ -350,7 +350,7 @@ type=process_type
 
 endpoint=http://unis_server_url:unis_port
   Specifies location of the UNIS server and port in above format. i.e. http://monitor.incntre.iu.edu:9000
-  This must be set to enable registration.
+  This must be set to enable registration. Endpoint must be https:// when ssl is enabled.
 
 init_register=[1|0]
   Enables or disables unis registration functionality. Disabled by default.
@@ -363,6 +363,16 @@ publicip=ip
 
 publicport=N
   Specifies IBP server port. This must be set to correctly register the entry with UNIS.
+
+client_certfile=cert_file_path
+  Specifies client certificate to be authenticated against UNIS server. If client_certfile and client_keyfile
+  are not specified then ssl will not be used to connect to UNIS. When set, make sure endpoint has https://
+  address in it.
+
+client_keyfile=key_file_path
+  Specifies client key to be authenticated against UNIS server. If client_certfile and client_keyfile
+  are not specified then ssl will not be used to connect to UNIS. When set, make sure endpoint has https://
+  address in it.
 
 
 --------------------------------------------------------------------------------
