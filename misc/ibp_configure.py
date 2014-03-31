@@ -25,6 +25,10 @@ log.setLevel(logging.DEBUG)
 IBP_PORT=6714
 ALLOCATION_SIZE = 8000  #mb
 UNIS_ENDPOINT = "http://monitor.incntre.iu.edu:9000"
+# if SSL_UNIS_* is set then unis is assumed to talk over ssl
+UNIS_SSL_ENABLED = True
+UNIS_SSL_KEY = "/root/ssl/client.key"
+UNIS_SSL_CERT = "/root/ssl/client.crt"
 LOGFILENAME = "ibp_configure.log"
 WAIT_INTERVAL = 60 #seconds to wait before interfaces are up
 
@@ -92,6 +96,9 @@ protocol_name= ibp
 registration_interval = 120
 publicip = {public_ip}
 publicport = 6714
+use_ssl = {use_ssl}
+client_certfile={cert_file_path}
+client_keyfile={key_file_path}
 """
 
 c = Configuration()
@@ -294,7 +301,10 @@ def generate_config(args, interface_addresses, sub_ip_list, resource, public_ip)
     # create unis registration entry
     unis_config = ""
     if args.unis:
-        unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=UNIS_ENDPOINT, public_ip=public_ip)
+        use_ssl = 1 if UNIS_SSL_ENABLED else 0
+        unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=UNIS_ENDPOINT, public_ip=public_ip,\
+                                         cert_file_path=UNIS_SSL_CERT, key_file_path=UNIS_SSL_KEY,\
+                                         use_ssl=use_ssl)
 
     # create phoebus entry
     phoebus_config = ""

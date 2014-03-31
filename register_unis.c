@@ -21,6 +21,7 @@ void parse_unis_config(inip_file_t *kf)
   int unis_reg_interval = inip_get_integer(kf, "unis", "registration_interval", UNIS_REG_INTERVAL);
   char* client_cert_path = inip_get_string(kf, "unis", "client_certfile", NULL);
   char* client_key_path = inip_get_string(kf, "unis", "client_keyfile", NULL);
+  int use_ssl = inip_get_integer(kf, "unis", "use_ssl", 0);
 
   if(!unis_name || !unis_type || !unis_endpoint) {
     log_printf(0, "register_unis: no unis information present. Unis registration will not be done.");
@@ -40,11 +41,8 @@ void parse_unis_config(inip_file_t *kf)
   //ssl params
   config->certfile = client_cert_path;
   config->keyfile = client_key_path;
+  config->use_ssl = use_ssl;
   config->keypass  = NULL; config->cacerts = NULL;
-  if(config->certfile && config->keyfile)
-    config->use_ssl = 1;
-  else
-    config->use_ssl = 0;
 
   log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer, config->certfile, config->keyfile, config->use_ssl);
 }
