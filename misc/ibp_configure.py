@@ -238,11 +238,11 @@ def reallocation_needed(args):
         return True
 
     if os.path.isfile(c.allocation_success_file()):
-        log.info('This text file ({}) acts as a lock for resource allocation. Delete it for '
+        log.info('This text file ({0}) acts as a lock for resource allocation. Delete it for '
         'reallocation.!'.format(c.allocation_success_file()))
         return False
     else:
-        log.info('This text file ({}) not found, so allocating the '
+        log.info('This text file ({0}) not found, so allocating the '
                 'resources'.format(c.allocation_success_file()))
         return True
 
