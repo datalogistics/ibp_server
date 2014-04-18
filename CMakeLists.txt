@@ -63,11 +63,11 @@ endif (PHOEBUS_FOUND)
 # Check if we found unis lib c and the set options
 if (UNIS_C_FOUND)
   set(UNIS_C_OPT "-D_ENABLE_UNIS_C")
-  OPTION( _ENABLE_UNIS_C "Enable PHOEBUS support" ON )
+  OPTION( _ENABLE_UNIS_C "Enable UNIS support" ON )
   include_directories(${UNIS_C_INCLUDE_DIR})
   list(APPEND LIBS ${UNIS_C_LIBRARY} curl jansson)
 else (UNIS_C_FOUND)
-  OPTION( _ENABLE_UNIS_C "Enable PHOEBUS support" OFF )
+  OPTION( _ENABLE_UNIS_C "Enable UNIS support" OFF )
 endif (UNIS_C_FOUND)
 
 #message("flags=${CMAKE_C_FLAGS}")
@@ -141,5 +141,6 @@ TARGET_LINK_LIBRARIES( chksum_test ${OPENSSL_LIBRARIES} ${CRYPTO_LIBRARIES})
 
 install(TARGETS chksum_test date_spacefree expire_list get_alloc get_config get_corrupt get_version get_rid_status ibp_attach_rid ibp_detach_rid
     ibp_rescan ibp_rid_mode ibp_server ibp_undelete mkfs.resource print_alog read_alloc repair_history DESTINATION bin)
-
+install(FILES misc/ibp.cfg DESTINATION etc)
+install(FILES misc/ibp-server DESTINATION etc/init.d)
 
