@@ -24,9 +24,9 @@ log.setLevel(logging.DEBUG)
 # Configurable parameters starts
 IBP_PORT=6714
 ALLOCATION_SIZE = 8000  #mb
-UNIS_ENDPOINT = "http://monitor.incntre.iu.edu:9000"
+UNIS_ENDPOINT = "http://localhost:8888"
 # if SSL_UNIS_* is set then unis is assumed to talk over ssl
-UNIS_SSL_ENABLED = True
+UNIS_SSL_ENABLED = False
 UNIS_SSL_KEY = "/root/ssl/client.key"
 UNIS_SSL_CERT = "/root/ssl/client.crt"
 LOGFILENAME = "ibp_configure.log"
@@ -316,7 +316,7 @@ def generate_config(args, interface_addresses, sub_ip_list, resource, public_ip)
             unis=unis_config)
 
     # check that $IBP_ROOT/etc exists
-    if not os.path.exists(c.ibp_config_path()):
+    if not os.path.dirname(c.ibp_config_path()):
         os.makedirs(os.path.dirname(c.ibp_config_path()))
 
     with open(c.ibp_config_path(), 'w') as f:

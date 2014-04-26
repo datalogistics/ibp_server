@@ -48,9 +48,16 @@ void parse_unis_config(inip_file_t *kf)
 }
 
 //*************************************************************************
+//  _print_log - internal function to be passed to library to catch logs
+//*************************************************************************
+void _print_log(int level, const char* msg) {
+    log_printf(level, msg);
+}
+
 //  start_unis_registration - initializes the unis_registration api
 //*************************************************************************
 void start_unis_registration(){
+  register_log_callback_libunis_c(_print_log);
   if(config != NULL) {
     if(unis_init(config) == 0) {
       log_printf(5, "register_unis: unis registration is successful.");
