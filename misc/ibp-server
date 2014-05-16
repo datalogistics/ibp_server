@@ -9,7 +9,7 @@
 #
 
 
-PREFIX=/usr/local
+#PREFIX=/usr/local
 if [ -z ${PREFIX} ]; then
 IBPBINDIR=/bin
 else
@@ -23,7 +23,7 @@ LOGFILE=${IBPVARDIR}/log/ibp_server.log
 DEBUGLEVEL=9
 
 IBP="${IBPBINDIR}/ibp_server -d ${CONFFILE}"
-IBP_CONFIGURE="${IBPBINDIR}/ibp_configure.py"
+#IBP_CONFIGURE="${IBPBINDIR}/ibp_configure.py"
 
 ERROR=0
 ARGV="$@"
