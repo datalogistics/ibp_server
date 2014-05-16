@@ -541,6 +541,8 @@ int main(int argc, const char **argv)
   assert(apr_initialize() == APR_SUCCESS);
   assert(apr_pool_create(&global_pool, NULL) == APR_SUCCESS);
 
+  init_random();  // Make sure and initialize the random number generator;
+
   shutdown_now = 0;
 
   global_config = &config;   //** Make the global point to what's loaded

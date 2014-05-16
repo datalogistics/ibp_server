@@ -3092,8 +3092,6 @@ osd_t *osd_mount_fs(const char *device, int n_cache, apr_time_t expire_time)
    apr_thread_mutex_create(&(fs->lock), APR_THREAD_MUTEX_DEFAULT, fs->pool);
    apr_thread_mutex_create(&(fs->obj_lock), APR_THREAD_MUTEX_DEFAULT, fs->pool);
 
-   init_random();  // Make sure and initialize the random number generator;
-
    //** Lastly set up all the pointers
    d->umount = fs_umount;
    d->create_id = fs_create_id;
