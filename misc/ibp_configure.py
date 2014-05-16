@@ -30,17 +30,18 @@ UNIS_SSL_ENABLED = False
 UNIS_SSL_KEY = "/root/ssl/client.key"
 UNIS_SSL_CERT = "/root/ssl/client.crt"
 LOGFILENAME = "ibp_configure.log"
-WAIT_INTERVAL = 60 #seconds to wait before interfaces are up
+WAIT_INTERVAL = 10 #seconds to wait before interfaces are up
 
 # location constants
-IBP_RESOURCE_ROOT = "/root"
-IBP_ROOT      = "/usr/local"
+IBP_RESOURCE_ROOT = "/tmp/ibp_resources"
+IBP_ROOT      = "/"
 
 class Configuration():
 
-    def __init__(self, ibp_root=IBP_ROOT, resource_root=IBP_RESOURCE_ROOT):
+    def __init__(self, ibp_root=IBP_ROOT, resource_root=IBP_RESOURCE_ROOT, size=ALLOCATION_SIZE):
         self.ibp_root = ibp_root
         self.resource_root = resource_root
+        self.size = size
 
     def allocation_success_file(self):
         # acts as lock for reallocation. This file will be created when resources are
@@ -56,7 +57,7 @@ class Configuration():
 
     def makefs_cmd(self):
         return path.join(self.ibp_root, "bin/mkfs.resource") + " 0 dir " + self.resource_base_dir()\
-               + " " + self.resource_db() + " " + str(ALLOCATION_SIZE)
+               + " " + self.resource_db() + " " + str(self.size)
 
     def ibp_config_path(self):
         return path.join(self.ibp_root, "etc/ibp.cfg")
@@ -102,6 +103,38 @@ client_keyfile={key_file_path}
 """
 
 c = Configuration()
+
+def query_yes_no(question, default="no"):
+    """Ask a yes/no question via raw_input() and return their answer.
+    
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is one of "yes" or "no".
+    """
+    valid = {"yes":True,   "y":True,  "ye":True,
+             "no":False,     "n":False}
+    if default == None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = raw_input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "\
+                             "(or 'y' or 'n').\n")
 
 def execute_command(cmd, ignore_status = False):
   log.debug("Command to run: %s" % cmd)
@@ -199,9 +232,9 @@ def configure_arguments():
                         help='List of interfaces to bind to. If this option is not used then '
                               'all interfaces except localhost will be set. Specify multiple '
                               'interfaces by a comma separated list')
-    parser.add_argument('--root', type=str, default=None,
+    parser.add_argument('--root', type=str, default=IBP_ROOT,
                         help='Specifies root path to /bin/ibp_server')
-    parser.add_argument('--resource', type=str, default=None,
+    parser.add_argument('--resource', type=str, default=IBP_RESOURCE_ROOT,
                         help='Specifies root path for resource allocations.')
     parser.add_argument('--force_allocate', action='store_true',
                         help='Ignores the resource lock and reallocates the resources.')
@@ -212,6 +245,8 @@ def configure_arguments():
     parser.add_argument('--sleep', type=int, default=WAIT_INTERVAL,
                         help='Specifies time in seconds to wait before network interfaces have '
                         'come up.')
+    parser.add_argument('--size', type=int, default=ALLOCATION_SIZE,
+                        help='Specifies the max allocated size in MB for the resource')
     parser.add_argument('-l', '--log', action='store_true', help='Log to file.')
     args = parser.parse_args()
 
@@ -221,12 +256,7 @@ def configure_arguments():
         sys.exit(1)
 
     global c
-    if args.root and args.resource:
-        c = Configuration(args.root, args.resource)
-    elif args.root:
-        c = Configuration(ibp_root=args.root)
-    elif args.resource:
-        c = Configuration(resource_root=args.resource)
+    c = Configuration(args.root, args.resource, args.size)
 
     return args
 
@@ -239,7 +269,7 @@ def reallocation_needed(args):
 
     if os.path.isfile(c.allocation_success_file()):
         log.info('This text file ({0}) acts as a lock for resource allocation. Delete it for '
-        'reallocation.!'.format(c.allocation_success_file()))
+        'reallocation!'.format(c.allocation_success_file()))
         return False
     else:
         log.info('This text file ({0}) not found, so allocating the '
@@ -252,7 +282,12 @@ def allocate(args):
     """
     # check if already allocated
     if os.path.exists(c.resource_base_dir()):
-      shutil.rmtree(c.resource_base_dir())
+        ret = query_yes_no("WARNING: directory %s already exists, delete?" % c.resource_base_dir())
+        if ret:
+            shutil.rmtree(c.resource_base_dir())
+        else:
+            log.error("Specify another resource path and try again, exiting.")
+            exit(1)
 
     if os.path.exists(c.resource_db()):
       shutil.rmtree(c.resource_db())
