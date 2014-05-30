@@ -392,6 +392,9 @@ def main():
     else:
         resource = ""
 
+    log.info("To add more resources use 'bin/mkfs.resource <IBP id (unique)> dir <path to drive> <path to drive DB> <maximum size in MB>' command.\
+ \n Then copy/paste the output from mkfs.resource  into the /etc/ibp.cfg. \n For more information check https://github.com/datalogistics/ibp_server  ")
+
     # Need to sleep because network prob fails if we do not wait for them
     log.info('Sleeping for %d seconds. This allows network interfaces to come up' % args.sleep)
     time.sleep(args.sleep)
@@ -410,7 +413,7 @@ def main():
     ibp_config = generate_config(args, interface_addresses, sub_ip_list, resource, public_ip)
 
     # start interface monitoring thread
-    execute_command(c.ibp_interface_monitor(), True)
+    # execute_command(c.ibp_interface_monitor(), True)
 
     # bbye
     sys.exit(0)
