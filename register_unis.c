@@ -10,6 +10,7 @@ static unis_config* config = NULL;
 //*************************************************************************
 void parse_unis_config(inip_file_t *kf)
 {
+  unis_loc location;
   char* unis_name = inip_get_string(kf, "unis", "name", NULL);
   char* unis_type = inip_get_string(kf, "unis", "type", NULL);
   char* unis_endpoint = inip_get_string(kf, "unis", "endpoint", NULL);
@@ -22,6 +23,14 @@ void parse_unis_config(inip_file_t *kf)
   char* client_cert_path = inip_get_string(kf, "unis", "client_certfile", NULL);
   char* client_key_path = inip_get_string(kf, "unis", "client_keyfile", NULL);
   int use_ssl = inip_get_integer(kf, "unis", "use_ssl", 0);
+
+  location.country = inip_get_string(kf, "unis", "country", NULL);
+  location.street_address = inip_get_string(kf, "unis", "street", NULL);
+  location.state = inip_get_string(kf, "unis", "state", NULL);
+  location.institution = inip_get_string(kf, "unis", "institution", NULL);
+  location.zipcode = inip_get_string(kf, "unis", "zipcode", NULL);
+  location.lat = inip_get_double(kf, "unis", "latitude", 0);
+  location.lon = inip_get_double(kf, "unis", "longitude", 0);
 
   if(!unis_name || !unis_type || !unis_endpoint) {
     log_printf(0, "register_unis: no unis information present. Unis registration will not be done.");
