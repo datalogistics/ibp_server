@@ -52,6 +52,7 @@ void parse_unis_config(inip_file_t *kf)
   config->keyfile = client_key_path;
   config->use_ssl = use_ssl;
   config->keypass  = NULL; config->cacerts = NULL;
+  memcpy(&config->loc_info, &location, sizeof(location));
 
   log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer, config->certfile, config->keyfile, config->use_ssl);
 }
