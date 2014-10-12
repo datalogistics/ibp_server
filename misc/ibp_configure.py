@@ -19,7 +19,6 @@ import logging
 
 # Setting basic logging
 log = logging.getLogger('ibp_configure')
-log.setLevel(logging.DEBUG)
 
 MS_URL = "https://dlt.incntre.iu.edu:9001"
 IBP_CONFIG_LOG = "ibp_configure.log"
@@ -67,47 +66,48 @@ latitude = {lat}
 longitude = {lon}
 """
 
-BLIPP_CONFIG = """
-{
+BLIPP_CONFIG = """{
     "status": "ON",
     "serviceType": "ps:tools:blipp",
     "name": "blipp",
     "ttl": 100000,
     "location": {
-        "institution": %s,
-        "street_address": %s,
-        "state": %s,
-        "zipcode": %s,
-        "country": %s,
-        "latitude": %f.
+        "institution": "%s",
+        "country": "%s",
+        "state": "%s",
+        "zipcode": "%s",
+        "latitude": %f,
         "longitude": %f
     },
     "description": "BLiPP for DLT Install",
     "properties": {
       "configurations": {
-        "unis_url": %s,
-        "use_ssl": %s,
-            "ssl_cert": %s,
-            "ssl_key": %s,
+        "unis_url": "%s",
+        "use_ssl": "%s",
+            "ssl_cert": "%s",
+            "ssl_key": "%s",
         "ssl_cafile": "",
         "probe_defaults":
         {"collection_schedule":"builtins.simple",
-         "schedule_params": {"every": 2},
+         "schedule_params": {"every": 5},
          "reporting_params": 8,
-         "collection_size":100000,
+         "collection_size":10000,
          "collection_ttl":1500000,
-         "ms_url": MS_URL
+         "ms_url": "%s"
         },
         "probes":{
+               "net":{
+                    "probe_module": "net"
+                },
                 "ibp_server": {
                     "probe_module": "cmd_line_probe",
-                    "command": "get_version %s %d",
-                    "regex": "Total resources.*Used:\\s+(?P<used>\\d+).*Free:\\s+(?P<free>\\d+).*",
+                    "command": "get_version %s %s",
+                    "regex": "Total resources.*Used:\\\s+(?P<used>\\\d+).*Free:\\\s+(?P<free>\\\d+).*",
                     "eventTypes": {"used": "ps:tools:blipp:ibp_server:resource:usage:used",
                                    "free": "ps:tools:blipp:ibp_server:resource:usage:free"}
                 }
         }
-      },
+      }
     }
 }
 """
@@ -238,6 +238,9 @@ class Configuration():
     def ibp_config_file(self):
         return path.join(self.ibp_root, "etc/ibp.cfg")
 
+    def blipp_config_file(self):
+        return path.join(self.ibp_root, "etc/blipp_dlt.json")
+
     def ibp_interface_monitor(self):
         return path.join(self.ibp_root, "bin/ibp_interface_monitor.py") + " -l -d"
 
@@ -299,8 +302,8 @@ class Configuration():
             return True
     
         if os.path.isfile(self.allocation_success_file()):
-            log.info('This text file ({0}) acts as a lock for resource allocation.\nDelete it for '
-                     'reallocation!'.format(self.allocation_success_file()))
+            log.info('This text file ({0}) acts as a lock for resource allocation.\n\
+            Delete it for reallocation!'.format(self.allocation_success_file()))
             return False
         else:
             log.info('This text file ({0}) not found, so allocating the '
@@ -341,6 +344,20 @@ class Configuration():
             f.write(resource)
 
         return resource
+    def save_and_write(self, fname, content):
+        # check that $IBP_ROOT/etc exists
+        if not os.path.dirname(fname):
+            os.makedirs(os.path.dirname(fname))
+
+        if os.path.isfile(fname):
+            with open(fname, 'r') as f:
+                with open(fname + ".ibp_configure_save", 'w') as g:
+                    g.write(f.read())
+                    g.close()
+                    f.close()
+
+        with open(fname, 'w') as f:
+            f.write(content)
 
     def get_string(self, disp_str, dval):
         val = raw_input(disp_str)
@@ -368,38 +385,60 @@ class Configuration():
     def get_user_input(self, args):
         public_ip = mysys.get_public_facing_ip(args)
 
-        print "==============================================================="
-        print ":: Begin interactive DLT configuration"
-
-        print "\n== IBP Server Settings =="
-        self.ibp_host = self.get_string('IBP hostname [%s]: ' % public_ip, public_ip) 
-        self.ibp_port = self.get_int('IBP port [%s]: ' % self.ibp_port, self.ibp_port)
-        self.ibp_resource_path = self.get_string('Resource path [%s] ' %
+        log.info("===============================================================")
+        log.info(":: Begin interactive DLT configuration")
+        log.info('')
+        log.info("== IBP Server Settings ==")
+        self.ibp_host = self.get_string(' IBP hostname [%s]: ' % public_ip, public_ip) 
+        self.ibp_port = self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
+        self.ibp_resource_path = self.get_string(' Resource path [%s] ' %
                                                  self.ibp_resource_path, self.ibp_resource_path)
-        self.ibp_resource_db = self.get_string('Resource DB path [%s] ' %
+        self.ibp_resource_db = self.get_string(' Resource DB path [%s] ' %
                                                  self.ibp_resource_db, self.ibp_resource_db)
-        self.ibp_size = self.get_int('Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
-        self.ibp_log = self.get_string('IBP log file [%s] ' % self.ibp_log, self.ibp_log)
-        print "\n== UNIS Settings (depot registration) =="
-        self.unis_endpoint = self.get_real('UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
-        self.unis_use_ssl = self.query_yes_no('Enable SSL', default="yes")
+        self.ibp_size = self.get_int(' Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
+        self.ibp_log = self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
+        log.info('')
+        log.info("== UNIS Settings (depot registration) ==")
+        self.unis_endpoint = self.get_real(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
+        self.unis_use_ssl = self.query_yes_no(' Enable SSL', default="yes")
         if self.unis_use_ssl:
-            self.unis_cert_file = self.get_string('UNIS client cert file [%s]: ' %
+            self.unis_cert_file = self.get_string(' UNIS client cert file [%s]: ' %
                                                   self.unis_cert_file, self.unis_cert_file)
-            self.unis_key_file = self.get_string('UNIS client key file [%s]: ' %
+            self.unis_key_file = self.get_string(' UNIS client key file [%s]: ' %
                                                  self.unis_key_file, self.unis_key_file)
-        self.unis_institution = self.get_string('Institution [%s]: ' % self.unis_institution,
-                                                self.unis_institution)
-        self.unis_country = self.get_string('Country [%s]: ' % "US", "US")
-        self.unis_state = self.get_string('State [%s]: ' % "AK", "AK")
-        self.unis_zipcode = self.get_string('ZipCode [%s]: ' % "00000", "00000")
-        self.unis_latitude = self.get_real('Latitude [%s]: ' % self.unis_latitude, self.unis_latitude) 
-        self.unis_longitude = self.get_real('Longitude [%s]: ' % self.unis_longitude, self.unis_longitude) 
-        self.enable_blipp = self.query_yes_no('Monitor the depot with BLiPP (usage stats)', default='yes')
-        print "\n== Phoebus Settings (WAN Acceleration) =="
-        self.phoebus = self.get_string('Optional Phoebus Gateway (<host>/<port>): ', '')
+        self.unis_institution = self.get_string(' Institution [%s]: ' % "", "unknown")
+        self.unis_country = self.get_string(' Country [%s]: ' % "US", "US")
+        self.unis_state = self.get_string(' State [%s]: ' % "AK", "AK")
+        self.unis_zipcode = self.get_string(' ZipCode [%s]: ' % "", "00000")
+        self.unis_latitude = self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude) 
+        self.unis_longitude = self.get_real(' Longitude [%s]: ' % self.unis_longitude, self.unis_longitude) 
+        self.enable_blipp = self.query_yes_no(' Monitor the depot with BLiPP (usage stats)', default='yes')
+        log.info('')
+        log.info("== Phoebus Settings (WAN Acceleration) ==")
+        self.phoebus = self.get_string(' Optional Phoebus Gateway (<host>/<port>): ', '')
+        log.info('')
+        log.info("End DLT onfiguration")
+        log.info("===============================================================")
+
+    def generate_blipp_config(self, args):
+        blipp_config = BLIPP_CONFIG % (self.unis_institution,
+                                       self.unis_state,
+                                       self.unis_zipcode,
+                                       self.unis_country,
+                                       self.unis_latitude,
+                                       self.unis_longitude,
+                                       self.unis_endpoint,
+                                       self.unis_use_ssl,
+                                       self.unis_cert_file,
+                                       self.unis_key_file,
+                                       MS_URL,
+                                       self.ibp_host,
+                                       self.ibp_port)
         
-    def generate_config(self, args):
+        self.save_and_write(self.blipp_config_file(), blipp_config)
+        return blipp_config
+
+    def generate_ibp_config(self, args):
         """
         """
         resource_config = self.allocate(args)
@@ -446,25 +485,16 @@ class Configuration():
                                               resource=resource_config,
                                               unis=unis_config)
 
-        # check that $IBP_ROOT/etc exists
-        if not os.path.dirname(self.ibp_config_file()):
-            os.makedirs(os.path.dirname(self.ibp_config_file()))
-
-        if os.path.isfile(self.ibp_config_file()):
-            with open(self.ibp_config_file(), 'r') as f:
-                with open(self.ibp_config_file()+".ibp_configure_save", 'w') as g:
-                          g.write(f.read())
-                          g.close()
-                          f.close()
-
-        with open(self.ibp_config_file(), 'w') as f:
-            f.write(ibp_config)
-
+        self.save_and_write(self.ibp_config_file(), ibp_config)
         return ibp_config
 
 
-def configure_logging(log_to_file):
+def configure_logging(log_to_file, debug=False):
     global log
+    if debug:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
     formatter = logging.Formatter('[%(levelname)s] %(message)s')
     if log_to_file:
         handler = logging.FileHandler(LOGFILENAME, 'a')
@@ -484,6 +514,8 @@ def main():
     parser.add_argument('--neuca', type=str, default=None,
                         help='Use neuca tools to get public ip. Provide distro name as parameter'
                         'Supported distributions are debian, ubuntu, redhat, centos, fedora.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Turn on debugging output.')
     parser.add_argument('--force_allocate', action='store_true',
                         help='Ignores the resource lock and reallocates the resources.')
     parser.add_argument('--host', type=str, default=None,
@@ -493,22 +525,31 @@ def main():
                         help='List of interfaces to bind to. If this option is not used then '
                               'all interfaces except localhost will be set. Specify multiple '
                               'interfaces by a comma separated list')
+    parser.add_argument('--ibp_root', type=str, default='/',
+                        help='Change the relative install path, default is /')
     parser.add_argument('-l', '--log', action='store_true', help='Log to file.')
     args = parser.parse_args()
 
     #only either of neuca or public ip should be set
     if args.neuca and args.host:
-        log.error("both neuca or public ip should be used together")
+        log.error("--neuca and --host should not be used together")
         sys.exit(1)
 
-    configure_logging(args.log)
+    configure_logging(args.log, debug=args.debug)
 
     cfg = Configuration()
+    cfg.ibp_root = args.ibp_root
     cfg.get_user_input(args)
-    ibp_config = cfg.generate_config(args)
+    
+    log.info("Saving IBP configuration to %s" % cfg.ibp_config_file())
+    ibp_config = cfg.generate_ibp_config(args)
+    log.debug(ibp_config)
 
-    #print ibp_config
-
+    if (cfg.enable_blipp):
+        log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())
+        blipp_config = cfg.generate_blipp_config(args)
+        log.debug(blipp_config)
+    
     # start interface monitoring thread
     # execute_command(c.ibp_interface_monitor(), True)
 
