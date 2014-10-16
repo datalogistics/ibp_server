@@ -471,9 +471,11 @@ class Configuration():
         else:
             ibp_conn_strings = self.get_ibp_interface_addresses(args)
 
+        # EK: need to fix NAT substitue map feature
+        sub_ip_list = ""
         # also prepare substitute_map option as 
-        default_interface_ip = mysys.get_public_facing_ip_using_default_interface()
-        sub_ip_list = default_interface_ip + ":" + self.ibp_host + ";"
+        #default_interface_ip = mysys.get_public_facing_ip_using_default_interface()
+        #sub_ip_list = default_interface_ip + ":" + self.ibp_host + ";"
 
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
                                                 public_ip=self.ibp_host,
