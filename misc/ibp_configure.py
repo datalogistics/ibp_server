@@ -218,6 +218,7 @@ class Configuration():
         self.unis_country      = ""
         self.unis_latitude     = 0
         self.unis_longitude    = 0
+        self.ibp_do_res        = False
         self.ibp_size          = 8000
         self.ibp_port          = 6714
         self.ibp_resource_path = "/tmp/ibp_resources"
@@ -232,7 +233,7 @@ class Configuration():
         return os.path.join(self.ibp_resource_path, ".allocations_do_not_remove")
 
     def makefs_cmd(self):
-        return path.join(self.ibp_root, "bin/mkfs.resource") + " 0 dir " + self.ibp_resource_path\
+        return path.join(self.ibp_root, "bin/mkfs.resource") + " 1 dir " + self.ibp_resource_path\
                + " " + self.ibp_resource_db + " " + str(self.ibp_size)
 
     def ibp_config_file(self):
@@ -300,23 +301,37 @@ class Configuration():
         """
         if args.force_allocate:
             return True
-    
-        if os.path.isfile(self.allocation_success_file()):
+            
+        if os.path.exists('/tmp/ibp_dbenv'):
+            do_del = self.query_yes_no(' Found existing IBP DB environment, delete', default="yes")
+            if do_del:
+                shutil.rmtree('/tmp/ibp_dbenv')
+            else:
+                log.info("WARNING: Existing DB environment in /tmp/ibp_dbenv might conflict\n\
+                with new resource configurations!")
+
+        if self.ibp_do_res and os.path.isfile(self.allocation_success_file()):
             log.info('This text file ({0}) acts as a lock for resource allocation.\n\
-            Delete it for reallocation!'.format(self.allocation_success_file()))
+       Delete it to allow re-allocation!'.format(self.allocation_success_file()))
             return False
-        else:
+        elif self.ibp_do_res:
             log.info('This text file ({0}) not found, so allocating the '
                      'resources'.format(self.allocation_success_file()))
-        return True
+            return True
+
+        return False
 
     def allocate(self, args):
         """
         Deletes resource directories and allocates them back
         """
         if not self.reallocation_needed(args):
-            with open(self.allocation_success_file(), 'r') as f:
-                return f.read()
+            if self.ibp_do_res:
+                log.info("Includng previous resource configuration")
+                with open(self.allocation_success_file(), 'r') as f:
+                    return f.read()
+            else:
+                return ""
 
         # check if already allocated
         if os.path.exists(self.ibp_resource_path):
@@ -344,6 +359,7 @@ class Configuration():
             f.write(resource)
 
         return resource
+
     def save_and_write(self, fname, content):
         # check that $IBP_ROOT/etc exists
         if not os.path.dirname(fname):
@@ -391,12 +407,14 @@ class Configuration():
         log.info("== IBP Server Settings ==")
         self.ibp_host = self.get_string(' IBP hostname [%s]: ' % public_ip, public_ip) 
         self.ibp_port = self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
-        self.ibp_resource_path = self.get_string(' Resource path [%s] ' %
-                                                 self.ibp_resource_path, self.ibp_resource_path)
-        self.ibp_resource_db = self.get_string(' Resource DB path [%s] ' %
-                                                 self.ibp_resource_db, self.ibp_resource_db)
-        self.ibp_size = self.get_int(' Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
         self.ibp_log = self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
+        self.ibp_do_res = self.query_yes_no(' Configure an initial IBP resource', default="yes")
+        if self.ibp_do_res:
+            self.ibp_resource_path = self.get_string(' Resource path [%s] ' %
+                                                     self.ibp_resource_path, self.ibp_resource_path)
+            self.ibp_resource_db = self.get_string(' Resource DB path [%s] ' %
+                                                   self.ibp_resource_db, self.ibp_resource_db)
+            self.ibp_size = self.get_int(' Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
         self.unis_endpoint = self.get_real(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
@@ -447,14 +465,6 @@ class Configuration():
             phoebus_config = ""
         else:
             phoebus_config = PHOEBUS_SAMPLE_CONFIG.format(phoebus_gateway=self.phoebus)
-
-        if resource_config == "":
-            if os.path.isfile(self.allocation_success_file()):
-                with open(self.allocation_success_file(), 'r') as f:
-                    resource = f.read()
-            else:
-                log.error("No resource allocation information found. Quitting...!")
-                sys.exit(1)
 
         if len(self.ibp_host):
             ibp_conn_strings = self.ibp_host + ':' + str(self.ibp_port)
