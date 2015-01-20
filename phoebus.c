@@ -76,12 +76,11 @@ void phoebus_path_set(phoebus_t *p, const char *path)
    //** Parse the path **
    p->p_count = 0;
    p->path_string = strdup(path);
-
    p->key = strdup(path);
 
    hop = string_token(p->path_string, ",", &bstate, &finished);
    while (finished == 0) {
-     stage[p->p_count] = hop;
+     stage[p->p_count] = strdup(hop);
      p->p_count++;
      hop = string_token(NULL, ",", &bstate, &finished);
    }
@@ -100,9 +99,12 @@ void phoebus_path_set(phoebus_t *p, const char *path)
 
 void phoebus_path_destroy(phoebus_t *p)
 {
-  free(p->path_string);
-  free(p->path);
-  free(p->key);
+  if (p->path_string)
+    free(p->path_string);
+  if (p->path)
+    free(p->path);
+  if (p->key)
+    free(p->key);
 }
 
 //***************************************************************
@@ -165,8 +167,9 @@ void phoebus_init(void)
 
 void phoebus_destroy(void)
 {
-   phoebus_path_destroy(global_phoebus);  
-   free(global_phoebus);  
+   phoebus_path_destroy(global_phoebus);
+   if (global_phoebus)
+     free(global_phoebus);
 }
 
 //***************************************************************

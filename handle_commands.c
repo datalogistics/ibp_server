@@ -2373,7 +2373,6 @@ log_printf(15, "iovec->n=%d off=" OT " len=" OT " cumulative_len=" OT "\n", iov-
   if (err != 0) {
      log_printf(5, "handle_copy: net_connect returned an error err=%d to host %s:%d\n",err, rhost, rport);
      send_cmd_result(task, IBP_E_CONNECTION);
-     if (ppath.p_count != 0) phoebus_path_destroy(&ppath);
      destroy_netstream(ns);
      free(temp);
      return(0);
@@ -2387,7 +2386,6 @@ log_printf(15, "iovec->n=%d off=" OT " len=" OT " cumulative_len=" OT "\n", iov-
   log_printf(10, "handle_copy: End of routine Remote host:%s:%d ns=%d\n", rhost, rport, task->ns->id);
 
   destroy_netstream(ns);
-  if (ppath.p_count != 0) phoebus_path_destroy(&ppath);
 
   free(temp);
   return(err);

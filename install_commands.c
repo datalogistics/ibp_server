@@ -48,7 +48,7 @@ void install_commands(inip_file_t *kf) {
   add_command(IBP_STORE, "ibp_store", kf, NULL, NULL, NULL, NULL, read_write, handle_write);
   add_command(IBP_LOAD, "ibp_load", kf, NULL, NULL, NULL, NULL, read_read, handle_read);
   add_command(IBP_SEND, "ibp_send", kf, NULL, NULL, NULL, NULL, read_read, handle_copy);
-  add_command(IBP_PHOEBUS_SEND, "ibp_phoebus_send", kf, phoebus_load_config, phoebus_init, phoebus_destroy, phoebus_print, read_read, handle_copy);
+  add_command(IBP_PHOEBUS_SEND, "ibp_phoebus_send", kf, phoebus_load_config, phoebus_init, NULL, phoebus_print, read_read, handle_copy);
   add_command(IBP_RENAME, "ibp_rename", kf, NULL, NULL, NULL, NULL, read_rename, handle_rename);
   add_command(IBP_ALIAS_ALLOCATE, "ibp_alias_allocate", kf, NULL, NULL, NULL, NULL, read_alias_allocate, handle_alias_allocate);
   add_command(IBP_ALIAS_MANAGE, "ibp_alias_manage", kf, NULL, NULL, NULL, NULL, read_manage, handle_manage);
@@ -64,7 +64,7 @@ void install_commands(inip_file_t *kf) {
   add_command(IBP_STORE_CHKSUM, "ibp_store", kf, NULL, NULL, NULL, NULL, read_write, handle_write);
   add_command(IBP_LOAD_CHKSUM, "ibp_load", kf, NULL, NULL, NULL, NULL, read_read, handle_read);
   add_command(IBP_SEND_CHKSUM, "ibp_send", kf, NULL, NULL, NULL, NULL, read_read, handle_copy);
-  add_command(IBP_PHOEBUS_SEND_CHKSUM, "ibp_phoebus_send", kf, phoebus_load_config, phoebus_init, phoebus_destroy, phoebus_print, read_read, handle_copy);
+  add_command(IBP_PHOEBUS_SEND_CHKSUM, "ibp_phoebus_send", kf, phoebus_load_config, phoebus_init, NULL, phoebus_print, read_read, handle_copy);
   add_command(IBP_PUSH_CHKSUM, "ibp_push", kf, NULL, NULL, NULL, NULL, read_read, handle_copy);
   add_command(IBP_PULL_CHKSUM, "ibp_pull", kf, NULL, NULL, NULL, NULL, read_read, handle_copy);
   add_command(IBP_VALIDATE_CHKSUM, "ibp_validate_chksum", kf, NULL, NULL, NULL, NULL, read_validate_get_chksum, handle_validate_chksum);

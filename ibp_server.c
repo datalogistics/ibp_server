@@ -322,7 +322,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   i = 0; k = 0; bstate = NULL;
   for (i=0; i<server->n_iface; i++) {
       iface = &(server->iface[i]);
-      iface->hostname = string_token(list[i], ":", &bstate, &k);
+      iface->hostname = strdup(string_token(list[i], ":", &bstate, &k));
       if (sscanf(string_token(NULL, " ", &bstate, &k), "%d", &(iface->port)) != 1) {
          iface->port = server->port;
       }

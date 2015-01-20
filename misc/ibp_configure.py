@@ -174,16 +174,8 @@ class System():
                     continue
 
     def get_public_facing_ip_neuca(self, distro):
-        import neuca
-        customizer = {
-            "debian": neuca.NEucaLinuxCustomizer,
-            "ubuntu": neuca.NEucaLinuxCustomizer,
-            "redhat": neuca.NEucaLinuxCustomizer,
-            "fedora": neuca.NEucaLinuxCustomizer,
-            "centos": neuca.NEucaLinuxCustomizer,
-        }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
-
-        customizer.updateUserData()
+        from neuca_guest_tools import neuca
+        customizer = neuca.NEucaOSCustomizer(distro)
         return customizer.getPublicIP()
 
     def get_public_facing_ip_using_default_interface(self):
@@ -199,12 +191,13 @@ class System():
                 return self.get_public_facing_ip_neuca(args.neuca)
             except:
                 log.error('neuca get public ip failed, so trying to get ip of default interface')
-
+                
         return self.get_public_facing_ip_using_default_interface()
 
 class Configuration():
     def __init__(self):
         # init sets config defaults
+        self.public_ip         = ""
         self.wait_interval     = 10
         self.enable_blipp      = False
         self.phoebus           = ""
@@ -213,18 +206,20 @@ class Configuration():
         self.unis_cert_file    = "/usr/local/etc/dlt-client.pem"
         self.unis_key_file     = "/usr/local/etc/dlt-client.key"
         self.unis_institution  = ""
-        self.unis_street       = ""
+        self.unis_state        = ""
         self.unis_zipcode      = ""
         self.unis_country      = ""
         self.unis_latitude     = 0
         self.unis_longitude    = 0
         self.ibp_do_res        = False
         self.ibp_size          = 8000
+        self.ibp_host          = ""
         self.ibp_port          = 6714
         self.ibp_resource_path = "/tmp/ibp_resources"
         self.ibp_resource_db   = "/tmp/ibp_resources/db"
         self.ibp_root          = "/"
         self.ibp_log           = "/var/log/ibp_server.log"
+        self.ibp_sub_ip        = ""
         
     def allocation_success_file(self):
         # acts as lock for reallocation. This file will be created when resources are
@@ -288,7 +283,7 @@ class Configuration():
             for name, ip in mysys.all_interfaces():
                 if name != "lo" or ip.startswith("127."):
                     interface_addresses += mysys.format_ip(ip) + ":" + str(self.ibp_port) + ";"
-
+                    
         if interface_addresses == "":
             log.error("not even single interface address could be determined")
             sys.exit(1)
@@ -302,7 +297,7 @@ class Configuration():
         if args.force_allocate:
             return True
             
-        if os.path.exists('/tmp/ibp_dbenv'):
+        if not args.geni and os.path.exists('/tmp/ibp_dbenv'):
             do_del = self.query_yes_no(' Found existing IBP DB environment, delete', default="yes")
             if do_del:
                 shutil.rmtree('/tmp/ibp_dbenv')
@@ -327,7 +322,7 @@ class Configuration():
         """
         if not self.reallocation_needed(args):
             if self.ibp_do_res:
-                log.info("Includng previous resource configuration")
+                log.info("Including previous resource configuration")
                 with open(self.allocation_success_file(), 'r') as f:
                     return f.read()
             else:
@@ -399,7 +394,7 @@ class Configuration():
             return dval
 
     def get_user_input(self, args):
-        public_ip = mysys.get_public_facing_ip(args)
+        self.public_ip = mysys.get_public_facing_ip(args)
 
         log.info("===============================================================")
         log.info(":: Begin interactive DLT configuration")
@@ -417,7 +412,7 @@ class Configuration():
             self.ibp_size = self.get_int(' Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
-        self.unis_endpoint = self.get_real(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
+        self.unis_endpoint = self.get_string(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
         self.unis_use_ssl = self.query_yes_no(' Enable SSL', default="yes")
         if self.unis_use_ssl:
             self.unis_cert_file = self.get_string(' UNIS client cert file [%s]: ' %
@@ -471,16 +466,10 @@ class Configuration():
         else:
             ibp_conn_strings = self.get_ibp_interface_addresses(args)
 
-        # EK: need to fix NAT substitue map feature
-        sub_ip_list = ""
-        # also prepare substitute_map option as 
-        #default_interface_ip = mysys.get_public_facing_ip_using_default_interface()
-        #sub_ip_list = default_interface_ip + ":" + self.ibp_host + ";"
-
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
-                                                public_ip=self.ibp_host,
+                                                public_ip=self.public_ip,
                                                 port=self.ibp_port,
-                                                use_ssl=self.unis_use_ssl,
+                                                use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
                                                 key_file=self.unis_key_file,
                                                 inst=self.unis_institution,
@@ -492,7 +481,7 @@ class Configuration():
 
         ibp_config = IBP_SAMPLE_CONFIG.format(interfaces=ibp_conn_strings,
                                               ibp_log=self.ibp_log,
-                                              substitute_map=sub_ip_list,
+                                              substitute_map=self.ibp_sub_ip,
                                               phoebus=phoebus_config,
                                               resource=resource_config,
                                               unis=unis_config)
@@ -537,8 +526,10 @@ def main():
                         help='List of interfaces to bind to. If this option is not used then '
                               'all interfaces except localhost will be set. Specify multiple '
                               'interfaces by a comma separated list')
-    parser.add_argument('--ibp_root', type=str, default='/',
+    parser.add_argument('--ibp-root', type=str, default='/',
                         help='Change the relative install path, default is /')
+    parser.add_argument('--geni', action='store_true',
+                        help='Non-interactive config generation for GENI deployments.')
     parser.add_argument('-l', '--log', action='store_true', help='Log to file.')
     args = parser.parse_args()
 
@@ -551,7 +542,17 @@ def main():
 
     cfg = Configuration()
     cfg.ibp_root = args.ibp_root
-    cfg.get_user_input(args)
+
+    if (args.geni):
+        cfg.unis_endpoint = "http://monitor.incntre.iu.edu:9000"
+        cfg.unis_use_ssl  = False
+        cfg.ibp_do_res    = True
+        cfg.public_ip     = mysys.get_public_facing_ip(args)
+        if args.neuca:
+            default_ip        = mysys.get_public_facing_ip_using_default_interface()
+            cfg.ibp_sub_ip    = default_ip + ":" + cfg.public_ip + ";"
+    else:
+        cfg.get_user_input(args)
     
     log.info("Saving IBP configuration to %s" % cfg.ibp_config_file())
     ibp_config = cfg.generate_ibp_config(args)
