@@ -22,7 +22,7 @@ import os.path
 import array
 import shutil
 
-IBP_PID_LOCATION = "/usr/local/bin/var/run/ibp_server.pid"
+IBP_PID_LOCATION = "/var/run/ibp_server.pid"
 IBP_SERVER_INIT_COMMAND = "service ibp-server restart"
 IBP_MONITOR_SCRIPT_PID_LOCATION = "/var/run/ibp_interface_monitor.pid"
 
@@ -100,11 +100,12 @@ def check_interfaces():
     logging.info("stored_interfaces {}".format(stored_interfaces))
   else:
     #check whether we have any changes in the interface
-    if len(stored_interfaces.difference(current_interfaces)) != 0:
+    if (len(stored_interfaces) != len(current_interfaces)):
       #we have changes in interfaces, restart the service.
       logging.info("Network interfaces have been changed. Restarting the service to reflect it")
       logging.info("stored_interfaces {}".format(stored_interfaces))
       logging.info("current_interfaces {}".format(current_interfaces))
+      stored_interfaces = current_interfaces
       # check if we have ibp_server running otherwise forget about it
       if os.path.isfile(IBP_PID_LOCATION):
         with open(IBP_PID_LOCATION, 'r') as f:

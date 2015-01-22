@@ -113,6 +113,40 @@ BLIPP_CONFIG = """{
 """
 
 class System():
+    def get_mount_point(self, pathname):
+        "Get the mount point of the filesystem containing pathname"
+        pathname= os.path.normcase(os.path.realpath(pathname))
+        parent_device= path_device= os.stat(pathname).st_dev
+        while parent_device == path_device:
+            mount_point= pathname
+            pathname= os.path.dirname(pathname)
+            if pathname == mount_point: break
+            parent_device= os.stat(pathname).st_dev
+            return mount_point
+        
+    def get_mounted_device(self, pathname):
+        "Get the device mounted at pathname"
+        # uses "/proc/mounts"
+        pathname= os.path.normcase(pathname) # might be unnecessary here
+        try:
+            with open("/proc/mounts", "r") as ifp:
+                for line in ifp:
+                    fields= line.rstrip('\n').split()
+                    # note that line above assumes that
+                    # no mount points contain whitespace
+                    if fields[1] == pathname:
+                        return fields[0]
+        except EnvironmentError:
+            pass
+        return None # explicit
+
+    def get_fs_freespace(self, pathname):
+        "Get the free space of the filesystem containing pathname"
+        stat= os.statvfs(pathname)
+        # use f_bfree for superuser, or f_bavail if filesystem
+        # has reserved space for superuser
+        return stat.f_bfree*stat.f_bsize
+
     def execute_command(self, cmd, ignore_status = False):
         log.debug("Executing command: %s" % cmd)
         (status, output) = commands.getstatusoutput(cmd)
@@ -400,7 +434,7 @@ class Configuration():
         log.info(":: Begin interactive DLT configuration")
         log.info('')
         log.info("== IBP Server Settings ==")
-        self.ibp_host = self.get_string(' IBP hostname [%s]: ' % public_ip, public_ip) 
+        self.ibp_host = self.get_string(' IBP hostname [%s]: ' % self.public_ip, self.public_ip) 
         self.ibp_port = self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
         self.ibp_log = self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
         self.ibp_do_res = self.query_yes_no(' Configure an initial IBP resource', default="yes")
@@ -409,7 +443,7 @@ class Configuration():
                                                      self.ibp_resource_path, self.ibp_resource_path)
             self.ibp_resource_db = self.get_string(' Resource DB path [%s] ' %
                                                    self.ibp_resource_db, self.ibp_resource_db)
-            self.ibp_size = self.get_int(' Total disk space [%s MB] ' % self.ibp_size, self.ibp_size)
+            self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % self.ibp_size, self.ibp_size)
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
         self.unis_endpoint = self.get_string(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
@@ -517,7 +551,7 @@ def main():
                         'Supported distributions are debian, ubuntu, redhat, centos, fedora.')
     parser.add_argument('--debug', action='store_true',
                         help='Turn on debugging output.')
-    parser.add_argument('--force_allocate', action='store_true',
+    parser.add_argument('--force-allocate', action='store_true',
                         help='Ignores the resource lock and reallocates the resources.')
     parser.add_argument('--host', type=str, default=None,
                         help='Specify hostname or IP of the node. If specified this script will not attempt\
@@ -544,10 +578,13 @@ def main():
     cfg.ibp_root = args.ibp_root
 
     if (args.geni):
-        cfg.unis_endpoint = "http://monitor.incntre.iu.edu:9000"
-        cfg.unis_use_ssl  = False
-        cfg.ibp_do_res    = True
-        cfg.public_ip     = mysys.get_public_facing_ip(args)
+        cfg.unis_endpoint     = "http://monitor.incntre.iu.edu:9000"
+        cfg.unis_use_ssl      = False
+        cfg.ibp_do_res        = True
+        cfg.public_ip         = mysys.get_public_facing_ip(args)
+        cfg.ibp_resource_path = "/root/ibp_resources"
+        cfg.ibp_resource_db   = "/root/ibp_resources/db"
+        cfg.ibp_size          = mysys.get_fs_freespace("/")/(1024*1024)
         if args.neuca:
             default_ip        = mysys.get_public_facing_ip_using_default_interface()
             cfg.ibp_sub_ip    = default_ip + ":" + cfg.public_ip + ";"
