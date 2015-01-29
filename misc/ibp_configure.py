@@ -560,6 +560,8 @@ def main():
                         help='List of interfaces to bind to. If this option is not used then '
                               'all interfaces except localhost will be set. Specify multiple '
                               'interfaces by a comma separated list')
+    parser.add_argument('--ibp-resource-dir', type=str, default='/root',
+			help='A path for the ibp_resource and db directories.')
     parser.add_argument('--ibp-root', type=str, default='/',
                         help='Change the relative install path, default is /')
     parser.add_argument('--geni', action='store_true',
@@ -582,8 +584,8 @@ def main():
         cfg.unis_use_ssl      = False
         cfg.ibp_do_res        = True
         cfg.public_ip         = mysys.get_public_facing_ip(args)
-        cfg.ibp_resource_path = "/root/ibp_resources"
-        cfg.ibp_resource_db   = "/root/ibp_resources/db"
+        cfg.ibp_resource_path = args.ibp_resource_dir + "/ibp_resources"
+        cfg.ibp_resource_db   = args.ibp_resource_dir + "/ibp_resources/db"
         cfg.ibp_size          = mysys.get_fs_freespace("/")/(1024*1024)
         if args.neuca:
             default_ip        = mysys.get_public_facing_ip_using_default_interface()
