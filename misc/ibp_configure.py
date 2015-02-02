@@ -586,7 +586,7 @@ def main():
         cfg.public_ip         = mysys.get_public_facing_ip(args)
         cfg.ibp_resource_path = args.ibp_resource_dir + "/ibp_resources"
         cfg.ibp_resource_db   = args.ibp_resource_dir + "/ibp_resources/db"
-        cfg.ibp_size          = mysys.get_fs_freespace("/")/(1024*1024)
+        cfg.ibp_size          = mysys.get_fs_freespace(args.ibp_resource_dir)/(1024*1024)
         if args.neuca:
             default_ip        = mysys.get_public_facing_ip_using_default_interface()
             cfg.ibp_sub_ip    = default_ip + ":" + cfg.public_ip + ";"
