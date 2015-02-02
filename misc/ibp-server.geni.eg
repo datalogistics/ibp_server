@@ -25,6 +25,7 @@ DEBUGLEVEL=9
 IBP="${IBPBINDIR}/ibp_server -d ${CONFFILE}"
 IBP_CONFIGURE="${IBPBINDIR}/ibp_configure.py"
 IBP_CONFIGURE_ARGS=" --neuca debian --geni --ibp-root=/usr/local"
+IBP_DEFAULT_FILE=/etc/default/ibp-server
 
 ERROR=0
 ARGV="$@"
@@ -56,8 +57,12 @@ do
         fi
 
         if [ -f $IBP_CONFIGURE ] ; then
-          $IBP_CONFIGURE $IBP_CONFIGURE_ARGS
+			$IBP_CONFIGURE $IBP_CONFIGURE_ARGS
         fi
+
+		if [ -f $IBP_DEFAULT_FILE ]; then
+			. $IBP_DEFAULT_FILE
+		fi
 
         grep -e '^%include' -e '^\[resource' ${CONFFILE} >/dev/null 2>&1
         if [[ $? -gt 0 ]]; then
