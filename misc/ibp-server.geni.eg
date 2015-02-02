@@ -56,13 +56,11 @@ do
             continue
         fi
 
-        if [ -f $IBP_CONFIGURE ] ; then
-			$IBP_CONFIGURE $IBP_CONFIGURE_ARGS
-        fi
-
 		if [ -f $IBP_DEFAULT_FILE ]; then
-			. $IBP_DEFAULT_FILE
-		fi
+            . $IBP_DEFAULT_FILE
+        elif [ -f $IBP_CONFIGURE ] ; then
+            $IBP_CONFIGURE $IBP_CONFIGURE_ARGS
+        fi
 
         grep -e '^%include' -e '^\[resource' ${CONFFILE} >/dev/null 2>&1
         if [[ $? -gt 0 ]]; then

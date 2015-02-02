@@ -1,4 +1,4 @@
-IBP_CONFIGURE_EXTRA_ARGS="--ibp-resource-dir=/mnt"
+IBP_CONFIGURE_EXTRA_ARGS=" --geni --ibp-resource-dir=/mnt --ibp-root=/usr/local "
 if [ -f $IBP_CONFIGURE ] ; then
-   $IBP_CONFIGURE $IBP_CONFIGURE_ARGS $IBP_CONFIGURE_EXTRA_ARGS
+   $IBP_CONFIGURE  $IBP_CONFIGURE_EXTRA_ARGS
 fi
