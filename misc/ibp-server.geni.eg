@@ -33,6 +33,10 @@ if [ "x$ARGV" = "x" ] ; then
     ARGS="help"
 fi
 
+if [ -f $IBP_DEFAULT_FILE ]; then
+    . $IBP_DEFAULT_FILE
+fi
+
 for ARG in $@ $ARGS
 do
     # check for pidfile
@@ -56,9 +60,7 @@ do
             continue
         fi
 
-		if [ -f $IBP_DEFAULT_FILE ]; then
-            . $IBP_DEFAULT_FILE
-        elif [ -f $IBP_CONFIGURE ] ; then
+        if [ -f $IBP_CONFIGURE ] ; then
             $IBP_CONFIGURE $IBP_CONFIGURE_ARGS
         fi
 
