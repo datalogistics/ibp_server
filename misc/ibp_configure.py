@@ -52,7 +52,7 @@ UNIS_SAMPLE_CONFIG = """name = IBP Server
 type = ibp_server
 endpoint = {unis_endpoint}
 protocol_name= ibp
-registration_interval = 120
+registration_interval = 600
 publicip = {public_ip}
 publicport = {port}
 use_ssl = {use_ssl}
