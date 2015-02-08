@@ -317,6 +317,9 @@ class Configuration():
             for name, ip in mysys.all_interfaces():
                 if name != "lo" or ip.startswith("127."):
                     interface_addresses += mysys.format_ip(ip) + ":" + str(self.ibp_port) + ";"
+
+        if args.extra_nat_iface:
+            interface_addresses += args.extra_nat_iface+";"            
                     
         if interface_addresses == "":
             log.error("not even single interface address could be determined")
@@ -496,7 +499,7 @@ class Configuration():
             phoebus_config = PHOEBUS_SAMPLE_CONFIG.format(phoebus_gateway=self.phoebus)
 
         if len(self.ibp_host):
-            ibp_conn_strings = self.ibp_host + ':' + str(self.ibp_port)
+            ibp_conn_strings = self.ibp_host+':'+str(self.ibp_port)+";"+args.extra_nat_iface+";"
         else:
             ibp_conn_strings = self.get_ibp_interface_addresses(args)
 
@@ -566,6 +569,10 @@ def main():
                         help='Change the relative install path, default is /')
     parser.add_argument('--geni', action='store_true',
                         help='Non-interactive config generation for GENI deployments.')
+    parser.add_argument('--extra-sub-map', type=str, default=None,
+                        help='Add any static <host>:<host> substitutions for NAT configurations.')
+    parser.add_argument('--extra-nat-iface', type=str, default=None,
+                        help='Add any static <host>:<port> interfaces for NAT configurations.')
     parser.add_argument('-l', '--log', action='store_true', help='Log to file.')
     args = parser.parse_args()
 
@@ -589,7 +596,10 @@ def main():
         cfg.ibp_size          = mysys.get_fs_freespace(args.ibp_resource_dir)/(1024*1024)
         if args.neuca:
             default_ip        = mysys.get_public_facing_ip_using_default_interface()
-            cfg.ibp_sub_ip    = default_ip + ":" + cfg.public_ip + ";"
+            cfg.ibp_sub_ip    = default_ip+":"+cfg.public_ip+";"
+        if args.extra_sub_map:
+            cfg.ibp_sub_ip   += args.extra_sub_map+";"
+
     else:
         cfg.get_user_input(args)
     
