@@ -12,16 +12,29 @@
 # APR first.
 
 # Find the *relative* include path
-find_path(apr_inc apr-1/apr.h)
+# find_path(apr_inc apr-1/apr.h)
 
 # Now convert it to the full path
-if (apr_inc)     
-   find_path(APR_INCLUDE_DIR apr.h ${apr_inc}/apr-1 )
-else (apr_inc)
-   find_path(APR_INCLUDE_DIR apr.h)
-endif (apr_inc)
+# if (apr_inc)     
+#   find_path(APR_INCLUDE_DIR apr.h ${apr_inc}/apr-1 )
+# else (apr_inc)
+#   find_path(APR_INCLUDE_DIR apr.h)
+# endif (apr_inc)
 
-FIND_LIBRARY(APR_LIBRARY NAMES apr-1)
+# FIND_LIBRARY(APR_LIBRARY NAMES apr-1)
+# changes made to support debian distributions
+FIND_PATH(APR_INCLUDE_DIR apr.h
+          /usr/local/include/apr-1
+          /usr/local/include/apr-1.0
+          /usr/include/apr-1
+          /usr/include/apr-1.0
+          )
+
+SET(APR_NAMES ${APR_NAMES} apr-1)
+    FIND_LIBRARY(APR_LIBRARY
+    NAMES ${APR_NAMES}
+    PATHS /usr/lib /usr/local/lib
+    )
 
 IF (APR_LIBRARY AND APR_INCLUDE_DIR)
     SET(APR_LIBRARIES ${APR_LIBRARY})
