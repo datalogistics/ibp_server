@@ -12,16 +12,30 @@
 # APR first.
 
 # Find the *relative* include path
-find_path(apr_inc apr-1/apr.h)
+# find_path(apr_inc apr-1/apr.h)
 
 # Now convert it to the full path
-if (apr_inc)     
-   find_path(APRUTIL_INCLUDE_DIR apr.h ${apr_inc}/apr-1 )
-else (apr_inc)
-   find_path(APRUTIL_INCLUDE_DIR apr.h)
-endif (apr_inc)
+# if (apr_inc)     
+#   find_path(APRUTIL_INCLUDE_DIR apr.h ${apr_inc}/apr-1 )
+# else (apr_inc)
+#   find_path(APRUTIL_INCLUDE_DIR apr.h)
+# endif (apr_inc)
 
-FIND_LIBRARY(APRUTIL_LIBRARY NAMES aprutil-1)
+# FIND_LIBRARY(APRUTIL_LIBRARY NAMES aprutil-1)
+# changes made to support debian distributions
+FIND_PATH(APR_INCLUDE_DIR aprutil.h
+          /usr/local/include/aprutil-1
+          /usr/local/include/aprutil-1.0
+          /usr/include/aprutil-1
+          /usr/include/aprutil-1.0
+          )
+
+SET(APRUTIL_NAMES ${APRUTIL_NAMES} aprutil-1)
+    FIND_LIBRARY(APRUTIL_LIBRARY
+    NAMES ${APRUTIL_NAMES}
+    PATHS /usr/lib /usr/local/lib
+    )
+
 
 IF (APRUTIL_LIBRARY AND APRUTIL_INCLUDE_DIR)
     SET(APRUTIL_LIBRARIES ${APRUTIL_LIBRARY})
