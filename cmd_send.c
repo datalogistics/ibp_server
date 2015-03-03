@@ -26,9 +26,9 @@
 
 NetStream_t *cmd_send(char *host, int port, char *cmd, char **res_buffer, int timeout)
 {
-  int bufsize = 10*1024;
+  const int bufsize = 10*1024;
   char buffer[bufsize];
-  char *bstate;
+  char *bstate = NULL;
   int err, failed;
   int n, retry;
   double swait;
@@ -98,7 +98,10 @@ NetStream_t *cmd_send(char *host, int port, char *cmd, char **res_buffer, int ti
      }
   } while (failed == 1);
 
-  *res_buffer = strdup(bstate);
-
+  if (bstate != NULL) {
+    *res_buffer = strdup(bstate);
+  } else {
+    *res_buffer = NULL;
+  }
   return(ns);
 }
