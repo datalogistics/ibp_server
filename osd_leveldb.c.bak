@@ -39,10 +39,9 @@ http://www.accre.vanderbilt.edu
 #include <math.h>
 #include "string_token.h"
 #include "osd_abstract.h"
-#include "osd_fs.h"
+#include "osd_leveldb.h"
 #include "fmttypes.h"
 #include "log.h"
-#include "random.h"
 #include "type_malloc.h"
 #ifdef _HAS_XFS
 #include <xfs/xfs.h>
@@ -51,47 +50,47 @@ http://www.accre.vanderbilt.edu
 #define RANGE_INUSE   0
 #define RANGE_REQUEST 1
 
-#define FS_BUF_SIZE 262144
-//#define FS_BUF_SIZE 65536
-#define FS_MAGIC_HEADER sizeof(fs_header_t)
-//#define FS_OBJ_COUNT 128
-//#define FS_RANGE_COUNT 16
-#define FS_OBJ_COUNT 64
-#define FS_RANGE_COUNT 4
+#define leveldb_BUF_SIZE 262144
+//#define leveldb_BUF_SIZE 65536
+#define leveldb_MAGIC_HEADER sizeof(leveldb_header_t)
+//#define leveldb_OBJ_COUNT 128
+//#define leveldb_RANGE_COUNT 16
+#define leveldb_OBJ_COUNT 64
+#define leveldb_RANGE_COUNT 4
 
 #define _id2fname(fs, id, fname, len) (fs)->id2fname(fs, id, fname, len)
 #define _trashid2fname(fs, trash_type, trash_id, fname, len) (fs)->trashid2fname(fs, trash_type, trash_id, fname, len)
 
-osd_off_t fs_offset_l2p(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t l_offset);
-osd_off_t fs_offset_p2l(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t p_offset);
-osd_fd_t *fs_open(osd_t *d, osd_id_t id, int mode);
-int fs_close(osd_t *d, osd_fd_t *ofd);
-osd_off_t fs_normal_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer);
-osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, osd_off_t len, buffer_t buffer);
-osd_off_t fs_normal_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer);
-osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, osd_off_t len, buffer_t buffer);
-int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_t block, char *buffer, osd_off_t bufsize, char *calc_chksum, int correct_errors);
-osd_off_t _chksum_buffered_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t len, char *buffer, osd_off_t bufsize, chksum_t *cs1, chksum_t *cs2);
+osd_off_t leveldb_offset_l2p(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t l_offset);
+osd_off_t leveldb_offset_p2l(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t p_offset);
+osd_fd_t *leveldb_open(osd_t *d, osd_id_t id, int mode);
+int leveldb_close(osd_t *d, osd_fd_t *ofd);
+osd_off_t leveldb_normal_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer);
+osd_off_t leveldb_leveldb_chksum_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, osd_off_t len, buffer_t buffer);
+osd_off_t leveldb_normal_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer);
+osd_off_t leveldb_leveldb_chksum_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, osd_off_t len, buffer_t buffer);
+int _leveldb_calculate_chksum(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, chksum_t *cs, osd_off_t block, char *buffer, osd_off_t bufsize, char *calc_leveldb_chksum, int correct_errors);
+osd_off_t _leveldb_chksum_buffered_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t len, char *buffer, osd_off_t bufsize, chksum_t *cs1, chksum_t *cs2);
 
 #define PTR2INT(p) (int)(long)(p)
 #define INT2PTR(n) (void *)(long)(n)
-#define fs_cache_lock(c) apr_thread_mutex_lock((c)->lock)
-#define fs_cache_unlock(c) apr_thread_mutex_unlock((c)->lock)
+#define leveldb_cache_lock(c) apr_thread_mutex_lock((c)->lock)
+#define leveldb_cache_unlock(c) apr_thread_mutex_unlock((c)->lock)
 
 //******************************************************************************
-// fs_cache_create - Creates an FS cache object
+// leveldb_cache_create - Creates an FS cache object
 //******************************************************************************
 
-fs_cache_table_t *fs_cache_create(apr_pool_t *pool, int n_blocks, int block_size, apr_time_t max_wait)
+leveldb_cache_table_t *leveldb_cache_create(apr_pool_t *pool, int n_blocks, int block_size, apr_time_t max_wait)
 {
   int i;
-  fs_cache_table_t *c;
+  leveldb_cache_table_t *c;
 
   //** Check if block caching is disabled
   i = n_blocks * block_size;
   if (i == 0) return(NULL);
 
-  type_malloc_clear(c, fs_cache_table_t, 1);
+  type_malloc_clear(c, leveldb_cache_table_t, 1);
 
   apr_thread_mutex_create(&(c->lock), APR_THREAD_MUTEX_DEFAULT, pool);
   c->hash = apr_hash_make(pool);
@@ -104,16 +103,16 @@ fs_cache_table_t *fs_cache_create(apr_pool_t *pool, int n_blocks, int block_size
   type_malloc_clear(c->block_last_offset, int, n_blocks);
   for (i=0; i<n_blocks; i++) c->block_free_count[i] = block_size;
 
-  type_malloc_clear(c->table, fs_cache_entry_t, c->n_total+1);
+  type_malloc_clear(c->table, leveldb_cache_entry_t, c->n_total+1);
 
   return(c);
 }
 
 //******************************************************************************
-// fs_cache_destroy - Destroys an FS cache object
+// leveldb_cache_destroy - Destroys an FS cache object
 //******************************************************************************
 
-void fs_cache_destroy(fs_cache_table_t *c)
+void leveldb_cache_destroy(leveldb_cache_table_t *c)
 {
 
   if (c == NULL) return;
@@ -127,13 +126,13 @@ void fs_cache_destroy(fs_cache_table_t *c)
 }
 
 //******************************************************************************
-//  _fs_cache_forced_purge -NOTE:  Assumes *all* slots are used!
+//  _leveldb_cache_forced_purge -NOTE:  Assumes *all* slots are used!
 //******************************************************************************
 
-int _fs_cache_forced_purge(fs_cache_table_t *c, int n_drop)
+int _leveldb_cache_forced_purge(leveldb_cache_table_t *c, int n_drop)
 {
   int i, j, slot, start, end, drop_block, count;
-  fs_cache_entry_t *element;
+  leveldb_cache_entry_t *element;
 
   element = c->table;
   slot= 1;  //** This slot will be dropped based on the simple algorithm
@@ -147,7 +146,7 @@ int _fs_cache_forced_purge(fs_cache_table_t *c, int n_drop)
     count = 0;
     for (j=start; j<end; j++) {
        if (element[j].time != 0) {
-          apr_hash_set(c->hash, &(element[j].key), sizeof(fs_cache_key_t), NULL);
+          apr_hash_set(c->hash, &(element[j].key), sizeof(leveldb_cache_key_t), NULL);
           element[j].time = 0;
           count++;
        }
@@ -161,14 +160,14 @@ int _fs_cache_forced_purge(fs_cache_table_t *c, int n_drop)
 
 
 //******************************************************************************
-//  _fs_cache_purge_expired
+//  _leveldb_cache_purge_expired
 //******************************************************************************
 
-int _fs_cache_purge_expired(fs_cache_table_t *c)
+int _leveldb_cache_purge_expired(leveldb_cache_table_t *c)
 {
   int i, j, slot, start, end, count;
   apr_time_t now, dt;
-  fs_cache_entry_t *element;
+  leveldb_cache_entry_t *element;
   now = apr_time_now();
 
   element = c->table;
@@ -183,7 +182,7 @@ int _fs_cache_purge_expired(fs_cache_table_t *c)
        if (dt > c->max_wait) {
          slot = j;
          if (element[j].time != 0) {
-            apr_hash_set(c->hash, &(element[j].key), sizeof(fs_cache_key_t), NULL);
+            apr_hash_set(c->hash, &(element[j].key), sizeof(leveldb_cache_key_t), NULL);
             element[j].time = 0;
             count++;
          }
@@ -198,14 +197,14 @@ int _fs_cache_purge_expired(fs_cache_table_t *c)
 
 
 //******************************************************************************
-//  _fs_cache_find_free
+//  _leveldb_cache_find_free
 //******************************************************************************
 
-int _fs_cache_find_free(fs_cache_table_t *c)
+int _leveldb_cache_find_free(leveldb_cache_table_t *c)
 {
   int i, slot, j, start, off;
   apr_time_t now, dt;
-  fs_cache_entry_t *element;
+  leveldb_cache_entry_t *element;
   now = apr_time_now();
 
   element = c->table;
@@ -219,7 +218,7 @@ int _fs_cache_find_free(fs_cache_table_t *c)
            dt = now - element[slot].time;
            if (dt > c->max_wait) {
               if (element[slot].time != 0) {
-                 apr_hash_set(c->hash, &(element[slot].key), sizeof(fs_cache_key_t), NULL);
+                 apr_hash_set(c->hash, &(element[slot].key), sizeof(leveldb_cache_key_t), NULL);
                  c->block_free_count[i]++;
               }
               c->block_last_offset[i] = (j + off) % c->block_size;
@@ -233,27 +232,27 @@ int _fs_cache_find_free(fs_cache_table_t *c)
 }
 
 //******************************************************************************
-// _fs_cache_find_slot - Finds a free slot.  If none are available then an expiration
+// _leveldb_cache_find_slot - Finds a free slot.  If none are available then an expiration
 //   run is made to clean up.  If no slots are still available then slots are
 //   freed at random.
 //   NOTE : Locking is done via the calling routine
 //******************************************************************************
 
-int _fs_cache_find_slot(fs_cache_table_t *c)
+int _leveldb_cache_find_slot(leveldb_cache_table_t *c)
 {
   int slot, b;
 
   //** Find a slot from the free list
-  slot = _fs_cache_find_free(c);
-log_printf(15, "_fs_cache_find_slot: _fs_cache_find_free=%d\n", slot);
+  slot = _leveldb_cache_find_free(c);
+log_printf(15, "_leveldb_cache_find_slot: _leveldb_cache_find_free=%d\n", slot);
   if (slot == 0) {
      //** Expire old blocks
-     slot = _fs_cache_purge_expired(c);
-log_printf(15, "_fs_cache_find_slot: _fs_cache_purge_expired=%d\n", slot);
+     slot = _leveldb_cache_purge_expired(c);
+log_printf(15, "_leveldb_cache_find_slot: _leveldb_cache_purge_expired=%d\n", slot);
      if (slot == 0) {
         //** Force removal of some of the data
-        slot = _fs_cache_forced_purge(c, 0.1*c->n_total);
-log_printf(15, "_fs_cache_find_slot: _fs_cache_forced_pruge=%d\n", slot);
+        slot = _leveldb_cache_forced_purge(c, 0.1*c->n_total);
+log_printf(15, "_leveldb_cache_find_slot: _leveldb_cache_forced_pruge=%d\n", slot);
      }
   }
 
@@ -265,29 +264,29 @@ log_printf(15, "_fs_cache_find_slot: _fs_cache_forced_pruge=%d\n", slot);
 }
 
 //******************************************************************************
-// _fs_cache_remove - Removes a slot from the cache
+// _leveldb_cache_remove - Removes a slot from the cache
 //   NOTE : Locking is done via the calling routine
 //******************************************************************************
 
-void _fs_cache_remove(fs_cache_table_t *c, int slot)
+void _leveldb_cache_remove(leveldb_cache_table_t *c, int slot)
 {
   int b;
 
   b = (slot-1) / c->block_size;
   c->block_free_count[b]++;
 
-  apr_hash_set(c->hash, &(c->table[slot].key), sizeof(fs_cache_key_t), NULL);
+  apr_hash_set(c->hash, &(c->table[slot].key), sizeof(leveldb_cache_key_t), NULL);
   c->table[slot].time = 0; //** This marks the slot as free
 }
 
 //******************************************************************************
-// fs_direct_cache_read - Returns 1 if the block has been recently read
+// leveldb_direct_cache_read - Returns 1 if the block has been recently read
 //    and is Ok to bypass chksum verification.
 //******************************************************************************
 
-int fs_direct_cache_read(fs_cache_table_t *c, osd_id_t id, int block)
+int leveldb_direct_cache_read(leveldb_cache_table_t *c, osd_id_t id, int block)
 {
-  fs_cache_key_t key;
+  leveldb_cache_key_t key;
   int slot, err;
   apr_time_t dt, now;
 
@@ -296,17 +295,17 @@ int fs_direct_cache_read(fs_cache_table_t *c, osd_id_t id, int block)
   err = 0;
   key.id = id; key.block = block;
 
-log_printf(15, "fs_direct_cache_read: c->hash=%p\n", c->hash);
-log_printf(15, "fs_direct_cache_read: key=%p id=" LU " block=%d\n", &key, id, block);
+log_printf(15, "leveldb_direct_cache_read: c->hash=%p\n", c->hash);
+log_printf(15, "leveldb_direct_cache_read: key=%p id=" LU " block=%d\n", &key, id, block);
 flush_log();
 
-  fs_cache_lock(c);
-  slot = PTR2INT(apr_hash_get(c->hash, &key, sizeof(fs_cache_key_t)));
-log_printf(15, "fs_direct_cache_read: id=" LU " block=%d slot=%d\n", id, block, slot); flush_log();
+  leveldb_cache_lock(c);
+  slot = PTR2INT(apr_hash_get(c->hash, &key, sizeof(leveldb_cache_key_t)));
+log_printf(15, "leveldb_direct_cache_read: id=" LU " block=%d slot=%d\n", id, block, slot); flush_log();
 
 //  void *v = apr_hash_get(c->hash, &key, sizeof(key));
 //  slot = PTR2INT(v);
-//log_printf(15, "fs_direct_cache_read: id=" LU " block=%d slot=%d \n", id, block, slot); flush_log();
+//log_printf(15, "leveldb_direct_cache_read: id=" LU " block=%d slot=%d \n", id, block, slot); flush_log();
 
   if (slot != 0) {
      now = apr_time_now();
@@ -315,76 +314,76 @@ log_printf(15, "fs_direct_cache_read: id=" LU " block=%d slot=%d\n", id, block, 
         err= 1;
         c->table[slot].time = now;
      } else {
-       _fs_cache_remove(c, slot);
+       _leveldb_cache_remove(c, slot);
      }
   }
 
-  fs_cache_unlock(c);
+  leveldb_cache_unlock(c);
 
-log_printf(15, "fs_direct_cache_read: id=" LU " block=%d slot=%d err=%d\n", id, block, slot, err); flush_log();
+log_printf(15, "leveldb_direct_cache_read: id=" LU " block=%d slot=%d err=%d\n", id, block, slot, err); flush_log();
 //return(0);
 
   return(err);
 }
 
 //******************************************************************************
-//  fs_cache_add - Adds the id/block combo to the cache
+//  leveldb_cache_add - Adds the id/block combo to the cache
 //******************************************************************************
 
-void fs_cache_add(fs_cache_table_t *c, osd_id_t id, int block)
+void leveldb_cache_add(leveldb_cache_table_t *c, osd_id_t id, int block)
 {
-  fs_cache_key_t key;
+  leveldb_cache_key_t key;
   int slot;
 
   if (c == NULL) return;  //** Check if disabled
 
-log_printf(15, "fs_cache_add: id=" LU " block=%d\n", id, block);
+log_printf(15, "leveldb_cache_add: id=" LU " block=%d\n", id, block);
 
   key.id = id; key.block = block;
 
-  fs_cache_lock(c);
+  leveldb_cache_lock(c);
   slot = PTR2INT(apr_hash_get(c->hash, &key, sizeof(key)));
 
   if (slot == 0) {
-    slot = _fs_cache_find_slot(c);
-log_printf(15, "fs_cache_add: id=" LU " block=%d slot=%d\n", id, block, slot);
+    slot = _leveldb_cache_find_slot(c);
+log_printf(15, "leveldb_cache_add: id=" LU " block=%d slot=%d\n", id, block, slot);
     c->table[slot].key = key;
     c->table[slot].time = apr_time_now();
     apr_hash_set(c->hash, &(c->table[slot].key), sizeof(key), INT2PTR(slot));
   }
-  fs_cache_unlock(c);
+  leveldb_cache_unlock(c);
 }
 
 //******************************************************************************
-// fs_cache_remove - Removes teh id/block combo from the cache
+// leveldb_cache_remove - Removes teh id/block combo from the cache
 //******************************************************************************
 
-void fs_cache_remove(fs_cache_table_t *c, osd_id_t id, int block)
+void leveldb_cache_remove(leveldb_cache_table_t *c, osd_id_t id, int block)
 {
-  fs_cache_key_t key;
+  leveldb_cache_key_t key;
   int slot;
 
   if (c == NULL) return;  //** Check if disabled
 
   key.id = id; key.block = block;
 
-  fs_cache_lock(c);
+  leveldb_cache_lock(c);
   slot = PTR2INT(apr_hash_get(c->hash, &key, sizeof(key)));
-log_printf(15, "fs_cache_remove: id=" LU " block=%d slot=%d\n", id, block, slot);
+log_printf(15, "leveldb_cache_remove: id=" LU " block=%d slot=%d\n", id, block, slot);
 
   if (slot != 0) {
     //apr_hash_set(c->hash, &key, sizeof(key), NULL);
-    _fs_cache_remove(c, slot);
+    _leveldb_cache_remove(c, slot);
   }
-  fs_cache_unlock(c);
+  leveldb_cache_unlock(c);
 }
 
 
 //**************************************************
-// _generate_key - Generates a random 64 bit number
+// _leveldb_generate_key - Generates a random 64 bit number
 //**************************************************
 
-osd_id_t _generate_key()
+osd_id_t _leveldb_generate_key()
 {
    osd_id_t r;
 
@@ -400,7 +399,7 @@ osd_id_t _generate_key()
 //     the return is also fname.
 //**************************************************
 
-char *id2fname_normal(osd_fs_t *fs, osd_id_t id, char *fname, int len)
+char *leveldb_id2fname_normal(osd_leveldb_t *fs, osd_id_t id, char *fname, int len)
 {
    int dir = (id & DIR_BITMASK);
 
@@ -413,9 +412,9 @@ char *id2fname_normal(osd_fs_t *fs, osd_id_t id, char *fname, int len)
 
 //**************************************************
 
-char *id2fname_loopback(osd_fs_t *fs, osd_id_t id, char *fname, int len)
+char *leveldb_id2fname_loopback(osd_leveldb_t *fs, osd_id_t id, char *fname, int len)
 {
-   if (id >= FS_MAX_LOOPBACK) return(NULL);
+   if (id >= LEVELDB_MAX_LOOPBACK) return(NULL);
    return(fs->id_map[id]);
 }
 
@@ -425,7 +424,7 @@ char *id2fname_loopback(osd_fs_t *fs, osd_id_t id, char *fname, int len)
 //     the return is also fname.
 //**************************************************
 
-char *trashid2fname_normal(osd_fs_t *fs, int trash_type, const char *trash_id, char *fname, int len)
+char *leveldb_trashid2fnamenormal(osd_leveldb_t *fs, int trash_type, const char *trash_id, char *fname, int len)
 {
    switch (trash_type) {
       case OSD_EXPIRE_ID:
@@ -446,35 +445,35 @@ char *trashid2fname_normal(osd_fs_t *fs, int trash_type, const char *trash_id, c
 
 //**************************************************
 
-char *trashid2fname_loopback(osd_fs_t *fs, int trash_type, const char *trash_id, char *fname, int len)
+char *leveldb_trashid2fnameloopback(osd_leveldb_t *fs, int trash_type, const char *trash_id, char *fname, int len)
 {
 //   return((const char *)trash_id);  //** A little sloppy....
   return(NULL);
 }
 
 //******************************************************************************
-// fs_associate_id - Associates an ID with a local filename.  Only used with
-//     loopback mounts.  id must be between 0..FS_MAX_LOOPBACK
+// leveldb_associate_id - Associates an ID with a local filename.  Only used with
+//     loopback mounts.  id must be between 0..LEVELDB_MAX_LOOPBACK
 //******************************************************************************
 
-int fs_associate_id(osd_t *d, int id, char *name)
+int leveldb_associate_id(osd_t *d, int id, char *name)
 {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
-  if (id >= FS_MAX_LOOPBACK) return(-1);
+  if (id >= LEVELDB_MAX_LOOPBACK) return(-1);
 
   fs->id_map[id] = name;
   return(0);
 }
 
 //******************************************************************************
-// fs_corrupt_count - Returns the number of corrupt objects encountered during
+// leveldb_corrupt_count - Returns the number of corrupt objects encountered during
 //    execution
 //******************************************************************************
 
-int fs_corrupt_count(osd_t *d)
+int leveldb_corrupt_count(osd_t *d)
 {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
   int n;
 
   apr_thread_mutex_lock(fs->obj_lock);
@@ -485,16 +484,16 @@ int fs_corrupt_count(osd_t *d)
 }
 
 //******************************************************************************
-//  _insert_corrupt_hash - Inserts a corrupt object into the table.
+//  _leveldb_insert_corrupt_hash - Inserts a corrupt object into the table.
 //     NOTE:  Assumes fs->obj_lock has been acquired exgternally
 //******************************************************************************
 
-void _insert_corrupt_hash(osd_fs_t *fs, osd_id_t id, const char *value)
+void _leveldb_insert_corrupt_hash(osd_leveldb_t *fs, osd_id_t id, const char *value)
 {
   osd_id_t *id2;
   char *v = apr_hash_get(fs->corrupt_hash, &id, sizeof(osd_id_t));
 
-  log_printf(1, "_insert_corrupt_hash: fs=%s id=" LU " v=%s\n", fs->devicename, id, value);
+  log_printf(1, "_leveldb_insert_corrupt_hash: fs=%s id=" LU " v=%s\n", fs->devicename, id, value);
 
   if (v == NULL) {  //** Need to add it
      id2 = (osd_id_t *)apr_palloc(fs->pool, sizeof(osd_id_t));
@@ -504,13 +503,13 @@ void _insert_corrupt_hash(osd_fs_t *fs, osd_id_t id, const char *value)
 }
 
 //*************************************************************
-//  fs_new_corrupt_iterator - Creates a new iterator to walk through the files
+//  leveldb_new_corrupt_iterator - Creates a new iterator to walk through the files
 //*************************************************************
 
-osd_iter_t *fs_new_corrupt_iterator(osd_t *d)
+osd_iter_t *leveldb_new_corrupt_iterator(osd_t *d)
 {
    osd_iter_t *oi = (osd_iter_t *)malloc(sizeof(osd_iter_t));
-   osd_fs_corrupt_iter_t *ci = (osd_fs_corrupt_iter_t *)malloc(sizeof(osd_fs_corrupt_iter_t));
+   osd_leveldb_corrupt_iter_t *ci = (osd_leveldb_corrupt_iter_t *)malloc(sizeof(osd_leveldb_corrupt_iter_t));
 
    if (oi == NULL) return(NULL);
    if (ci == NULL) return(NULL);
@@ -518,7 +517,7 @@ osd_iter_t *fs_new_corrupt_iterator(osd_t *d)
    apr_pool_create(&(ci->pool), NULL);
    ci->iter = NULL;
    ci->first_time = 1;
-   ci->fs = (osd_fs_t *)d->private;
+   ci->fs = (osd_leveldb_t *)d->private;
 
    oi->d = d;
    oi->arg = (void *)ci;
@@ -527,12 +526,12 @@ osd_iter_t *fs_new_corrupt_iterator(osd_t *d)
 }
 
 //*************************************************************
-//  fs_corrupt_destroy_iterator - Destroys an iterator
+//  leveldb_corrupt_destroy_iterator - Destroys an iterator
 //*************************************************************
 
-void fs_destroy_corrupt_iterator(osd_iter_t *oi)
+void leveldb_destroy_corrupt_iterator(osd_iter_t *oi)
 {
-  osd_fs_corrupt_iter_t *iter = (osd_fs_corrupt_iter_t *)oi->arg;
+  osd_leveldb_corrupt_iter_t *iter = (osd_leveldb_corrupt_iter_t *)oi->arg;
 
   if (iter == NULL) return;
 
@@ -546,9 +545,9 @@ void fs_destroy_corrupt_iterator(osd_iter_t *oi)
 //  corrupt_iterator_next - Returns the next key for the iterator
 //*************************************************************
 
-int fs_corrupt_iterator_next(osd_iter_t *oi, osd_id_t *id)
+int leveldb_corrupt_iterator_next(osd_iter_t *oi, osd_id_t *id)
 {
-  osd_fs_corrupt_iter_t *ci = (osd_fs_corrupt_iter_t *)oi->arg;
+  osd_leveldb_corrupt_iter_t *ci = (osd_leveldb_corrupt_iter_t *)oi->arg;
   osd_id_t *cid;
   apr_ssize_t klen;
 
@@ -567,14 +566,14 @@ int fs_corrupt_iterator_next(osd_iter_t *oi, osd_id_t *id)
 }
 
 //******************************************************************************
-// fs_mapping - Maps the given byte range to the chksum blocks
+// leveldb_mapping - Maps the given byte range to the chksum blocks
 //******************************************************************************
 
-int fs_mapping(osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len,
+int leveldb_mapping(osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len,
                osd_off_t *start_block, osd_off_t *end_block, osd_off_t *start_offset,
                osd_off_t *start_size, osd_off_t *end_size)
 {
-  osd_fs_chksum_t *fcs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *fcs = &(fsfd->obj->fd_chksum);
   osd_off_t n;
 
   //** Do the start block first
@@ -601,35 +600,35 @@ int fs_mapping(osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len,
      *end_block = (n / fcs->blocksize) + 1; //** +1 is for the offset block 0
      *end_size = (n % fcs->blocksize) + 1;  //** The +1 converts the modulo offset to a len
 //     if (*end_size == 0) { (*end_block)--; *end_size = fcs->blocksize; }
-//log_printf(10, "fs_mapping: fsfd=%p hbs=" I64T " bs=" I64T " n=" I64T "\n", fsfd, fcs->header_blocksize, fcs->blocksize, n);
+//log_printf(10, "leveldb_mapping: fsfd=%p hbs=" I64T " bs=" I64T " n=" I64T "\n", fsfd, fcs->header_blocksize, fcs->blocksize, n);
   }
 
   return(0);
 }
 
 //******************************************************************************
-// delete_range - Removes the range from the list
+// leveldb_delete_range - Removes the range from the list
 //******************************************************************************
 
-int delete_range(osd_fs_fd_t *fsfd)
+int leveldb_delete_range(osd_leveldb_fd_t *fsfd)
 {
   return(release_pigeon_coop_hole(fsfd->my_range_coop, &(fsfd->my_range_slot)));
 }
 
 //******************************************************************************
-// insert_range - Inserts the range into the coop
+// leveldb_insert_range - Inserts the range into the coop
 //******************************************************************************
 
-int insert_range(pigeon_coop_t *coop, osd_fs_fd_t *fsfd, int rtype, int64_t timestamp, osd_off_t start_block, osd_off_t end_block)
+int leveldb_insert_range(pigeon_coop_t *coop, osd_leveldb_fd_t *fsfd, int rtype, int64_t timestamp, osd_off_t start_block, osd_off_t end_block)
 {
-  osd_fs_range_t *r;
+  osd_leveldb_range_t *r;
 
   fsfd->my_range_coop = coop;
   fsfd->my_range_slot = reserve_pigeon_coop_hole(coop);
   r = pigeon_coop_hole_data(&(fsfd->my_range_slot));
 
   if (r == NULL) {
-     log_printf(0, "insert_range:  No slot acquired!!!\n");
+     log_printf(0, "leveldb_insert_range:  No slot acquired!!!\n");
      return(1);
   }
 
@@ -643,30 +642,30 @@ int insert_range(pigeon_coop_t *coop, osd_fs_fd_t *fsfd, int rtype, int64_t time
 }
 
 //******************************************************************************
-// check_range_overlap - Attempts to secure a the given range if possible.
+// leveldb_check_range_overlap - Attempts to secure a the given range if possible.
 //     If the full range is not available a shortened range is returned
 //     in end_block.  If upon success 0 is returned if no range is available
 //     1 is returned
 //******************************************************************************
 
-int check_range_overlap(pigeon_coop_t *coop, int64_t timestamp, osd_off_t start_block, osd_off_t *end_block)
+int leveldb_check_range_overlap(pigeon_coop_t *coop, int64_t timestamp, osd_off_t start_block, osd_off_t *end_block)
 {
    pigeon_coop_iter_t it;
    pigeon_coop_hole_t i;
-   osd_fs_range_t *r;
+   osd_leveldb_range_t *r;
 
    it = pigeon_coop_iterator_init(coop);
    i = pigeon_coop_iterator_next(&it);
    while ((r = pigeon_coop_hole_data(&i)) != NULL) {
        if ((r->lo <= start_block) && (r->hi >= start_block)) { //** Range overlaps beginning of block so may need to return
            if ((r->type == RANGE_INUSE) || ((r->type == RANGE_REQUEST) && (r->timestamp < timestamp))) {
-log_printf(10, "check_range_overlap: my_ts=" I64T " my_lo=" I64T " my_hi=" I64T " CONFLICT ts=" I64T " type=%d lo=" I64T " hi=" I64T "\n",
+log_printf(10, "leveldb_check_range_overlap: my_ts=" I64T " my_lo=" I64T " my_hi=" I64T " CONFLICT ts=" I64T " type=%d lo=" I64T " hi=" I64T "\n",
     timestamp, start_block, *end_block, r->timestamp, r->type, r->lo, r->hi);
               return(1);
            }
        } else if ((r->lo > start_block) && (r->lo <= *end_block)) { //** Need to shrink range
          if ((r->type == RANGE_INUSE) || ((r->type == RANGE_REQUEST) && (r->timestamp < timestamp))) {
-log_printf(10, "check_range_overlap: my_ts=" I64T " my_lo=" I64T " my_hi=" I64T " SHRINK ts=" I64T " type=%d lo=" I64T " hi=" I64T "\n",
+log_printf(10, "leveldb_check_range_overlap: my_ts=" I64T " my_lo=" I64T " my_hi=" I64T " SHRINK ts=" I64T " type=%d lo=" I64T " hi=" I64T "\n",
     timestamp, start_block, *end_block, r->timestamp, r->type, r->lo, r->hi);
             *end_block = r->lo-1;
          }
@@ -679,15 +678,15 @@ log_printf(10, "check_range_overlap: my_ts=" I64T " my_lo=" I64T " my_hi=" I64T 
 }
 
 //******************************************************************************
-// _range_request_wakeup - Wakes up any pending quests that can be fulfilled
+// _leveldb_range_request_wakeup - Wakes up any pending quests that can be fulfilled
 //    NOTE:  Assumes the object (obj->lock) is currently locked!
 //******************************************************************************
 
-void _range_request_wakeup(pigeon_coop_t *coop, osd_off_t lo, osd_off_t hi)
+void _leveldb_range_request_wakeup(pigeon_coop_t *coop, osd_off_t lo, osd_off_t hi)
 {
    pigeon_coop_iter_t it;
    pigeon_coop_hole_t i;
-   osd_fs_range_t *r;
+   osd_leveldb_range_t *r;
 
    it = pigeon_coop_iterator_init(coop);
    i = pigeon_coop_iterator_next(&it);
@@ -707,13 +706,13 @@ void _range_request_wakeup(pigeon_coop_t *coop, osd_off_t lo, osd_off_t hi)
 }
 
 //******************************************************************************
-// fsfd_unlock - Releases a previously acquired lock
+// leveldbfd_unlock - Releases a previously acquired lock
 //******************************************************************************
 
-void fsfd_unlock(osd_fs_t *fs, osd_fs_fd_t *fsfd)
+void leveldbfd_unlock(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd)
 {
-  osd_fs_object_t *obj = fsfd->obj;
-  osd_fs_range_t *r;
+  osd_leveldb_object_t *obj = fsfd->obj;
+  osd_leveldb_range_t *r;
 
   apr_thread_mutex_lock(obj->lock);
 
@@ -721,9 +720,9 @@ void fsfd_unlock(osd_fs_t *fs, osd_fs_fd_t *fsfd)
   //** Get my range first
   r = pigeon_coop_hole_data(&(fsfd->my_range_slot));
 
-  log_printf(10, "fsfd_unlock: fsfd=%p ts=%d  lo=" I64T " hi=" I64T "\n", fsfd, fsfd->timestamp, r->lo, r->hi); flush_log();
+  log_printf(10, "leveldbfd_unlock: fsfd=%p ts=%d  lo=" I64T " hi=" I64T "\n", fsfd, fsfd->timestamp, r->lo, r->hi); flush_log();
 
-  delete_range(fsfd);  //** then delete it
+  leveldb_delete_range(fsfd);  //** then delete it
 
   fflush(fsfd->fd);  //** Sync buffers
 
@@ -731,24 +730,24 @@ void fsfd_unlock(osd_fs_t *fs, osd_fs_fd_t *fsfd)
   apr_thread_cond_broadcast(obj->cond);
 
 //  //** Wake up everyone I overlap with
-//  _range_request_wakeup(obj->write_range_list, my_lo, my_hi);
-//  _range_request_wakeup(obj->read_range_list, my_lo, my_hi);
+//  _leveldb_range_request_wakeup(obj->write_range_list, my_lo, my_hi);
+//  _leveldb_range_request_wakeup(obj->read_range_list, my_lo, my_hi);
 
   apr_thread_mutex_unlock(obj->lock);
 }
 
 
 //******************************************************************************
-// fsfd_lock - Attempts to lock the objects requested block range.
+// leveldbfd_lock - Attempts to lock the objects requested block range.
 //    If the entire range can't be locked then the largest block begininng
 //    at the starting block is returned.
 //******************************************************************************
 
-osd_off_t fsfd_lock(osd_fs_t *fs, osd_fs_fd_t *fsfd, int mode, osd_off_t start_block, osd_off_t end_block, osd_off_t *got_block)
+osd_off_t leveldbfd_lock(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, int mode, osd_off_t start_block, osd_off_t end_block, osd_off_t *got_block)
 {
   int err;
   int64_t timestamp;
-  osd_fs_object_t *obj = fsfd->obj;
+  osd_leveldb_object_t *obj = fsfd->obj;
   pigeon_coop_t *coop;
 
   if (mode == OSD_READ_MODE) {
@@ -763,42 +762,42 @@ osd_off_t fsfd_lock(osd_fs_t *fs, osd_fs_fd_t *fsfd, int mode, osd_off_t start_b
   fsfd->timestamp = timestamp;
   obj->count++;
 
-  log_printf(10, "fsfd_lock: fsfd=%p ts=" I64T " id=" LU " lo=" I64T " hi=" I64T " mode=%d\n", fsfd, timestamp, obj->id, start_block, end_block, mode); flush_log();
+  log_printf(10, "leveldbfd_lock: fsfd=%p ts=" I64T " id=" LU " lo=" I64T " hi=" I64T " mode=%d\n", fsfd, timestamp, obj->id, start_block, end_block, mode); flush_log();
   err = 1;
   while (err != 0) {
      *got_block = end_block;
-     err = check_range_overlap(obj->write_range_list, timestamp, start_block, got_block);
-  log_printf(10, "fsfd_lock: fsfd=%p  ts=" I64T " write check lo=" I64T " hi_got=" I64T " err=%d\n", fsfd, timestamp, start_block, *got_block, err); flush_log();
+     err = leveldb_check_range_overlap(obj->write_range_list, timestamp, start_block, got_block);
+  log_printf(10, "leveldbfd_lock: fsfd=%p  ts=" I64T " write check lo=" I64T " hi_got=" I64T " err=%d\n", fsfd, timestamp, start_block, *got_block, err); flush_log();
      if ((err == 0) && (mode == OSD_WRITE_MODE)) {
-        err = check_range_overlap(obj->read_range_list, timestamp, start_block, got_block);
-  log_printf(10, "fsfd_lock: fsfd=%p ts=" I64T " read check lo=" I64T " hi_got=" I64T " err=%d\n", fsfd, timestamp, start_block, *got_block, err); flush_log();
+        err = leveldb_check_range_overlap(obj->read_range_list, timestamp, start_block, got_block);
+  log_printf(10, "leveldbfd_lock: fsfd=%p ts=" I64T " read check lo=" I64T " hi_got=" I64T " err=%d\n", fsfd, timestamp, start_block, *got_block, err); flush_log();
      }
 
     //** No success so insert myself in the queue and wait
     if (err != 0) {
-  log_printf(10, "fsfd_lock: fsfd=%p Failed so inserting my request ts=" I64T "\n", fsfd, timestamp); flush_log();
-       insert_range(coop, fsfd, RANGE_REQUEST, timestamp, start_block, end_block);
+  log_printf(10, "leveldbfd_lock: fsfd=%p Failed so inserting my request ts=" I64T "\n", fsfd, timestamp); flush_log();
+       leveldb_insert_range(coop, fsfd, RANGE_REQUEST, timestamp, start_block, end_block);
 //       apr_thread_cond_wait(fsfd->cond, obj->lock);
        apr_thread_cond_wait(obj->cond, obj->lock);
-  log_printf(10, "fsfd_lock: fsfd=%p Woken back so trying again ts=" I64T "\n", fsfd, timestamp); flush_log();
-       delete_range(fsfd);  //** Delete the queue request and try again
+  log_printf(10, "leveldbfd_lock: fsfd=%p Woken back so trying again ts=" I64T "\n", fsfd, timestamp); flush_log();
+       leveldb_delete_range(fsfd);  //** Delete the queue request and try again
     }
   }
 
 
-  log_printf(10, "fsfd_lock: fsfd=%p SUCCESS ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
+  log_printf(10, "leveldbfd_lock: fsfd=%p SUCCESS ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
 
   //** Register my range
-  insert_range(coop, fsfd, RANGE_INUSE, timestamp, start_block, *got_block);
+  leveldb_insert_range(coop, fsfd, RANGE_INUSE, timestamp, start_block, *got_block);
   fsfd->my_range_coop = coop;
 
   fflush(fsfd->fd);  //** Sync buffers
 
-  log_printf(10, "fsfd_lock: fsfd=%p AFTER FINAL INSERT ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
+  log_printf(10, "leveldbfd_lock: fsfd=%p AFTER FINAL INSERT ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
 
   apr_thread_mutex_unlock(fsfd->obj->lock);
 
-  log_printf(10, "fsfd_lock: fsfd=%p AFTER UNLOCK ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
+  log_printf(10, "leveldbfd_lock: fsfd=%p AFTER UNLOCK ts=" I64T " lo=" I64T " hi=" I64T " hi_got=" I64T "\n", fsfd, timestamp, start_block, end_block, *got_block); flush_log();
 
   return(0);
 }
@@ -807,11 +806,11 @@ osd_off_t fsfd_lock(osd_fs_t *fs, osd_fs_fd_t *fsfd, int mode, osd_off_t start_b
 //  reserve - Preallocates space for allocation
 //**************************************************
 
-int fs_reserve(osd_t *d, osd_id_t id, osd_off_t len) {
+int leveldb_reserve(osd_t *d, osd_id_t id, osd_off_t len) {
 
-log_printf(10, "osd_fs: reserve(" LU ", " ST ")\n", id, len);
+log_printf(10, "osd_leveldb: reserve(" LU ", " ST ")\n", id, len);
 
-  osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
+  osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, OSD_READ_MODE);
   if (fsfd == NULL) return(0);
 
 #if ! ( defined(__APPLE__) && defined(__MACH__) )
@@ -832,7 +831,7 @@ log_printf(10, "osd_fs: reserve(" LU ", " ST ")\n", id, len);
   }
   return 0 == ftruncate(fd, len);
 #endif
-  fs_close(d, (osd_fd_t *)fsfd);
+  leveldb_close(d, (osd_fd_t *)fsfd);
 
   return(0);
 }
@@ -842,8 +841,8 @@ log_printf(10, "osd_fs: reserve(" LU ", " ST ")\n", id, len);
 // id_exists - Checks to see if the ID exists
 //**************************************************
 
-int fs_id_exists(osd_t *d, osd_id_t id) {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
+int leveldb_id_exists(osd_t *d, osd_id_t id) {
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
   char fname[fs->pathlen];
 
@@ -855,11 +854,11 @@ int fs_id_exists(osd_t *d, osd_id_t id) {
 }
 
 //**************************************************
-//  _fs_read_block_header - Reads the block header
+//  _leveldb_read_block_header - Reads the block header
 //    Assumes the fpos is correctly located
 //**************************************************
 
-int _fs_read_block_header(osd_fs_fd_t *fsfd, uint32_t *block_bytes_used, char *cs_value, osd_off_t max_blocksize, int cs_len)
+int _leveldb_read_block_header(osd_leveldb_fd_t *fsfd, uint32_t *block_bytes_used, char *cs_value, osd_off_t max_blocksize, int cs_len)
 {
   osd_off_t n, m;
   int err;
@@ -877,11 +876,11 @@ int _fs_read_block_header(osd_fs_fd_t *fsfd, uint32_t *block_bytes_used, char *c
 }
 
 //**************************************************
-//  _fs_write_block_header - Writes the block header
+//  _leveldb_write_block_header - Writes the block header
 //    Assumes the fpos is correctly located
 //**************************************************
 
-int _fs_write_block_header(osd_fs_fd_t *fsfd, uint32_t block_bytes_used, char *cs_value, int cs_len)
+int _leveldb_write_block_header(osd_leveldb_fd_t *fsfd, uint32_t block_bytes_used, char *cs_value, int cs_len)
 {
   osd_off_t n, m;
 
@@ -898,22 +897,22 @@ int _fs_write_block_header(osd_fs_fd_t *fsfd, uint32_t block_bytes_used, char *c
 // create_id - Creates a new object id for use.
 //**************************************************
 
-osd_id_t fs_create_id(osd_t *d, int chksum_type, int header_size, int block_size, osd_id_t id) {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+osd_id_t leveldb_create_id(osd_t *d, int chksum_type, int header_size, int block_size, osd_id_t id) {
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
    char  fname[fs->pathlen];
    char  cs_value[CHKSUM_MAX_SIZE];
    int32_t dbytes;
    int n, cs_size;
-   fs_header_t header;
+   leveldb_header_t header;
    chksum_t chksum;
 
    apr_thread_mutex_lock(fs->lock);
 
    if (id == 0) {
       do {      //Generate a unique key
-         id = _generate_key();
-log_printf(15,"fs_create_id: id=" LU " chksum_type=%d\n", id, chksum_type);
-      } while (fs_id_exists(d, id));
+         id = _leveldb_generate_key();
+log_printf(15,"leveldb_create_id: id=" LU " chksum_type=%d\n", id, chksum_type);
+      } while (leveldb_id_exists(d, id));
    }
 
    FILE *fd = fopen(_id2fname(fs, id, fname, sizeof(fname)), "w");   //Make sure and create the file so no one else can use it
@@ -938,7 +937,7 @@ log_printf(15,"fs_create_id: id=" LU " chksum_type=%d\n", id, chksum_type);
       n = n + fwrite(&dbytes, 1, sizeof(int32_t), fd);
       n = n + fwrite(cs_value, 1, cs_size, fd);
       if (n != (sizeof(header) + sizeof(int32_t) + cs_size)) {
-         log_printf(0, "fs_create_id:  Error storing magic header+chksum! id=" LU " \n", id);
+         log_printf(0, "leveldb_create_id:  Error storing magic header+chksum! id=" LU " \n", id);
       }
    }
 
@@ -953,9 +952,9 @@ log_printf(15,"fs_create_id: id=" LU " chksum_type=%d\n", id, chksum_type);
 //  physical_remove - Removes the id
 //**************************************************
 
-int fs_physical_remove(osd_t *d, osd_id_t id) {
+int leveldb_physical_remove(osd_t *d, osd_id_t id) {
 //   log_printf(10, "physical_remove(" LU ")\n", id);
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen];
 
@@ -966,9 +965,9 @@ int fs_physical_remove(osd_t *d, osd_id_t id) {
 //  trash_physical_remove - Removes the id from trash
 //**************************************************
 
-int fs_trash_physical_remove(osd_t *d, int trash_type, const char *trash_id) {
+int leveldb_trash_physical_remove(osd_t *d, int trash_type, const char *trash_id) {
 //log_printf(10, "trash_physical_remove(%d, %s)\n", trash_type, trash_id);
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen];
 
@@ -979,9 +978,9 @@ int fs_trash_physical_remove(osd_t *d, int trash_type, const char *trash_id) {
 //  delete_remove - Moved the ID to the deleted_trash dir
 //**************************************************
 
-int fs_delete_remove(osd_t *d, osd_id_t id) {
+int leveldb_delete_remove(osd_t *d, osd_id_t id) {
 //log_printf(10,"delete_remove(" LU ")\n", id);
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen], tname[fs->pathlen];
    apr_time_t now = apr_time_now();
@@ -995,9 +994,9 @@ int fs_delete_remove(osd_t *d, osd_id_t id) {
 //  expire_remove - Moved the ID to the expired_trash dir
 //**************************************************
 
-int fs_expire_remove(osd_t *d, osd_id_t id) {
+int leveldb_expire_remove(osd_t *d, osd_id_t id) {
 //log_printf(10,"expire_remove(" LU ")\n", id);
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen], tname[fs->pathlen];
    apr_time_t now = apr_time_now();
@@ -1012,13 +1011,13 @@ int fs_expire_remove(osd_t *d, osd_id_t id) {
 //  remove - Wrapper for physical/expire/delete remove
 //**************************************************
 
-int fs_remove(osd_t *d, int rmode, osd_id_t id) {
+int leveldb_remove(osd_t *d, int rmode, osd_id_t id) {
    if (rmode == OSD_DELETE_ID) {
-      return(fs_delete_remove(d, id));
+      return(leveldb_delete_remove(d, id));
    } else if (rmode == OSD_EXPIRE_ID) {
-      return(fs_expire_remove(d, id));
+      return(leveldb_expire_remove(d, id));
    } else if (rmode == OSD_PHYSICAL_ID) {
-      return(fs_physical_remove(d, id));
+      return(leveldb_physical_remove(d, id));
    }
 
    return(-1);
@@ -1028,8 +1027,8 @@ int fs_remove(osd_t *d, int rmode, osd_id_t id) {
 // trash_undelete - Undeletes a trashed id
 //**************************************************
 
-osd_id_t fs_trash_undelete(osd_t *d, int trash_type, const char *trash_id) {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+osd_id_t leveldb_trash_undelete(osd_t *d, int trash_type, const char *trash_id) {
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char tname[fs->pathlen], wname[fs->pathlen];
    char dname[fs->pathlen];
@@ -1058,53 +1057,53 @@ log_printf(15, "trash_undelete: ttype=%d trash_id=%s tname=%s dname=%s id=" LU "
 }
 
 //*************************************************************
-//  fs_offset_l2p - Converts the Logical offset to a
+//  leveldb_offset_l2p - Converts the Logical offset to a
 //     physical offset
 //*************************************************************
 
-osd_off_t fs_offset_l2p(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t l_offset)
+osd_off_t leveldb_offset_l2p(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t l_offset)
 {
   osd_off_t n, blocks, rem, len, hds;
-  osd_fs_chksum_t *fcs;
+  osd_leveldb_chksum_t *fcs;
 
 
   fcs = &(fsfd->obj->fd_chksum);
-//log_printf(10, "fs_offset_l2p: id=" LU " l_offset=" I64T " is_valid=%d\n", fsfd->obj->id, l_offset, fcs->is_valid);
+//log_printf(10, "leveldb_offset_l2p: id=" LU " l_offset=" I64T " is_valid=%d\n", fsfd->obj->id, l_offset, fcs->is_valid);
 
   if (fcs->is_valid == 0) return(l_offset);
 
   hds = fcs->hbs_with_chksum - fcs->header_blocksize;
   if (l_offset < fcs->header_blocksize) {
-     n = l_offset + FS_MAGIC_HEADER + hds;
+     n = l_offset + leveldb_MAGIC_HEADER + hds;
   } else {
      len = l_offset - fcs->header_blocksize;
      blocks = len / fcs->blocksize;
      rem = len % fcs->blocksize;
-     n = FS_MAGIC_HEADER + fcs->hbs_with_chksum + blocks * fcs->bs_with_chksum + hds + rem;
+     n = leveldb_MAGIC_HEADER + fcs->hbs_with_chksum + blocks * fcs->bs_with_chksum + hds + rem;
   }
 
-log_printf(10, "fs_offset_l2p: id=" LU " l_offset=" I64T " p_offset=" I64T " is_valid=%d\n", fsfd->obj->id, l_offset, n, fcs->is_valid);
+log_printf(10, "leveldb_offset_l2p: id=" LU " l_offset=" I64T " p_offset=" I64T " is_valid=%d\n", fsfd->obj->id, l_offset, n, fcs->is_valid);
 
   return(n);
 }
 
 
 //*************************************************************
-//  fs_offset_p2l - Converts the physical offset to a
+//  leveldb_offset_p2l - Converts the physical offset to a
 //     logical offset
 //*************************************************************
 
-osd_off_t fs_offset_p2l(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t p_offset)
+osd_off_t leveldb_offset_p2l(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t p_offset)
 {
   osd_off_t n, blocks, rem, hds;
-  osd_fs_chksum_t *fcs;
+  osd_leveldb_chksum_t *fcs;
 
 
   fcs = &(fsfd->obj->fd_chksum);
   if (fcs->is_valid == 0) return(p_offset);
 
   hds = fcs->hbs_with_chksum - fcs->header_blocksize;
-  n = p_offset - FS_MAGIC_HEADER;
+  n = p_offset - leveldb_MAGIC_HEADER;
   if (n < fcs->hbs_with_chksum) {
      n = n - hds;
   } else {
@@ -1114,7 +1113,7 @@ osd_off_t fs_offset_p2l(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t p_offset)
      if (rem > hds) rem = rem - hds;
      n = fcs->header_blocksize + blocks*fcs->blocksize + rem;
      if (rem < 0) {
-        log_printf(0, "fs_offset_p2l: rem<cs_size! p_offset=" I64T " l_offset=" I64T " rem=" I64T " hds=" I64T "\n",
+        log_printf(0, "leveldb_offset_p2l: rem<cs_size! p_offset=" I64T " l_offset=" I64T " rem=" I64T " hds=" I64T "\n",
            p_offset, n, rem, hds);
         n = n + rem;
      }
@@ -1129,21 +1128,21 @@ osd_off_t fs_offset_p2l(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t p_offset)
 // truncate - truncates a file to a logical fixed size
 //*************************************************************
 
-int fs_truncate(osd_t *d, osd_id_t id, osd_off_t l_size) {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+int leveldb_truncate(osd_t *d, osd_id_t id, osd_off_t l_size) {
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
    osd_off_t n, b, rem, boff;
    uint32_t bused;
    int err, cs_len;
-   osd_fs_chksum_t *fcs;
+   osd_leveldb_chksum_t *fcs;
    chksum_t cs;
-   char buffer[FS_BUF_SIZE];
+   char buffer[leveldb_BUF_SIZE];
    char cs_value[CHKSUM_MAX_SIZE];
 
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, OSD_READ_MODE);
    if (fsfd == NULL) return(0);
 
    if (l_size > 0) l_size--;  //** This is the final offset
-   n = fs_offset_l2p(fs, fsfd, l_size);  //** Convert it to the physical offset
+   n = leveldb_offset_l2p(fs, fsfd, l_size);  //** Convert it to the physical offset
    if (l_size > 0) n++;   //** convert the physical offset to a length
 
    err = ftruncate(fileno(fsfd->fd), n);
@@ -1155,12 +1154,12 @@ int fs_truncate(osd_t *d, osd_id_t id, osd_off_t l_size) {
       if (l_size < fcs->header_blocksize) {
          b = 0;
          rem = l_size + 1;
-         boff = FS_MAGIC_HEADER;
+         boff = leveldb_MAGIC_HEADER;
       } else {
          b = l_size - fcs->header_blocksize;
          rem = (b % fcs->blocksize) + 1;
          b = (b / fcs->blocksize) + 1;
-         boff = FS_MAGIC_HEADER + fcs->hbs_with_chksum + (b-1) * fcs->bs_with_chksum;
+         boff = leveldb_MAGIC_HEADER + fcs->hbs_with_chksum + (b-1) * fcs->bs_with_chksum;
       }
 
       bused = rem;
@@ -1169,15 +1168,15 @@ int fs_truncate(osd_t *d, osd_id_t id, osd_off_t l_size) {
       n = boff + cs_len + sizeof(uint32_t);
       fseeko(fsfd->fd, n, SEEK_SET);
 
-      fsfd_lock(fs, fsfd, OSD_WRITE_MODE, b, b, &n);
-      _chksum_buffered_read(fs, fsfd, rem, buffer, FS_BUF_SIZE, &cs, NULL);
+      leveldbfd_lock(fs, fsfd, OSD_WRITE_MODE, b, b, &n);
+      _leveldb_chksum_buffered_read(fs, fsfd, rem, buffer, leveldb_BUF_SIZE, &cs, NULL);
       chksum_get(&cs, CHKSUM_DIGEST_BIN, cs_value);
       fseeko(fsfd->fd, boff, SEEK_SET);
-      _fs_write_block_header(fsfd, bused, cs_value, cs_len);
-      fsfd_unlock(fs, fsfd);
+      _leveldb_write_block_header(fsfd, bused, cs_value, cs_len);
+      leveldbfd_unlock(fs, fsfd);
    }
 
-   fs_close(d, (osd_fd_t *)fsfd);
+   leveldb_close(d, (osd_fd_t *)fsfd);
 
    return(err);
 }
@@ -1186,10 +1185,10 @@ int fs_truncate(osd_t *d, osd_id_t id, osd_off_t l_size) {
 // size - Returns the fd size in bytes
 //*************************************************************
 
-osd_off_t fs_fd_size(osd_t *d, osd_fd_t *ofd)
+osd_off_t leveldb_fd_size(osd_t *d, osd_fd_t *ofd)
 {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)ofd;
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)ofd;
    osd_off_t n;
 
    if (fsfd == NULL) return(0);
@@ -1197,7 +1196,7 @@ osd_off_t fs_fd_size(osd_t *d, osd_fd_t *ofd)
    fseeko(fsfd->fd, 0, SEEK_END);
    n = ftell(fsfd->fd);
 
-   n = fs_offset_p2l(fs, fsfd, n);
+   n = leveldb_offset_p2l(fs, fsfd, n);
 
    return(n);
 }
@@ -1206,29 +1205,29 @@ osd_off_t fs_fd_size(osd_t *d, osd_fd_t *ofd)
 // size - Returns the id size in bytes
 //*************************************************************
 
-osd_off_t fs_size(osd_t *d, osd_id_t id) {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+osd_off_t leveldb_size(osd_t *d, osd_id_t id) {
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
    osd_off_t n;
 
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, OSD_READ_MODE);
    if (fsfd == NULL) return(0);
 
    fseeko(fsfd->fd, 0, SEEK_END);
    n = ftell(fsfd->fd);
 
-   n = fs_offset_p2l(fs, fsfd, n);
+   n = leveldb_offset_p2l(fs, fsfd, n);
 
-   fs_close(d, (osd_fd_t *)fsfd);
+   leveldb_close(d, (osd_fd_t *)fsfd);
 
    return(n);
 }
 
 //*************************************************************
-// fs_trash_size - Returns the trash file size in bytes
+// leveldb_trash_size - Returns the trash file size in bytes
 //*************************************************************
 
-osd_off_t fs_trash_size(osd_t *d, int trash_type, const char *trash_id) {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+osd_off_t leveldb_trash_size(osd_t *d, int trash_type, const char *trash_id) {
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen];
    FILE *fout = fopen(_trashid2fname(fs, trash_type, trash_id, fname, sizeof(fname)), "r");
@@ -1244,32 +1243,32 @@ osd_off_t fs_trash_size(osd_t *d, int trash_type, const char *trash_id) {
 }
 
 //*************************************************************
-//  fs_read_header - Retreives the file header
+//  leveldb_read_header - Retreives the file header
 //*************************************************************
 
-int fs_read_header(FILE *fd, fs_header_t *header)
+int leveldb_read_header(FILE *fd, leveldb_header_t *header)
 {
   fseeko(fd, 0, SEEK_SET);
-  return(fread(header, 1, sizeof(fs_header_t), fd));
+  return(fread(header, 1, sizeof(leveldb_header_t), fd));
 }
 
 //*************************************************************
-//  fs_write_header - Stores the file header
+//  leveldb_write_header - Stores the file header
 //*************************************************************
 
-int fs_write_header(FILE *fd, fs_header_t *header)
+int leveldb_write_header(FILE *fd, leveldb_header_t *header)
 {
   fseeko(fd, 0, SEEK_SET);
-  return(fwrite(header, 1, sizeof(fs_header_t), fd));
+  return(fwrite(header, 1, sizeof(leveldb_header_t), fd));
 }
 
 //*************************************************************
-// fs_get_state - Returns the current state of the object
+// leveldb_get_state - Returns the current state of the object
 //*************************************************************
 
-int fs_get_state(osd_t *d, osd_fd_t *ofd)
+int leveldb_get_state(osd_t *d, osd_fd_t *ofd)
 {
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)ofd;
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)ofd;
    int state;
 
    if (ofd == NULL) return(OSD_STATE_BAD_HEADER);
@@ -1282,31 +1281,31 @@ int fs_get_state(osd_t *d, osd_fd_t *ofd)
 }
 
 //*************************************************************
-// object_open - Opens the object and determines the alloc type
+// leveldb_object_open - Opens the object and determines the alloc type
 //*************************************************************
 
-int object_open(osd_fs_t *fs, osd_fs_object_t *obj)
+int leveldb_object_open(osd_leveldb_t *fs, osd_leveldb_object_t *obj)
 {
    char  fname[fs->pathlen];
    int n, normal;
-   osd_fs_chksum_t *fcs = &(obj->fd_chksum);
+   osd_leveldb_chksum_t *fcs = &(obj->fd_chksum);
 
    obj->is_ok = 0;  //** Default is failure
    normal = 1;
 
    FILE *fd = fopen(_id2fname(fs, obj->id, fname, sizeof(fname)), "r+");
    if (fd != NULL) {
-     n = fs_read_header(fd, &(obj->header));
-     if (n == sizeof(fs_header_t)) {
+     n = leveldb_read_header(fd, &(obj->header));
+     if (n == sizeof(leveldb_header_t)) {
         normal = memcmp(obj->header.magic, CHKSUM_MAGIC, sizeof(CHKSUM_MAGIC));
      }
-     log_printf(10, "object_open: id=" LU " fs=%s normal=%d fread=%d\n", obj->id, fs->devicename, normal, n); flush_log();
+     log_printf(10, "leveldb_object_open: id=" LU " fs=%s normal=%d fread=%d\n", obj->id, fs->devicename, normal, n); flush_log();
    } else {
      log_printf(1, "ERROR with open id=" LU " fs=%s\n", obj->id, fs->devicename); flush_log();
      return(1);
   }
 
-   log_printf(10, "object_open: id=" LU " fs=%s normal=%d n_opened=%d\n", obj->id, fs->devicename, normal, obj->n_opened); flush_log();
+   log_printf(10, "leveldb_object_open: id=" LU " fs=%s normal=%d n_opened=%d\n", obj->id, fs->devicename, normal, obj->n_opened); flush_log();
 
    if (normal != 0) { //** Normal allocation so init the obj header
       fcs->blocksize = 1;
@@ -1315,22 +1314,22 @@ int object_open(osd_fs_t *fs, osd_fs_object_t *obj)
       fcs->hbs_with_chksum = 1;
       fcs->is_valid = 0;
       blank_chksum_set(&(fcs->chksum));
-      obj->read = fs_normal_read;
-      obj->write = fs_normal_write;
-      memset(&(obj->header), 0, sizeof(fs_header_t));
+      obj->read = leveldb_normal_read;
+      obj->write = leveldb_normal_write;
+      memset(&(obj->header), 0, sizeof(leveldb_header_t));
       obj->state = OSD_STATE_GOOD;
    } else {  //** Got a chksum type allocation
       chksum_set(&(fcs->chksum), obj->header.chksum_type);
       if (chksum_valid_type(obj->header.chksum_type) == 0) {
          n = obj->header.chksum_type;
-         log_printf(0, "object_open:  Invalid chksum type! id=" LU " type=%d \n", obj->id, n);
+         log_printf(0, "leveldb_object_open:  Invalid chksum type! id=" LU " type=%d \n", obj->id, n);
          fclose(fd);
          return(-2);
       }
 
       obj->state = obj->header.state;
       if (obj->state != OSD_STATE_GOOD) {
-         log_printf(0, "object_open:  Bad state! id=" LU " state=%d \n", obj->id, obj->state);
+         log_printf(0, "leveldb_object_open:  Bad state! id=" LU " state=%d \n", obj->id, obj->state);
       }
 
       fcs->header_blocksize = obj->header.header_size;
@@ -1340,13 +1339,13 @@ int object_open(osd_fs_t *fs, osd_fs_object_t *obj)
       fcs->bs_with_chksum = fcs->blocksize + n + sizeof(uint32_t);
       fcs->is_valid = 1;
 
-      obj->read = fs_chksum_read;
-      obj->write = fs_chksum_write;
+      obj->read = leveldb_leveldb_chksum_read;
+      obj->write = leveldb_leveldb_chksum_write;
    }
 
    if (fd != NULL) fclose(fd);
 
-   if (obj->state != OSD_STATE_GOOD) _insert_corrupt_hash(fs, obj->id, "chksum");
+   if (obj->state != OSD_STATE_GOOD) _leveldb_insert_corrupt_hash(fs, obj->id, "chksum");
 
    obj->is_ok = 1;  //** Successful open!
 
@@ -1355,22 +1354,22 @@ int object_open(osd_fs_t *fs, osd_fs_object_t *obj)
 
 
 //*************************************************************
-// fs_object_get - Retreives the next free object slot
+// leveldb_object_get - Retreives the next free object slot
 //*************************************************************
 
-osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
+osd_leveldb_object_t *leveldb_object_get(osd_leveldb_t *fs, osd_id_t id)
 {
   pigeon_coop_hole_t pch;
-  osd_fs_object_t *obj;
+  osd_leveldb_object_t *obj;
   int err;
 
   apr_thread_mutex_lock(fs->obj_lock);
 
   //** 1st see if it's already in use
-  obj = (osd_fs_object_t *)apr_hash_get(fs->obj_hash, &id, sizeof(osd_id_t));
+  obj = (osd_leveldb_object_t *)apr_hash_get(fs->obj_hash, &id, sizeof(osd_id_t));
   if (obj == NULL) {  //** New object
      pch = reserve_pigeon_coop_hole(fs->obj_list);
-     obj = (osd_fs_object_t *)pigeon_coop_hole_data(&pch);
+     obj = (osd_leveldb_object_t *)pigeon_coop_hole_data(&pch);
      obj->id = id;
      obj->my_slot = pch;
      obj->n_opened = 1;  //** Include the caller
@@ -1378,7 +1377,7 @@ osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
      obj->n_read = 0;
      obj->n_write = 0;
      obj->count = 0;
-     obj->is_ok = -1;  //** Default to object_open failure
+     obj->is_ok = -1;  //** Default to leveldb_object_open failure
      obj->state = OSD_STATE_GOOD;
 
      apr_hash_set(fs->obj_hash, &(obj->id), sizeof(osd_id_t), obj);  //** Add it to the table
@@ -1387,7 +1386,7 @@ osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
 
      apr_thread_mutex_unlock(fs->obj_lock);   //** Unlock the list and do the open
 
-     err = object_open(fs, obj);  //** Opens the object and stores the approp r/w routines
+     err = leveldb_object_open(fs, obj);  //** Opens the object and stores the approp r/w routines
 
      apr_thread_mutex_unlock(obj->lock);   // Free the object lock
 
@@ -1400,15 +1399,15 @@ osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
         apr_thread_mutex_unlock(fs->obj_lock);
         obj = NULL;
      } else {
-        log_printf(15, "fs_object_get(1): id=" LU " nopened=%d shelf=%d hole=%d\n", obj->id, obj->n_opened, obj->my_slot.shelf, obj->my_slot.hole);
+        log_printf(15, "leveldb_object_get(1): id=" LU " nopened=%d shelf=%d hole=%d\n", obj->id, obj->n_opened, obj->my_slot.shelf, obj->my_slot.hole);
      }
   } else {  //** Already opened so just increase the ref count
      apr_thread_mutex_lock(obj->lock);
 
-     //** Make sure object_open didn't fail
+     //** Make sure leveldb_object_open didn't fail
      err = 0;
      obj->n_pending--;
-     log_printf(15, "fs_object_get(2): want_id=" LU " id=" LU " nopened=%d npending=%d shelf=%d hole=%d err=%d\n", id, obj->id, obj->n_opened, obj->n_pending, obj->my_slot.shelf, obj->my_slot.hole, err);
+     log_printf(15, "leveldb_object_get(2): want_id=" LU " id=" LU " nopened=%d npending=%d shelf=%d hole=%d err=%d\n", id, obj->id, obj->n_opened, obj->n_pending, obj->my_slot.shelf, obj->my_slot.hole, err);
 
      if ((obj->id == id) && (obj->is_ok == 1)) {  //** and id matches and is ok
         obj->n_opened++;
@@ -1425,7 +1424,7 @@ osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
         }
      }
 
-     log_printf(15, "fs_object_get(2): id=" LU "  err=%d\n", id, err);
+     log_printf(15, "leveldb_object_get(2): id=" LU "  err=%d\n", id, err);
 
      apr_thread_mutex_unlock(fs->obj_lock);
 
@@ -1436,10 +1435,10 @@ osd_fs_object_t *fs_object_get(osd_fs_t *fs, osd_id_t id)
 }
 
 //*************************************************************
-// fs_object_release - Releases the object
+// leveldb_object_release - Releases the object
 //*************************************************************
 
-int fs_object_release(osd_fs_t *fs, osd_fs_object_t *obj)
+int leveldb_object_release(osd_leveldb_t *fs, osd_leveldb_object_t *obj)
 {
   pigeon_coop_hole_t pch;
 
@@ -1481,31 +1480,31 @@ log_printf(15, "Trying to REALLY close it... id=" LU " nopened=%d npending=%d sh
 }
 
 //*************************************************************
-// fs_object_fd_get - Retreives the next free object slot
+// leveldb_object_fd_get - Retreives the next free object slot
 //*************************************************************
 
-osd_fs_fd_t *fs_object_fd_get(osd_fs_t *fs, osd_fs_object_t *obj, int mode)
+osd_leveldb_fd_t *leveldb_object_fd_get(osd_leveldb_t *fs, osd_leveldb_object_t *obj, int mode)
 {
   pigeon_coop_hole_t pch = reserve_pigeon_coop_hole(fs->fd_list);
-  osd_fs_fd_t *fd = pigeon_coop_hole_data(&pch);
+  osd_leveldb_fd_t *fd = pigeon_coop_hole_data(&pch);
   fd->my_slot = pch;
   fd->obj = obj;
   fd->chksum = obj->fd_chksum.chksum;
   chksum_reset(&(fd->chksum));
 
-log_printf(15, "fs_object_fd_get: id=" LU " shelf=%d hole=%d\n", obj->id, pch.shelf, pch.hole);
+log_printf(15, "leveldb_object_fd_get: id=" LU " shelf=%d hole=%d\n", obj->id, pch.shelf, pch.hole);
 
   return(fd);
 }
 
 //*************************************************************
-// fs_object_fd_release - Releases the object
+// leveldb_object_fd_release - Releases the object
 //*************************************************************
 
-void fs_object_fd_release(osd_fs_t *fs, osd_fs_fd_t *fd)
+void leveldb_object_fd_release(osd_leveldb_t *fs, osd_leveldb_fd_t *fd)
 {
   pigeon_coop_hole_t pch = fd->my_slot;
-log_printf(15, "fs_object_fd_release: id=" LU " shelf=%d hole=%d\n", fd->obj->id, pch.shelf, pch.hole);
+log_printf(15, "leveldb_object_fd_release: id=" LU " shelf=%d hole=%d\n", fd->obj->id, pch.shelf, pch.hole);
 
   release_pigeon_coop_hole(fs->fd_list, &pch);
 }
@@ -1513,25 +1512,25 @@ log_printf(15, "fs_object_fd_release: id=" LU " shelf=%d hole=%d\n", fd->obj->id
 
 
 //*************************************************************
-// fsfd_get - Stores the object in the global table if needed
+// leveldbfd_get - Stores the object in the global table if needed
 //*************************************************************
 
-osd_fs_fd_t *fsfd_get(osd_fs_t *fs, osd_id_t id, int mode)
+osd_leveldb_fd_t *leveldbfd_get(osd_leveldb_t *fs, osd_id_t id, int mode)
 {
-  osd_fs_object_t *obj;
-  osd_fs_fd_t *fsfd;
+  osd_leveldb_object_t *obj;
+  osd_leveldb_fd_t *fsfd;
 
   //** Find a free/existing object slot depending on if the file is currrently in use or not
-  obj = fs_object_get(fs, id);
+  obj = leveldb_object_get(fs, id);
   if (obj == NULL) {
-     log_printf(1, "fsfd_get: Can't get an object slot!  id=" LU "\n", id);
+     log_printf(1, "leveldbfd_get: Can't get an object slot!  id=" LU "\n", id);
      return(NULL);
   }
 
   //** Find an fd slot
-  fsfd = fs_object_fd_get(fs, obj, mode);
+  fsfd = leveldb_object_fd_get(fs, obj, mode);
   if (fsfd == NULL) {
-     log_printf(1, "fsfd_get: Can't get an fd slot!  id=" LU "\n", id);
+     log_printf(1, "leveldbfd_get: Can't get an fd slot!  id=" LU "\n", id);
      return(NULL);
   }
 
@@ -1539,86 +1538,86 @@ osd_fs_fd_t *fsfd_get(osd_fs_t *fs, osd_id_t id, int mode)
 }
 
 //*************************************************************
-// fsfd_remove - REmoves the object from the global table if needed
+// leveldbfd_remove - REmoves the object from the global table if needed
 //*************************************************************
 
-int fsfd_remove(osd_fs_t *fs, osd_fs_fd_t *fsfd)
+int leveldbfd_remove(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd)
 {
-  osd_fs_object_t *obj;
+  osd_leveldb_object_t *obj;
 //  apr_thread_mutex_lock(fs->obj_lock);
 //  apr_thread_mutex_lock(fsfs->obj->lock);
 
   obj = fsfd->obj;  //** Get the object 1st
-  fs_object_fd_release(fs, fsfd);  //** Then release the fd
-  fs_object_release(fs, obj);      //** and finally the object itself
+  leveldb_object_fd_release(fs, fsfd);  //** Then release the fd
+  leveldb_object_release(fs, obj);      //** and finally the object itself
 
   return(0);
 }
 
 //*************************************************************
-// fs_open - Opens an object for R/W
+// leveldb_open - Opens an object for R/W
 //*************************************************************
 
-osd_fd_t *fs_open(osd_t *d, osd_id_t id, int mode)
+osd_fd_t *leveldb_open(osd_t *d, osd_id_t id, int mode)
 {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
    char fname[fs->pathlen];
 
-   osd_fs_fd_t *fsfd = fsfd_get(fs, id, mode);
+   osd_leveldb_fd_t *fsfd = leveldbfd_get(fs, id, mode);
    if (fsfd == NULL) return(NULL);
 
    fsfd->fd = fopen(_id2fname(fs, id, fname, sizeof(fname)), "r+");
    if (fsfd->fd == NULL) {
       if (mode == OSD_WRITE_MODE) {
-         log_printf(10, "fs_open(" LU ", %d, w+) doesn't exist so creating the file\n", id, mode);
+         log_printf(10, "leveldb_open(" LU ", %d, w+) doesn't exist so creating the file\n", id, mode);
          fsfd->fd = fopen(_id2fname(fs, id, fname, sizeof(fname)), "w+");
          if (fsfd->fd == NULL) {
-            log_printf(0, "fs_open(" LU ", %d) open error = %d\n", id, mode, errno);
-            fsfd_remove(fs, fsfd);
+            log_printf(0, "leveldb_open(" LU ", %d) open error = %d\n", id, mode, errno);
+            leveldbfd_remove(fs, fsfd);
             return(NULL);
          }
       } else {
-         log_printf(0, "fs_open(" LU ", %d, r+)=NULL open error = %d\n", id, mode, errno);
-         fsfd_remove(fs, fsfd);
+         log_printf(0, "leveldb_open(" LU ", %d, r+)=NULL open error = %d\n", id, mode, errno);
+         leveldbfd_remove(fs, fsfd);
          return(NULL);
       }
    }
 
-   log_printf(10, "fs_open(" LU ", %d)=%p success\n", id, mode, fsfd->fd);
+   log_printf(10, "leveldb_open(" LU ", %d)=%p success\n", id, mode, fsfd->fd);
 
    return((osd_fd_t *)fsfd);
 }
 
 //*************************************************************
-// fs_close - Opens an object for R/W
+// leveldb_close - Opens an object for R/W
 //*************************************************************
 
-int fs_close(osd_t *d, osd_fd_t *ofd)
+int leveldb_close(osd_t *d, osd_fd_t *ofd)
 {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)ofd;
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)ofd;
 
    if (fsfd == NULL) return(0);
 
-   log_printf(10, "fs_close(%p)\n", fsfd->fd);
+   log_printf(10, "leveldb_close(%p)\n", fsfd->fd);
 
    if (fsfd->fd != NULL) {
       fclose(fsfd->fd);
       fsfd->fd = NULL;
    }
 
-   return(fsfd_remove(fs, fsfd));
+   return(leveldbfd_remove(fs, fsfd));
 }
 
 
 //*************************************************************
-//  fs_native_open - Opens the ID and positions the fd to len
+//  leveldb_native_open - Opens the ID and positions the fd to len
 //*************************************************************
 
-int fs_native_open(osd_t *d, osd_id_t id, osd_off_t offset, int mode)
+int leveldb_native_open(osd_t *d, osd_id_t id, osd_off_t offset, int mode)
 {
    int flags;
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
    char fname[fs->pathlen];
 
@@ -1632,7 +1631,7 @@ int fs_native_open(osd_t *d, osd_id_t id, osd_off_t offset, int mode)
 
    int fd = open(_id2fname(fs, id, fname, sizeof(fname)), flags, S_IRUSR|S_IWUSR);
    if (fd == -1) {
-      log_printf(0, "fs_native_open(" LU ", " OT ", %d) open error = %d\n", id, offset, mode, errno);
+      log_printf(0, "leveldb_native_open(" LU ", " OT ", %d) open error = %d\n", id, offset, mode, errno);
       return(-1);
    }
 
@@ -1642,20 +1641,20 @@ int fs_native_open(osd_t *d, osd_id_t id, osd_off_t offset, int mode)
 }
 
 //*************************************************************
-//  fs_native_close - Closes the fd
+//  leveldb_native_close - Closes the fd
 //*************************************************************
 
-int fs_native_close(osd_t *d, int fd)
+int leveldb_native_close(osd_t *d, int fd)
 {
   return(close(fd));
 }
 
 //**************************************************************************************
-// _chksum_buffered_read - Reads len bytes of data from fsfd and accumulates
+// _leveldb_chksum_buffered_read - Reads len bytes of data from fsfd and accumulates
 //     the chksum information in cs1 and optionally cs2
 //**************************************************************************************
 
-osd_off_t _chksum_buffered_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t len, char *buffer, osd_off_t bufsize, chksum_t *cs1, chksum_t *cs2)
+osd_off_t _leveldb_chksum_buffered_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t len, char *buffer, osd_off_t bufsize, chksum_t *cs1, chksum_t *cs2)
 {
   osd_off_t nblocks, i, n, nleft;
 
@@ -1671,7 +1670,7 @@ osd_off_t _chksum_buffered_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t len, 
 
   nleft = len % bufsize;
   if (nleft > 0) {
-log_printf(10, "_chksum_buffered_read: len=" I64T " bufsize=" I64T " nblocks=" I64T " nleft=" I64T "\n", len, bufsize, nblocks, nleft);
+log_printf(10, "_leveldb_chksum_buffered_read: len=" I64T " bufsize=" I64T " nblocks=" I64T " nleft=" I64T "\n", len, bufsize, nblocks, nleft);
 //ftello(fsfd->fd);
      n = n + fread(buffer, 1, nleft, fsfd->fd);
      chksum_add(cs1, nleft, buffer);
@@ -1682,27 +1681,27 @@ log_printf(10, "_chksum_buffered_read: len=" I64T " bufsize=" I64T " nblocks=" I
 }
 
 //**************************************************************************************
-// chksum_merged_write - Writes a PARTIAL block to disk with chksum information
+// leveldb_chksum_merged_write - Writes a PARTIAL block to disk with chksum information
 //  NOTE:  Assumes the block lock has already been acquired
 //**************************************************************************************
 
-osd_off_t chksum_merged_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data)
+osd_off_t leveldb_chksum_merged_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data)
 {
   char cs_value[CHKSUM_MAX_SIZE+2];
   char disk_value[CHKSUM_MAX_SIZE+2];
 //  char dummy_value[CHKSUM_MAX_SIZE+2];
-  char buffer[FS_BUF_SIZE];
+  char buffer[leveldb_BUF_SIZE];
   uint32_t block_bytes_used;
   osd_off_t n, n2, obj_offset, nbytes, bs, d, herr;
   chksum_t *cs = &(fsfd->chksum);
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
   //** Move to the start of the block
   if (block == 0) {
-     obj_offset = FS_MAGIC_HEADER;
+     obj_offset = leveldb_MAGIC_HEADER;
      bs = ocs->header_blocksize;
   } else {
-     obj_offset = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+     obj_offset = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
      bs = ocs->blocksize;
   }
 
@@ -1712,25 +1711,25 @@ osd_off_t chksum_merged_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, 
   //** Get the chksum and block bytes from disk
   nbytes = chksum_size(cs, CHKSUM_DIGEST_BIN);
   block_bytes_used = 0;
-  herr = _fs_read_block_header(fsfd, &block_bytes_used, disk_value, bs, nbytes);
+  herr = _leveldb_read_block_header(fsfd, &block_bytes_used, disk_value, bs, nbytes);
 
   if ((herr == 0) && (block_bytes_used > 0)) {  //** If it's a valid with data
     chksum_reset(cs);  //** Reset the chksum
     d = block_bytes_used;
-    _chksum_buffered_read(fs, fsfd, d, buffer, FS_BUF_SIZE, cs, NULL);  //** Read the original
+    _leveldb_chksum_buffered_read(fs, fsfd, d, buffer, leveldb_BUF_SIZE, cs, NULL);  //** Read the original
     chksum_get(cs, CHKSUM_DIGEST_BIN, cs_value);
 
     n2 = memcmp(disk_value, cs_value, nbytes);
     if (n2 != 0) {
        d = block_bytes_used;
-       log_printf(0, "chksum_merged_write(%p, " I64T ", " I64T ") original chksum mismatch! memcmp = " I64T " bbu=" I64T " off=" I64T" len=" I64T "\n",
+       log_printf(0, "leveldb_chksum_merged_write(%p, " I64T ", " I64T ") original chksum mismatch! memcmp = " I64T " bbu=" I64T " off=" I64T" len=" I64T "\n",
            fsfd, obj_offset, ocs->blocksize, n2, d, offset, len);
        n2 = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
 
        return(n2);
     }
   } else if (herr == -2) {  //** Invalid blocksize so it's a bad block
-    log_printf(0, "chksum_merged_write(%p, " I64T ", " I64T ") invalid header size!\n", fsfd, obj_offset, ocs->blocksize);
+    log_printf(0, "leveldb_chksum_merged_write(%p, " I64T ", " I64T ") invalid header size!\n", fsfd, obj_offset, ocs->blocksize);
     n2 = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
     return(n2);
   }
@@ -1740,7 +1739,7 @@ osd_off_t chksum_merged_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, 
   n = fwrite(data, 1, len, fsfd->fd);
   if (n != len) {
      d = block_bytes_used;
-     log_printf(0, "chksum_merged_write(%p, " I64T ", " I64T ") error writing data! off=" I64T" len=" I64T " n=" I64T " errno=%d\n",
+     log_printf(0, "leveldb_chksum_merged_write(%p, " I64T ", " I64T ") error writing data! off=" I64T" len=" I64T " n=" I64T " errno=%d\n",
          fsfd, obj_offset, ocs->blocksize, offset, len, n, errno);
      n2 = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
      return(n2);
@@ -1752,14 +1751,14 @@ osd_off_t chksum_merged_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, 
   fseeko(fsfd->fd, obj_offset + sizeof(uint32_t) + nbytes, SEEK_SET); //** Move to the start of the block
   chksum_reset(cs);  //** Reset the chksum
   d = block_bytes_used;
-  _chksum_buffered_read(fs, fsfd, d, buffer, FS_BUF_SIZE, cs, NULL);  //** Read the original
+  _leveldb_chksum_buffered_read(fs, fsfd, d, buffer, leveldb_BUF_SIZE, cs, NULL);  //** Read the original
   chksum_get(cs, CHKSUM_DIGEST_BIN, cs_value);
 
   //** lastly store the new header
   fseeko(fsfd->fd, obj_offset, SEEK_SET); //** Move to the start of the block
-  herr = _fs_write_block_header(fsfd, block_bytes_used, cs_value, nbytes) ;
+  herr = _leveldb_write_block_header(fsfd, block_bytes_used, cs_value, nbytes) ;
   if (herr != 0) {
-    log_printf(0, "chksum_merged_write(%p, " I64T ", " I64T ") error writing header!\n", fsfd, obj_offset, ocs->blocksize);
+    log_printf(0, "leveldb_chksum_merged_write(%p, " I64T ", " I64T ") error writing header!\n", fsfd, obj_offset, ocs->blocksize);
     n2 = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
     return(n2);
   }
@@ -1768,12 +1767,12 @@ osd_off_t chksum_merged_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, 
 }
 
 //**************************************************************************************
-// chksum_full_write - Writes a FULL block to disk with chksum information
+// leveldb_chksum_full_write - Writes a FULL block to disk with chksum information
 //  NOTE:  Assumes the block lock has already been acquired
-//         DO NOT USE for header block!  Use chksum_merged_write instead!
+//         DO NOT USE for header block!  Use leveldb_chksum_merged_write instead!
 //**************************************************************************************
 
-osd_off_t chksum_full_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, buffer_t buffer)
+osd_off_t leveldb_chksum_full_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, buffer_t buffer)
 {
   char dummy_value[CHKSUM_MAX_SIZE+2];
   char cs_value[CHKSUM_MAX_SIZE+2];
@@ -1781,7 +1780,7 @@ osd_off_t chksum_full_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, bu
   int herr;
   uint32_t block_bytes_used;
   chksum_t *cs = &(fsfd->chksum);
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
 //apr_time_t start_time, dt;
 //start_time = apr_time_now();
@@ -1792,64 +1791,64 @@ osd_off_t chksum_full_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, bu
   chksum_get(cs, CHKSUM_DIGEST_BIN, cs_value);
 
   //** Move to the correct location
-  obj_offset = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+  obj_offset = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
   fseeko(fsfd->fd, obj_offset, SEEK_SET);
 
   //** Store the data and the chksum
   nbytes = chksum_size(cs, CHKSUM_DIGEST_BIN); //** Now the chksum
   block_bytes_used = ocs->blocksize;
-  herr = _fs_write_block_header(fsfd, block_bytes_used, cs_value, nbytes);
+  herr = _leveldb_write_block_header(fsfd, block_bytes_used, cs_value, nbytes);
   n = fwrite(buffer, 1, ocs->blocksize, fsfd->fd);     //** Lastly the data
 
 //Q  posix_fadvise(fileno(fsfd->fd), obj_offset, ocs->bs_with_chksum, POSIX_FADV_DONTNEED);
 
   if ((n != ocs->blocksize) || (herr != 0)) {
-     log_printf(0, "chksum_full_write(%p, " I64T ", " I64T ") write error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, ocs->blocksize, herr);
+     log_printf(0, "leveldb_chksum_full_write(%p, " I64T ", " I64T ") write error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, ocs->blocksize, herr);
      n = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
      return(n);
   }
 
 //dt = apr_time_now() - start_time;
 chksum_get(cs, CHKSUM_DIGEST_HEX, dummy_value);
-log_printf(15, "chksum_full_write(%p, " I64T ", " I64T ") cs=%s\n", fsfd, obj_offset, ocs->blocksize, dummy_value);
+log_printf(15, "leveldb_chksum_full_write(%p, " I64T ", " I64T ") cs=%s\n", fsfd, obj_offset, ocs->blocksize, dummy_value);
 
   return(OSD_STATE_GOOD);
 }
 
 //*************************************************************
-//  fs_chksum_write - Stores data to an id given the offset and length with chksumming
+//  leveldb_leveldb_chksum_write - Stores data to an id given the offset and length with chksumming
 //*************************************************************
 
-osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buf)
+osd_off_t leveldb_leveldb_chksum_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buf)
 {
    osd_off_t start_block, end_block, start_offset, start_size, end_size, end_got;
    osd_off_t bpos, block, n, first_block, err;
    osd_off_t start_off, end_off, doff;
-   osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+   osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
    int got_last;
    char *buffer = (char *)buf;
 
    //** Map the byte range to the blocks
-   fs_mapping(fsfd, offset, len, &start_block, &end_block, &start_offset, &start_size, &end_size);
+   leveldb_mapping(fsfd, offset, len, &start_block, &end_block, &start_offset, &start_size, &end_size);
    first_block = start_block;
 
    //** Calculate the physical disk byte range for posix_fadvise
     if (start_block == 0) {
-       start_off = FS_MAGIC_HEADER;
+       start_off = leveldb_MAGIC_HEADER;
     } else {
-       start_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (start_block-1) * ocs->bs_with_chksum;
+       start_off = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (start_block-1) * ocs->bs_with_chksum;
     }
 
     //** Only need to preload the 1st and last blocks.  The middle blocks are completely overwritten.
     //** But if I do this I get crappy performance...  Weird interaction with lunix IO scheduler...
-    end_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
+    end_off = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
     doff = end_off - start_off + 1;
 #if ! ( defined(__APPLE__) && defined(__MACH__) )
     posix_fadvise(fileno(fsfd->fd), start_off, doff, POSIX_FADV_WILLNEED);
 #endif
 
-   log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T ")\n", fsfd, offset, len);
-   log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T " hbs=" I64T " bs=" I64T "\n",
+   log_printf(10, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T ")\n", fsfd, offset, len);
+   log_printf(10, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T " hbs=" I64T " bs=" I64T "\n",
       fsfd, offset, len, start_block, end_block, start_offset, start_size, end_size, fsfd->obj->fd_chksum.header_blocksize, fsfd->obj->fd_chksum.blocksize);
 
 
@@ -1859,15 +1858,15 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
    err = OSD_STATE_GOOD;
    do {
      //** Request the lock and see what we get back
-     fsfd_lock(fs, fsfd, OSD_WRITE_MODE, start_block, end_block, &end_got);
-     log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd, offset, len, start_block, end_block, end_got);
+     leveldbfd_lock(fs, fsfd, OSD_WRITE_MODE, start_block, end_block, &end_got);
+     log_printf(10, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd, offset, len, start_block, end_block, end_got);
 
      //** Now write the 1st block (if needed)
      if (bpos == 0) {
-         n = chksum_merged_write(fs, fsfd, start_block, start_offset, start_size, buffer);
-         fs_cache_remove(fs->cache, fsfd->obj->id, start_block);
+         n = leveldb_chksum_merged_write(fs, fsfd, start_block, start_offset, start_size, buffer);
+         leveldb_cache_remove(fs->cache, fsfd->obj->id, start_block);
          if (n != 0) {
-            log_printf(0, "fs_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
          }
          start_block++;
@@ -1879,10 +1878,10 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
      if (end_got == end_block) { got_last--; }
 
      for (block=start_block; block <= got_last; block++) {
-         n = chksum_full_write(fs, fsfd, block, &(buffer[bpos]));
-         fs_cache_remove(fs->cache, fsfd->obj->id, block);
+         n = leveldb_chksum_full_write(fs, fsfd, block, &(buffer[bpos]));
+         leveldb_cache_remove(fs->cache, fsfd->obj->id, block);
          if (n != 0) {
-            log_printf(0, "fs_chksum_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
          }
          bpos += fsfd->obj->fd_chksum.blocksize;
@@ -1891,32 +1890,32 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
 
      //** handle the last block
      if ((end_got == end_block) && (end_block != first_block)) {
-         n = chksum_merged_write(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
-         fs_cache_remove(fs->cache, fsfd->obj->id, end_block);
+         n = leveldb_chksum_merged_write(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
+         leveldb_cache_remove(fs->cache, fsfd->obj->id, end_block);
          if (n != 0) {
-            log_printf(0, "fs_chksum_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
          }
      }
 
      start_block = end_got + 1;
 
-//     fflush(fsfd->fd);  //** Make sure data is available for other threads  -- done in fsfd_unlock
+//     fflush(fsfd->fd);  //** Make sure data is available for other threads  -- done in leveldbfd_unlock
 
-     fsfd_unlock(fs, fsfd);
+     leveldbfd_unlock(fs, fsfd);
    } while (end_got < end_block);
 
-   log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T ")=" I64T " FINISHED\n", fsfd, offset, len, err);
+   log_printf(10, "leveldb_leveldb_chksum_write(%p, " I64T ", " I64T ")=" I64T " FINISHED\n", fsfd, offset, len, err);
 
    if (err != OSD_STATE_GOOD) {
       apr_thread_mutex_lock(fsfd->obj->lock);
       fsfd->obj->header.state = n;
       fsfd->obj->state = n;
-      fs_write_header(fsfd->fd, &(fsfd->obj->header));
+      leveldb_write_header(fsfd->fd, &(fsfd->obj->header));
       apr_thread_mutex_unlock(fsfd->obj->lock);
 
       apr_thread_mutex_lock(fs->obj_lock);
-      _insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
+      _leveldb_insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
       apr_thread_mutex_unlock(fs->obj_lock);
    }
 
@@ -1927,10 +1926,10 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
 }
 
 //*************************************************************
-//  fs_normal_write - Stores data to an id given the offset and length (no chksum)
+//  leveldb_normal_write - Stores data to an id given the offset and length (no chksum)
 //*************************************************************
 
-osd_off_t fs_normal_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer)
+osd_off_t leveldb_normal_write(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer)
 {
    osd_off_t n, err;
 
@@ -1938,12 +1937,12 @@ osd_off_t fs_normal_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
 
    fseeko(fsfd->fd, offset, SEEK_SET);
 
-log_printf(15, "fs_normal_write(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicename, fsfd, offset, len, buffer);
+log_printf(15, "leveldb_normal_write(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicename, fsfd, offset, len, buffer);
 
    err = 0;
    n = fwrite(buffer, 1, len, fsfd->fd);
    if (n != len) {
-      log_printf(0, "fs_normal_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+      log_printf(0, "leveldb_normal_write(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
       err = 1;
    }
 
@@ -1960,47 +1959,47 @@ log_printf(15, "fs_normal_write(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicena
 //  write - Stores data to an id given the offset and length
 //*************************************************************
 
-osd_off_t fs_write(osd_t *d, osd_fd_t *ofd, osd_off_t offset, osd_off_t len, buffer_t buffer)
+osd_off_t leveldb_write(osd_t *d, osd_fd_t *ofd, osd_off_t offset, osd_off_t len, buffer_t buffer)
 {
    osd_off_t err;
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)ofd;
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)ofd;
    if (fsfd == NULL) {
-      log_printf(0, "fs_write(NULL, " I64T ", " I64T ", buffer) invalid fd!\n", offset, len);
+      log_printf(0, "leveldb_write(NULL, " I64T ", " I64T ", buffer) invalid fd!\n", offset, len);
       return(-1);
    }
 
-   log_printf(10, "fs_write(%p, " I64T ", " I64T ", buffer) start!\n", fsfd, offset, len);
+   log_printf(10, "leveldb_write(%p, " I64T ", " I64T ", buffer) start!\n", fsfd, offset, len);
 
    err = fsfd->obj->write(fs, fsfd, offset, len, buffer);
    if (err == 0) err = len;
-   log_printf(10, "fs_write(%p, " I64T ", " I64T ", buffer)=" I64T " end!\n", fsfd, offset, len, err);
+   log_printf(10, "leveldb_write(%p, " I64T ", " I64T ", buffer)=" I64T " end!\n", fsfd, offset, len, err);
 
    return(err);
 }
 
 //**************************************************************************************
-//  chksum_direct_read - Reads a chksum block but bypasses the chksum validation.
+//  leveldb_chksum_direct_read - Reads a chksum block but bypasses the chksum validation.
 //     Designed for use with caching of recently verified blocks
 //**************************************************************************************
 
-osd_off_t chksum_direct_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data_ptr)
+osd_off_t leveldb_chksum_direct_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data_ptr)
 {
   char *data = (char *)data_ptr;
   osd_off_t obj_offset;
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
   osd_off_t n;
 
   //** Move to the start of the block
   if (block == 0) {
-     obj_offset = FS_MAGIC_HEADER;
+     obj_offset = leveldb_MAGIC_HEADER;
   } else {
-     obj_offset = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+     obj_offset = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
   }
 
   obj_offset += offset + chksum_size(&(fsfd->chksum), CHKSUM_DIGEST_BIN) + sizeof(uint32_t);
 
-log_printf(10, "chksum_direct_read(%p) off=" OT " len=" OT "\n", fsfd, offset, len);
+log_printf(10, "leveldb_chksum_direct_read(%p) off=" OT " len=" OT "\n", fsfd, offset, len);
 
   fseeko(fsfd->fd, obj_offset, SEEK_SET);
 
@@ -2013,49 +2012,49 @@ log_printf(10, "chksum_direct_read(%p) off=" OT " len=" OT "\n", fsfd, offset, l
 
 
 //**************************************************************************************
-// chksum_merged_read - Read a PARTIAL block to disk with chksum information
+// leveldb_chksum_merged_read - Read a PARTIAL block to disk with chksum information
 //  NOTE:  Assumes the block lock has already been acquired
 //**************************************************************************************
 
-osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data_ptr)
+osd_off_t leveldb_chksum_merged_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, osd_off_t offset, osd_off_t len, buffer_t data_ptr)
 {
   char cs_value[CHKSUM_MAX_SIZE], disk_value[CHKSUM_MAX_SIZE];
-  char buffer[FS_BUF_SIZE];
+  char buffer[leveldb_BUF_SIZE];
   char *data = (char *)data_ptr;
   int herr;
   uint32_t block_bytes_used;
   osd_off_t n, obj_offset, nbytes, bs, nleft, off, len2;
   chksum_t *cs = &(fsfd->chksum);
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
 //memset(data, 0, len);
 
   //** Move to the start of the block
   if (block == 0) {
-     obj_offset = FS_MAGIC_HEADER;
+     obj_offset = leveldb_MAGIC_HEADER;
      bs = ocs->header_blocksize;
   } else {
-     obj_offset = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+     obj_offset = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
      bs = ocs->blocksize;
   }
 
   fseeko(fsfd->fd, obj_offset, SEEK_SET);
 
-//log_printf(5, "chksum_merged_read: block=" I64T " fpos=" I64T " len=" I64T "\n", block, obj_offset, len); flush_log();
+//log_printf(5, "leveldb_chksum_merged_read: block=" I64T " fpos=" I64T " len=" I64T "\n", block, obj_offset, len); flush_log();
 
   chksum_reset(cs);  //** Reset the chksum
 
   //** Get the chksum and block bytes from disk
   block_bytes_used = 0;
   nbytes = chksum_size(cs, CHKSUM_DIGEST_BIN);
-  herr = _fs_read_block_header(fsfd, &block_bytes_used, disk_value, bs, nbytes);
+  herr = _leveldb_read_block_header(fsfd, &block_bytes_used, disk_value, bs, nbytes);
 
 //  nblocks = block_bytes_used;
-//  log_printf(10, "chksum_merged_read(%p, b=" I64T ", o=" I64T ", l=" I64T " oo=" I64T ", bs=" I64T ", csl=" I64T ") after initial chksum read herr=%d bytes_used=" I64T "\n",
+//  log_printf(10, "leveldb_chksum_merged_read(%p, b=" I64T ", o=" I64T ", l=" I64T " oo=" I64T ", bs=" I64T ", csl=" I64T ") after initial chksum read herr=%d bytes_used=" I64T "\n",
 //       fsfd, block, offset, len, obj_offset, ocs->blocksize, nbytes, herr, nblocks);
 
   if (herr != 0) {  //** Either a disk error or more likely this block is empty
-     log_printf(10, "chksum_merged_read(%p, " I64T ", " I64T ") ERROR after header read herr=%d\n", fsfd, obj_offset, ocs->blocksize, herr);
+     log_printf(10, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") ERROR after header read herr=%d\n", fsfd, obj_offset, ocs->blocksize, herr);
   }
 
 
@@ -2065,9 +2064,9 @@ osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, o
   n = 0;
 
   //** Read in any data before the "read" start position
-  n = n + _chksum_buffered_read(fs, fsfd, off, buffer, FS_BUF_SIZE, cs, NULL);
+  n = n + _leveldb_chksum_buffered_read(fs, fsfd, off, buffer, leveldb_BUF_SIZE, cs, NULL);
 
-//log_printf(10, "chksum_merged_read(%p, " I64T ", " I64T ") after pre-read n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
+//log_printf(10, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") after pre-read n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
 
   if (offset < block_bytes_used) {  //** Siphon the requested data if available
      off = offset + len;
@@ -2078,15 +2077,15 @@ osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, o
         memset(&(data[len2]), 0, off);
      }
      chksum_add(cs, len2, data);  //** Only chksum the available data
-//log_printf(10, "chksum_merged_read(%p, " I64T ", " I64T ") after siphon n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
+//log_printf(10, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") after siphon n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
 
      //** Read in the rest of block if available
      off = offset + len;
      bs = (off > block_bytes_used) ? off : block_bytes_used;
      nleft = bs - offset - len;
-     n = n + _chksum_buffered_read(fs, fsfd, nleft, buffer, FS_BUF_SIZE, cs, NULL);
+     n = n + _leveldb_chksum_buffered_read(fs, fsfd, nleft, buffer, leveldb_BUF_SIZE, cs, NULL);
 
-//log_printf(10, "chksum_merged_read(%p, " I64T ", " I64T ") after post-read n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
+//log_printf(10, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") after post-read n=" I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
 
   } else { //** Nothing to read so fill with blanks
      memset(data, 0, len);
@@ -2095,7 +2094,7 @@ osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, o
 
   if (block_bytes_used > 0) { //** Valid chksum stored
      if ((n != bs) && (herr != 0)) {
-        log_printf(0, "chksum_merged_read(%p, " I64T ", " I64T ") read error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, bs, herr);
+        log_printf(0, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") read error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, bs, herr);
         n = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
         return(n);
      }
@@ -2104,7 +2103,7 @@ osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, o
 
      n = memcmp(disk_value, cs_value, chksum_size(&(ocs->chksum), CHKSUM_DIGEST_BIN));
      if (n != 0) {
-        log_printf(0, "chksum_merged_read(%p, " I64T ", " I64T ") chksum mismatch! memcmp = " I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
+        log_printf(0, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") chksum mismatch! memcmp = " I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
         n = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
         return(n);
      }
@@ -2114,12 +2113,12 @@ osd_off_t chksum_merged_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, o
 }
 
 //**************************************************************************************
-// chksum_full_read - Read a FULL block to disk with chksum information
+// leveldb_chksum_full_read - Read a FULL block to disk with chksum information
 //  NOTE:  Assumes the block lock has already been acquired
-//         DO NOT USE for header block!  Use chksum_merged_read instead!
+//         DO NOT USE for header block!  Use leveldb_chksum_merged_read instead!
 //**************************************************************************************
 
-osd_off_t chksum_full_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, buffer_t buf)
+osd_off_t leveldb_chksum_full_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t block, buffer_t buf)
 {
   char cs_value[CHKSUM_MAX_SIZE+2], disk_value[CHKSUM_MAX_SIZE+2];
   char *buffer  =(char *)buf;
@@ -2127,7 +2126,7 @@ osd_off_t chksum_full_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, buf
   uint32_t block_bytes_used;
   osd_off_t n, obj_offset, nbytes, nleft;
   chksum_t *cs = &(fsfd->chksum);
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
 //memset(buffer, 0, ocs->blocksize);
 
@@ -2135,15 +2134,15 @@ osd_off_t chksum_full_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t block, buf
   chksum_reset(cs);
 
   //** Move to the correct location
-  obj_offset = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+  obj_offset = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
   fseeko(fsfd->fd, obj_offset, SEEK_SET);
 
-log_printf(0, "chksum_full_read: block=" I64T " fpos=" I64T "\n", block, obj_offset); flush_log();
+log_printf(0, "leveldb_chksum_full_read: block=" I64T " fpos=" I64T "\n", block, obj_offset); flush_log();
 
   //** Read the data and the chksum
   block_bytes_used = 0;
   nbytes = chksum_size(cs, CHKSUM_DIGEST_BIN);
-  herr = _fs_read_block_header(fsfd, &block_bytes_used, disk_value, ocs->blocksize, nbytes);
+  herr = _leveldb_read_block_header(fsfd, &block_bytes_used, disk_value, ocs->blocksize, nbytes);
 
   n = 0;
   if (block_bytes_used > 0) n = fread(buffer, 1, block_bytes_used, fsfd->fd);
@@ -2154,7 +2153,7 @@ log_printf(0, "chksum_full_read: block=" I64T " fpos=" I64T "\n", block, obj_off
 
   if ((n != block_bytes_used) || (herr != 0)) {
      nbytes = block_bytes_used;
-     log_printf(10, "chksum_full_read(%p, " I64T ", " I64T ") read error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, nbytes, herr);
+     log_printf(10, "leveldb_chksum_full_read(%p, " I64T ", " I64T ") read error = %d n=" I64T " should be=" I64T " herr=%d\n", fsfd, obj_offset, ocs->blocksize, errno, n, nbytes, herr);
      n = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
      return(n);
   }
@@ -2164,7 +2163,7 @@ log_printf(0, "chksum_full_read: block=" I64T " fpos=" I64T "\n", block, obj_off
 
      n = memcmp(disk_value, cs_value, nbytes);
      if (n != 0) {
-        log_printf(10, "chksum_merged_read(%p, " I64T ", " I64T ") chksum mismatch! memcmp = " I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
+        log_printf(10, "leveldb_chksum_merged_read(%p, " I64T ", " I64T ") chksum mismatch! memcmp = " I64T "\n", fsfd, obj_offset, ocs->blocksize, n);
         n = (block == 0) ? OSD_STATE_BAD_HEADER : OSD_STATE_BAD_BLOCK;
         return(n);
      }
@@ -2175,10 +2174,10 @@ log_printf(0, "chksum_full_read: block=" I64T " fpos=" I64T "\n", block, obj_off
 
 
 //*************************************************************
-//  fs_normal_read - Reads data from the id given at offset and length (no chksum)
+//  leveldb_normal_read - Reads data from the id given at offset and length (no chksum)
 //*************************************************************
 
-osd_off_t fs_normal_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer)
+osd_off_t leveldb_normal_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buffer)
 {
    osd_off_t n, err;
 
@@ -2190,12 +2189,12 @@ osd_off_t fs_normal_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
 
    fseeko(fsfd->fd, offset, SEEK_SET);
 
-log_printf(10, "fs_normal_read(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicename, fsfd, offset, len, buffer);
+log_printf(10, "leveldb_normal_read(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicename, fsfd, offset, len, buffer);
 
    err = 0;
    n = fread(buffer, 1, len, fsfd->fd);
    if (n != len) {
-      log_printf(0, "fs_normal_read(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+      log_printf(0, "leveldb_normal_read(%p, " I64T ", " I64T ") write error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
       err = 1;
    }
 
@@ -2205,40 +2204,40 @@ log_printf(10, "fs_normal_read(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicenam
 }
 
 //*************************************************************
-//  fs_chksum_read - Reads data from the id given at offset and length with chksumming
+//  leveldb_leveldb_chksum_read - Reads data from the id given at offset and length with chksumming
 //*************************************************************
 
-osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buf)
+osd_off_t leveldb_leveldb_chksum_read(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, osd_off_t offset, osd_off_t len, buffer_t buf)
 {
    osd_off_t start_block, end_block, start_offset, start_size, end_size;
    osd_off_t bpos, block, end_got, n,  first_block, err;
    osd_off_t start_off, end_off, doff;
    int got_last;
    char *buffer = (char *)buf;
-   osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+   osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
 //memset(buffer, 0, len);
 
    n = 0;
 
    //** Map the byte range to the blocks
-   fs_mapping(fsfd, offset, len, &start_block, &end_block, &start_offset, &start_size, &end_size);
+   leveldb_mapping(fsfd, offset, len, &start_block, &end_block, &start_offset, &start_size, &end_size);
    first_block = start_block;
 
    //** Calculate the physical disk byte range for posix_fadvise
     if (start_block == 0) {
-       start_off = FS_MAGIC_HEADER;
+       start_off = leveldb_MAGIC_HEADER;
     } else {
-       start_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (start_block-1) * ocs->bs_with_chksum;
+       start_off = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (start_block-1) * ocs->bs_with_chksum;
     }
-    end_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
+    end_off = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
     doff = end_off - start_off + 1;
 #if ! ( defined(__APPLE__) && defined(__MACH__) )
     posix_fadvise(fileno(fsfd->fd), start_off, doff, POSIX_FADV_WILLNEED);
 #endif
 
-   log_printf(10, "fs_chksum_read(%p, " I64T ", " I64T ")\n", fsfd->fd, offset, len);
-   log_printf(10, "fs_chksum_read(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T "\n",
+   log_printf(10, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ")\n", fsfd->fd, offset, len);
+   log_printf(10, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T "\n",
       fsfd, offset, len, start_block, end_block, start_offset, start_size, end_size);
 
    bpos = 0;
@@ -2246,21 +2245,21 @@ osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
    err = OSD_STATE_GOOD;
    do {
      //** Request the lock and see what we get back
-     fsfd_lock(fs, fsfd, OSD_READ_MODE, start_block, end_block, &end_got);
+     leveldbfd_lock(fs, fsfd, OSD_READ_MODE, start_block, end_block, &end_got);
 
-     log_printf(10, "fs_chksum_read(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd, offset, len, start_block, end_block, end_got);
+     log_printf(10, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd, offset, len, start_block, end_block, end_got);
 
      //** Now read the 1st block (if needed)
      if (bpos == 0) {
-         if (fs_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
-            n = chksum_direct_read(fs, fsfd, start_block, start_offset, start_size, buffer);
-            if (n != 0) fs_cache_remove(fs->cache, fsfd->obj->id, start_block);
+         if (leveldb_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
+            n = leveldb_chksum_direct_read(fs, fsfd, start_block, start_offset, start_size, buffer);
+            if (n != 0) leveldb_cache_remove(fs->cache, fsfd->obj->id, start_block);
          } else {
-            n = chksum_merged_read(fs, fsfd, start_block, start_offset, start_size, buffer);
-            if (n == 0) fs_cache_add(fs->cache, fsfd->obj->id, start_block);
+            n = leveldb_chksum_merged_read(fs, fsfd, start_block, start_offset, start_size, buffer);
+            if (n == 0) leveldb_cache_add(fs->cache, fsfd->obj->id, start_block);
          }
          if (n != 0) {
-            log_printf(0, "fs_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
          }
          start_block++;
@@ -2272,15 +2271,15 @@ osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
 
      for (block=start_block; block <= got_last; block++) {
 //log_printf(10, "11111111111111111111\n");
-         if (fs_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
-            n = chksum_direct_read(fs, fsfd, block, 0, ocs->blocksize, &(buffer[bpos]));
-            if (n != 0) fs_cache_remove(fs->cache, fsfd->obj->id, start_block);
+         if (leveldb_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
+            n = leveldb_chksum_direct_read(fs, fsfd, block, 0, ocs->blocksize, &(buffer[bpos]));
+            if (n != 0) leveldb_cache_remove(fs->cache, fsfd->obj->id, start_block);
          } else {
-            n = chksum_full_read(fs, fsfd, block, &(buffer[bpos]));
-            if (n == 0) fs_cache_add(fs->cache, fsfd->obj->id, start_block);
+            n = leveldb_chksum_full_read(fs, fsfd, block, &(buffer[bpos]));
+            if (n == 0) leveldb_cache_add(fs->cache, fsfd->obj->id, start_block);
          }
          if (n != 0) {
-            log_printf(0, "fs_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
          }
          bpos += fsfd->obj->fd_chksum.blocksize;
@@ -2290,33 +2289,33 @@ osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
      //** handle the last block
      if ((end_got == end_block) && (end_block != first_block)) {
 //log_printf(10, "2222222222222222\n");
-// log_printf(10, "22222222222222fs_chksum_read(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd->fd, offset, len, start_block, end_block, end_got);
-         if (fs_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
-            n = chksum_direct_read(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
+// log_printf(10, "22222222222222leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ") sb=" I64T " eb=" I64T " end_got=" I64T "\n", fsfd->fd, offset, len, start_block, end_block, end_got);
+         if (leveldb_direct_cache_read(fs->cache, fsfd->obj->id, start_block) == 1) {
+            n = leveldb_chksum_direct_read(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
          } else {
-            n = chksum_merged_read(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
+            n = leveldb_chksum_merged_read(fs, fsfd, end_block, 0, end_size, &(buffer[bpos]));
          }
          if (n != 0) {
-            log_printf(0, "fs_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
+            log_printf(0, "leveldb_leveldb_chksum_read(%p, " I64T ", " I64T ") read error = %d n=" I64T "\n", fsfd, offset, len, errno, n);
             err = n;
-            fs_cache_remove(fs->cache, fsfd->obj->id, end_block);
+            leveldb_cache_remove(fs->cache, fsfd->obj->id, end_block);
          }
      }
 
      start_block = end_got + 1;
 
-     fsfd_unlock(fs, fsfd);
+     leveldbfd_unlock(fs, fsfd);
    } while (end_got < end_block);
 
    if (err != OSD_STATE_GOOD) {
       apr_thread_mutex_lock(fsfd->obj->lock);
       fsfd->obj->header.state = n;
       fsfd->obj->state = n;
-      fs_write_header(fsfd->fd, &(fsfd->obj->header));
+      leveldb_write_header(fsfd->fd, &(fsfd->obj->header));
       apr_thread_mutex_unlock(fsfd->obj->lock);
 
       apr_thread_mutex_lock(fs->obj_lock);
-      _insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
+      _leveldb_insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
       apr_thread_mutex_unlock(fs->obj_lock);
    }
 
@@ -2328,39 +2327,39 @@ osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
 //  read - Reads data from the id given at offset and length
 //*************************************************************
 
-osd_off_t fs_read(osd_t *d, osd_fd_t *ofd, osd_off_t offset, osd_off_t len, buffer_t buffer)
+osd_off_t leveldb_read(osd_t *d, osd_fd_t *ofd, osd_off_t offset, osd_off_t len, buffer_t buffer)
 {
    osd_off_t err;
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)ofd;
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)ofd;
    if (fsfd == NULL) {
-      log_printf(0, "fs_write(NULL, " I64T ", " I64T ", buffer) invalid fd!\n", offset, len);
+      log_printf(0, "leveldb_write(NULL, " I64T ", " I64T ", buffer) invalid fd!\n", offset, len);
       return(-1);
    }
 
-   log_printf(10, "fs_read(%p, " I64T ", " I64T ", buffer) start!\n", fsfd, offset, len);
+   log_printf(10, "leveldb_read(%p, " I64T ", " I64T ", buffer) start!\n", fsfd, offset, len);
 
    err = fsfd->obj->read(fs, fsfd, offset, len, buffer);
    if (err == 0) err = len;
 
-   log_printf(10, "fs_read(%p, " I64T ", " I64T ", buffer)=" I64T " end!\n", fsfd, offset, len, err);
+   log_printf(10, "leveldb_read(%p, " I64T ", " I64T ", buffer)=" I64T " end!\n", fsfd, offset, len, err);
 
    return(err);
 }
 
 //*************************************************************
-//  fs_chksum_info - Retreives the objects chksum info
+//  leveldb_leveldb_chksum_info - Retreives the objects chksum info
 //    If no chksum info is available 1 is returned
 //*************************************************************
 
-int fs_chksum_info(osd_t *d, osd_id_t id, int *cs_type, osd_off_t *header_blocksize, osd_off_t *blocksize)
+int leveldb_leveldb_chksum_info(osd_t *d, osd_id_t id, int *cs_type, osd_off_t *header_blocksize, osd_off_t *blocksize)
 {
-   osd_fs_chksum_t *fcs;
+   osd_leveldb_chksum_t *fcs;
    int err;
-log_printf(15, "fs_chksum_info: start id=" LU "\n", id); flush_log();
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
+log_printf(15, "leveldb_leveldb_chksum_info: start id=" LU "\n", id); flush_log();
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, OSD_READ_MODE);
 
-log_printf(15, "fs_chksum_info: after open id=" LU "\n", id); flush_log();
+log_printf(15, "leveldb_leveldb_chksum_info: after open id=" LU "\n", id); flush_log();
 
    *cs_type = CHKSUM_NONE;
    *header_blocksize = 0;
@@ -2379,48 +2378,48 @@ log_printf(15, "fs_chksum_info: after open id=" LU "\n", id); flush_log();
    }
 
 
-   fs_close(d, (osd_fd_t *)fsfd);
+   leveldb_close(d, (osd_fd_t *)fsfd);
 
-log_printf(15, "fs_chksum_info: end id=" LU " cs_type=%d\n", id, *cs_type); flush_log();
+log_printf(15, "leveldb_leveldb_chksum_info: end id=" LU " cs_type=%d\n", id, *cs_type); flush_log();
 
    return(err);
 }
 
 //*************************************************************
-//  fs_get_chksum - Retreives the chksum data and stores it in the provided buffer
+//  leveldb_get_leveldb_chksum - Retreives the chksum data and stores it in the provided buffer
 //     If the buffer is too small a value of the needed buffer size is returned
 //     as a negative number. Otherwise the number of bytes used is returned
 //*************************************************************
 
-osd_off_t fs_get_chksum(osd_t *d, osd_id_t id, char *disk_buffer, char *calc_buffer, osd_off_t buffer_size, osd_off_t *block_len,
+osd_off_t leveldb_get_leveldb_chksum(osd_t *d, osd_id_t id, char *disk_buffer, char *calc_buffer, osd_off_t buffer_size, osd_off_t *block_len,
     char *good_block, osd_off_t start_block, osd_off_t end_block)
 {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
-  osd_fs_chksum_t *fcs;
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+  osd_leveldb_chksum_t *fcs;
   osd_off_t fpos, bpos, slot, n, end_got, block, got_block;
   int cs_size, state, flag_corrupt;
   uint32_t block_bytes_used;
   char disk_value[CHKSUM_MAX_SIZE], calc_value[CHKSUM_MAX_SIZE];
-  char chksum_buffer[FS_BUF_SIZE];
+  char chksum_buffer[leveldb_BUF_SIZE];
 //char hex_buffer[CHKSUM_MAX_SIZE];
 
-//log_printf(0, "fs_get_chksum: 00000000000000000\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 00000000000000000\n"); flush_log();
 
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, OSD_READ_MODE);
    if (fsfd == NULL) return(0);
 
    fcs = &(fsfd->obj->fd_chksum);
 
    if (fcs->is_valid == 0) {  //** No chksum available so return
-      fs_close(d, (osd_fd_t *)fsfd);
+      leveldb_close(d, (osd_fd_t *)fsfd);
       return(0);
    }
 
    cs_size = chksum_size(&(fcs->chksum), CHKSUM_DIGEST_BIN);
    n = cs_size*(end_block - start_block + 1);
    if ((buffer_size < n) && ((disk_buffer != NULL) || (calc_buffer != NULL))) {
-      log_printf(0, "fs_get_chksum: buffer too small size=" I64T " need=" I64T "\n", buffer_size, n);
-      fs_close(d, (osd_fd_t *)fsfd);
+      log_printf(0, "leveldb_get_leveldb_chksum: buffer too small size=" I64T " need=" I64T "\n", buffer_size, n);
+      leveldb_close(d, (osd_fd_t *)fsfd);
       return(-n);
    }
 
@@ -2429,38 +2428,38 @@ osd_off_t fs_get_chksum(osd_t *d, osd_id_t id, char *disk_buffer, char *calc_buf
    bpos = 0;
    slot = 0;
 
-//log_printf(0, "fs_get_chksum: 1111111111111111111111\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 1111111111111111111111\n"); flush_log();
 
    //** Get the header 1st if needed
    if (start_block == 0) {
-//log_printf(0, "fs_get_chksum: 22222222222222222222\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 22222222222222222222\n"); flush_log();
 
-      fpos = FS_MAGIC_HEADER;
+      fpos = leveldb_MAGIC_HEADER;
       fseeko(fsfd->fd, fpos, SEEK_SET);
 
       block_bytes_used = -1;
       n = fread(&block_bytes_used, 1, sizeof(uint32_t), fsfd->fd);
       if (block_len != 0) block_len[slot] = block_bytes_used;
       if (n != sizeof(uint32_t)) {
-         log_printf(0, "fs_get_chksum: Error reading header block_bytes_used! id=" LU " n=" I64T "\n", id, n);
+         log_printf(0, "leveldb_get_leveldb_chksum: Error reading header block_bytes_used! id=" LU " n=" I64T "\n", id, n);
       }
 
-      fsfd_lock(fs, fsfd, OSD_READ_MODE, 0, 0, &got_block);
+      leveldbfd_lock(fs, fsfd, OSD_READ_MODE, 0, 0, &got_block);
       n = fread(disk_value, 1, cs_size, fsfd->fd);
       if (disk_buffer != NULL) memcpy(&(disk_buffer[bpos]), disk_value, cs_size);
-      fsfd_unlock(fs, fsfd);
+      leveldbfd_unlock(fs, fsfd);
       if (n != cs_size) {
-         log_printf(0, "fs_get_chksum: Error reading header chksum! id=" LU "\n", id);
+         log_printf(0, "leveldb_get_leveldb_chksum: Error reading header chksum! id=" LU "\n", id);
       }
 
-//log_printf(0, "fs_get_chksum: 333333333333333333333333333\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 333333333333333333333333333\n"); flush_log();
 
 
-//log_printf(0, "fs_get_chksum: 4444444444444444444444\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 4444444444444444444444\n"); flush_log();
 
       //** Lastly see if we need to verify the chksum
       if ((good_block != NULL) || (calc_buffer != NULL)) {
-         state = _fs_calculate_chksum(fs, fsfd, &(fsfd->chksum), start_block, chksum_buffer, FS_BUF_SIZE, calc_value, 0);
+         state = _leveldb_calculate_chksum(fs, fsfd, &(fsfd->chksum), start_block, chksum_buffer, leveldb_BUF_SIZE, calc_value, 0);
          if (good_block != NULL) good_block[slot] = state;
          if (calc_buffer != NULL) memcpy(&(calc_buffer[bpos]), calc_value, cs_size);
       }
@@ -2470,47 +2469,47 @@ osd_off_t fs_get_chksum(osd_t *d, osd_id_t id, char *disk_buffer, char *calc_buf
       start_block++;
    }
 
-//log_printf(0, "fs_get_chksum: 555555555555555555555555555\n"); flush_log();
+//log_printf(0, "leveldb_get_leveldb_chksum: 555555555555555555555555555\n"); flush_log();
 
    if (end_block == 0) {   //** Exit if only reading the header
-      fs_close(d, (osd_fd_t *)fsfd);
+      leveldb_close(d, (osd_fd_t *)fsfd);
       return(bpos);
    }
-log_printf(5, "fs_get_chksum: start_block=" I64T "\n", start_block); flush_log();
+log_printf(5, "leveldb_get_leveldb_chksum: start_block=" I64T "\n", start_block); flush_log();
 
    //** Now cycle through the blocks
-   fpos = FS_MAGIC_HEADER + fcs->hbs_with_chksum;  //** Get the starting pos
+   fpos = leveldb_MAGIC_HEADER + fcs->hbs_with_chksum;  //** Get the starting pos
    fpos = fpos + (start_block-1) * fcs->bs_with_chksum;
    do {
      //** Request the lock and see what we get back
-     fsfd_lock(fs, fsfd, OSD_READ_MODE, start_block, end_block, &end_got);
+     leveldbfd_lock(fs, fsfd, OSD_READ_MODE, start_block, end_block, &end_got);
 
      for (block=start_block; block <= end_got; block++) {
         fseeko(fsfd->fd, fpos, SEEK_SET);
-log_printf(5, "fs_get_chksum: block=" I64T " fpos=" I64T "\n", block, fpos); flush_log();
+log_printf(5, "leveldb_get_leveldb_chksum: block=" I64T " fpos=" I64T "\n", block, fpos); flush_log();
 
         block_bytes_used = -1;
         n = fread(&block_bytes_used, 1, sizeof(uint32_t), fsfd->fd);
         if (block_len != 0) block_len[slot] = block_bytes_used;
         if (n != sizeof(uint32_t)) {
-           log_printf(0, "fs_get_chksum: Error reading block block_bytes_used! id=" LU " block=" I64T "\n", id, block);
+           log_printf(0, "leveldb_get_leveldb_chksum: Error reading block block_bytes_used! id=" LU " block=" I64T "\n", id, block);
         }
 
         n = fread(disk_value, 1, cs_size, fsfd->fd);
         if (disk_buffer != NULL) memcpy(&(disk_buffer[bpos]), disk_value, cs_size);
         if (n != cs_size) {
-           log_printf(0, "fs_get_chksum: Error reading block chksum! id=" LU " block=" I64T " err=" I64T "\n", id, block, n);
+           log_printf(0, "leveldb_get_leveldb_chksum: Error reading block chksum! id=" LU " block=" I64T " err=" I64T "\n", id, block, n);
         }
 
 //convert_bin2hex(cs_size, (unsigned char *)disk_value, hex_buffer);
-//log_printf(5, "fs_get_chksum: block=" I64T " dcs=%s\n", block, hex_buffer);
+//log_printf(5, "leveldb_get_leveldb_chksum: block=" I64T " dcs=%s\n", block, hex_buffer);
 
         //** Lastly see if we need to verify the chksum
         if ((good_block != NULL) || (calc_buffer != NULL)) {
-           state = _fs_calculate_chksum(fs, fsfd, &(fsfd->chksum), block, chksum_buffer, FS_BUF_SIZE, calc_value, 0);
+           state = _leveldb_calculate_chksum(fs, fsfd, &(fsfd->chksum), block, chksum_buffer, leveldb_BUF_SIZE, calc_value, 0);
            if (state != 0) flag_corrupt = 1;
 //convert_bin2hex(cs_size, (unsigned char *)calc_value, hex_buffer);
-//log_printf(5, "fs_get_chksum: block=" I64T " ccs=%s\n", block, hex_buffer);
+//log_printf(5, "leveldb_get_leveldb_chksum: block=" I64T " ccs=%s\n", block, hex_buffer);
            if (good_block != NULL) good_block[slot] = state;
            if (calc_buffer != NULL) memcpy(&(calc_buffer[bpos]), calc_value, cs_size);
         }
@@ -2521,26 +2520,26 @@ log_printf(5, "fs_get_chksum: block=" I64T " fpos=" I64T "\n", block, fpos); flu
      }
      start_block = end_got + 1;
 
-     fsfd_unlock(fs, fsfd);
+     leveldbfd_unlock(fs, fsfd);
    } while (end_got < end_block);
 
    if (flag_corrupt != 0) {
       apr_thread_mutex_lock(fs->obj_lock);
-      _insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
+      _leveldb_insert_corrupt_hash(fs, fsfd->obj->id, "chksum");
       apr_thread_mutex_unlock(fs->obj_lock);
    }
 
-   fs_close(d, (osd_fd_t *)fsfd);
+   leveldb_close(d, (osd_fd_t *)fsfd);
 
    return(bpos);
 }
 
 //*************************************************************
-//  _fs_calculate_block_chksum - Calculates the chksum for the given block
+//  _leveldb_calculate_block_leveldb_chksum - Calculates the chksum for the given block
 //     Assumes the caller has the appropriate lock on the data
 //*************************************************************
 
-int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_t block,
+int _leveldb_calculate_chksum(osd_leveldb_t *fs, osd_leveldb_fd_t *fsfd, chksum_t *cs, osd_off_t block,
     char *buffer, osd_off_t bufsize, char *calc_value, int correct_errors)
 {
   char cs_value[CHKSUM_MAX_SIZE];
@@ -2548,15 +2547,15 @@ int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_
   uint32_t block_bytes_used, max_block;
   osd_off_t fpos, nblocks, nleft, n, nbytes;
   int cs_size, err;
-  osd_fs_chksum_t *ocs = &(fsfd->obj->fd_chksum);
+  osd_leveldb_chksum_t *ocs = &(fsfd->obj->fd_chksum);
 
   err = 0;
 
   if (block == 0) {
-     fpos = FS_MAGIC_HEADER;
+     fpos = leveldb_MAGIC_HEADER;
      max_block = ocs->header_blocksize;
   } else {
-     fpos = FS_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
+     fpos = leveldb_MAGIC_HEADER + ocs->hbs_with_chksum + (block-1) * ocs->bs_with_chksum;
      max_block = ocs->blocksize;
   }
 
@@ -2571,7 +2570,7 @@ int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_
   n = n + fread(disk_value, 1, cs_size, fsfd->fd);
   nbytes = cs_size + sizeof(uint32_t);
   if (n != nbytes) {
-     log_printf(0, "_fs_calculate_chksum: Error reading chksum information:  fread=" I64T "\n", n);
+     log_printf(0, "_leveldb_calculate_chksum: Error reading chksum information:  fread=" I64T "\n", n);
      return(1);
   } else if (block_bytes_used > max_block) {
      block_bytes_used = max_block;
@@ -2592,7 +2591,7 @@ int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_
   }
 
   if (n != block_bytes_used) {
-     log_printf(0, "_fs_calculate_chksum: Error reading chksum information:  fread=" I64T "\n", n);
+     log_printf(0, "_leveldb_calculate_chksum: Error reading chksum information:  fread=" I64T "\n", n);
      return(1);
   }
 
@@ -2604,14 +2603,14 @@ int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_
      n = memcmp(disk_value, cs_value, cs_size);
      if (n != 0) {
         nblocks = block_bytes_used;
-        log_printf(10, "_fs_calculate_chksum mismatch! memcmp = " I64T " id=" LU " offset=" I64T " block_bytes=" I64T "\n", n, fsfd->obj->id, fpos, nblocks);
+        log_printf(10, "_leveldb_calculate_chksum mismatch! memcmp = " I64T " id=" LU " offset=" I64T " block_bytes=" I64T "\n", n, fsfd->obj->id, fpos, nblocks);
 
         if (correct_errors == 1) { //** Correct it if they want
            fpos = fpos + sizeof(uint32_t);
            fseeko(fsfd->fd, fpos, SEEK_SET); //** Move to the start of the block
            n = fwrite(cs_value, 1, cs_size, fsfd->fd);
            if (n != cs_size) {
-              log_printf(0, "_fs_calculate_chksum: Error storing corrected chksum information:  fwrite=" I64T "\n", n);
+              log_printf(0, "_leveldb_calculate_chksum: Error storing corrected chksum information:  fwrite=" I64T "\n", n);
               if (err == 0) return(3);  //** err could be -1 due to a blocksize error so the chksum could be using the wrong size
            }
 
@@ -2628,55 +2627,55 @@ int _fs_calculate_chksum(osd_fs_t *fs, osd_fs_fd_t *fsfd, chksum_t *cs, osd_off_
 
 
 //*************************************************************
-//  fs_validate_chksum - Reads the entire object verifying the chksum data.
+//  leveldb_validate_leveldb_chksum - Reads the entire object verifying the chksum data.
 //     If correct_errors = 1 any errors encountered are corrected.
 //     The block error count is returned or 0 if no errors occured.
 //     A negative value represents a disk or other internal error.
 //*************************************************************
 
-int fs_validate_chksum(osd_t *d, osd_id_t id, int correct_errors)
+int leveldb_validate_leveldb_chksum(osd_t *d, osd_id_t id, int correct_errors)
 {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
-   osd_fs_chksum_t *fcs;
-   char buffer[FS_BUF_SIZE];
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
+   osd_leveldb_chksum_t *fcs;
+   char buffer[leveldb_BUF_SIZE];
    osd_off_t block, start_block, end_block, end_got, nbytes, n;
    int err, errcnt, mode;
 
    //** Open the allocation in the appropriate mode
    mode = (correct_errors == 0) ? OSD_READ_MODE : OSD_WRITE_MODE;
-   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, mode);
+   osd_leveldb_fd_t *fsfd = (osd_leveldb_fd_t *)leveldb_open(d, id, mode);
    if (fsfd == NULL) return(0);
 
    fcs = &(fsfd->obj->fd_chksum);
 
    if (fcs->is_valid == 0) {  //** Chksum is disabled so return
-      fs_close(d, (osd_fd_t *)fsfd);
+      leveldb_close(d, (osd_fd_t *)fsfd);
       return(0);
    }
 
    //** Find out how many bytes there are and the corresponding number of blocks
    fseeko(fsfd->fd, 0, SEEK_END);
    nbytes = ftell(fsfd->fd);
-   n = fs_offset_p2l(fs, fsfd, nbytes) - fcs->header_blocksize;
+   n = leveldb_offset_p2l(fs, fsfd, nbytes) - fcs->header_blocksize;
    end_block = n / fcs->blocksize;
 
    //** Now cycle through all the blocks
    start_block = 0;
    errcnt = 0;
    do {
-     fsfd_lock(fs, fsfd, mode, start_block, end_block, &end_got);
+     leveldbfd_lock(fs, fsfd, mode, start_block, end_block, &end_got);
 
      for (block=start_block; block <= end_got; block++) {
-       err = _fs_calculate_chksum(fs, fsfd, &(fsfd->chksum), block, buffer, FS_BUF_SIZE, NULL, correct_errors);
+       err = _leveldb_calculate_chksum(fs, fsfd, &(fsfd->chksum), block, buffer, leveldb_BUF_SIZE, NULL, correct_errors);
        if (err != 0) {
-          log_printf(0, "fs_validate_chksum: chksum error id=" LU " block=" I64T " err=%d\n", id, block, err);
+          log_printf(0, "leveldb_validate_leveldb_chksum: chksum error id=" LU " block=" I64T " err=%d\n", id, block, err);
           errcnt++;
        }
      }
 
      start_block = end_got + 1;
 
-     fsfd_unlock(fs, fsfd);
+     leveldbfd_unlock(fs, fsfd);
    } while (end_block > end_got);
 
 
@@ -2685,11 +2684,11 @@ int fs_validate_chksum(osd_t *d, osd_id_t id, int correct_errors)
       apr_thread_mutex_lock(fsfd->obj->lock);
       fsfd->obj->header.state = OSD_STATE_GOOD;
       fsfd->obj->state = n;
-      fs_write_header(fsfd->fd, &(fsfd->obj->header));
+      leveldb_write_header(fsfd->fd, &(fsfd->obj->header));
       apr_thread_mutex_unlock(fsfd->obj->lock);
    }
 
-   fs_close(d, (osd_fd_t *)fsfd);
+   leveldb_close(d, (osd_fd_t *)fsfd);
 
    return(errcnt);
 }
@@ -2698,20 +2697,20 @@ int fs_validate_chksum(osd_t *d, osd_id_t id, int correct_errors)
 // statfs - Determine the file system stats
 //*************************************************************
 
-int fs_statfs(osd_t *d, struct statfs *buf)
+int leveldb_statfs(osd_t *d, struct statfs *buf)
 {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
   return(statfs(fs->devicename, buf));
 }
 
 //*************************************************************
-//  fs_opendir - Opens a sub dir for the OSD
+//  leveldb_opendir - Opens a sub dir for the OSD
 //*************************************************************
 
-int fs_opendir(osd_fs_iter_t *iter)
+int leveldb_opendir(osd_leveldb_iter_t *iter)
 {
-   osd_fs_t *fs = iter->fs;
+   osd_leveldb_t *fs = iter->fs;
 
    char dname[fs->pathlen];
 
@@ -2726,10 +2725,10 @@ int fs_opendir(osd_fs_iter_t *iter)
 //  new_iterator - Creates a new iterator to walk through the files
 //*************************************************************
 
-osd_iter_t *fs_new_iterator(osd_t *d)
+osd_iter_t *leveldb_new_iterator(osd_t *d)
 {
    osd_iter_t *oi = (osd_iter_t *)malloc(sizeof(osd_iter_t));
-   osd_fs_iter_t *iter = (osd_fs_iter_t *)malloc(sizeof(osd_fs_iter_t));
+   osd_leveldb_iter_t *iter = (osd_leveldb_iter_t *)malloc(sizeof(osd_leveldb_iter_t));
 
    if (oi == NULL) return(NULL);
    if (iter == NULL) return(NULL);
@@ -2738,9 +2737,9 @@ osd_iter_t *fs_new_iterator(osd_t *d)
    oi->arg = (void *)iter;
 
    iter->n = 0;
-   iter->fs = (osd_fs_t *)(d->private);
+   iter->fs = (osd_leveldb_t *)(d->private);
 
-   if (fs_opendir(iter) != 0) { free(iter); free(oi); return(NULL); }
+   if (leveldb_opendir(iter) != 0) { free(iter); free(oi); return(NULL); }
 
    return(oi);
 }
@@ -2749,13 +2748,13 @@ osd_iter_t *fs_new_iterator(osd_t *d)
 //  destroy_iterator - Destroys an iterator
 //*************************************************************
 
-void fs_destroy_iterator(osd_iter_t *oi)
+void leveldb_destroy_iterator(osd_iter_t *oi)
 {
-  osd_fs_iter_t *iter;
+  osd_leveldb_iter_t *iter;
 
   if (oi == NULL) return;
 
-  iter = (osd_fs_iter_t *)oi->arg;
+  iter = (osd_leveldb_iter_t *)oi->arg;
 
 
   if (iter->cdir != NULL) closedir(iter->cdir);
@@ -2768,14 +2767,14 @@ void fs_destroy_iterator(osd_iter_t *oi)
 //  iterator_next - Returns the next key for the iterator
 //*************************************************************
 
-int fs_iterator_next(osd_iter_t *oi, osd_id_t *id)
+int leveldb_iterator_next(osd_iter_t *oi, osd_id_t *id)
 {
-  osd_fs_iter_t *iter;
+  osd_leveldb_iter_t *iter;
   struct dirent *result;
   int finished, n;
 
   if (oi == NULL) return(1);
-  iter = (osd_fs_iter_t *)oi->arg;
+  iter = (osd_leveldb_iter_t *)oi->arg;
 
   if (iter->n >= DIR_MAX) return(1);
 
@@ -2787,14 +2786,14 @@ int fs_iterator_next(osd_iter_t *oi, osd_id_t *id)
        iter->n++;
        if (iter->n == DIR_MAX) return(1);   //** Finished
        closedir(iter->cdir);
-       if (fs_opendir(iter) != 0) return(1);   //*** Error opening the directory
+       if (leveldb_opendir(iter) != 0) return(1);   //*** Error opening the directory
     } else if ((strcmp(result->d_name, ".") != 0) && (strcmp(result->d_name, "..") != 0)) {
       finished = 1;               //** Found a valid file
     }
 //if (result==NULL) {
-//  log_printf(15, "osd_fs:iterator_next: result=NULL n=%d\n", iter->n); flush_log();
+//  log_printf(15, "osd_leveldb:iterator_next: result=NULL n=%d\n", iter->n); flush_log();
 //} else {
-//  log_printf(15, "osd_fs:iterator_next: d_name=%s\n", result->d_name); flush_log();
+//  log_printf(15, "osd_leveldb:iterator_next: d_name=%s\n", result->d_name); flush_log();
 //}
   } while (finished == 0);
 
@@ -2806,11 +2805,11 @@ int fs_iterator_next(osd_iter_t *oi, osd_id_t *id)
 //  new_trash_iterator - Creates a new iterator to walk through trash
 //*************************************************************
 
-osd_iter_t *fs_new_trash_iterator(osd_t *d, int trash_type)
+osd_iter_t *leveldb_new_trash_iterator(osd_t *d, int trash_type)
 {
-   osd_fs_t *fs = (osd_fs_t *)(d->private);
+   osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
    osd_iter_t *oi = (osd_iter_t *)malloc(sizeof(osd_iter_t));
-   osd_fs_iter_t *iter = (osd_fs_iter_t *)malloc(sizeof(osd_fs_iter_t));
+   osd_leveldb_iter_t *iter = (osd_leveldb_iter_t *)malloc(sizeof(osd_leveldb_iter_t));
    char dname[fs->pathlen];
 
    if (oi == NULL) return(NULL);
@@ -2824,7 +2823,7 @@ osd_iter_t *fs_new_trash_iterator(osd_t *d, int trash_type)
    } else if (trash_type == OSD_DELETE_ID) {
       snprintf(dname, sizeof(dname), "%s/deleted_trash", fs->devicename);
    } else {
-      log_printf(0, "fs_new_trash_iterator: invalid trash_type=%d\n", trash_type);
+      log_printf(0, "leveldb_new_trash_iterator: invalid trash_type=%d\n", trash_type);
       free(iter); free(oi);
       return(NULL);
    }
@@ -2846,15 +2845,15 @@ osd_iter_t *fs_new_trash_iterator(osd_t *d, int trash_type)
 //  trash_iterator_next - Returns the next key for the trash iterator
 //*************************************************************
 
-int fs_trash_iterator_next(osd_iter_t *oi, osd_id_t *id, ibp_time_t *move_time, char *trash_id)
+int leveldb_trash_iterator_next(osd_iter_t *oi, osd_id_t *id, ibp_time_t *move_time, char *trash_id)
 {
-  osd_fs_iter_t *iter;
+  osd_leveldb_iter_t *iter;
   struct dirent *result;
   int finished, n;
   apr_time_t mtime;
 
   if (oi == NULL) return(-1);  //** Bad iterator
-  iter = (osd_fs_iter_t *)oi->arg;
+  iter = (osd_leveldb_iter_t *)oi->arg;
 
   finished = 0;
   do {
@@ -2869,13 +2868,13 @@ int fs_trash_iterator_next(osd_iter_t *oi, osd_id_t *id, ibp_time_t *move_time, 
           *move_time = mtime;
           finished = 1;
        } else {
-          log_printf(15, "fs_trash_iterator_next: Invalid file so skipping: %s\n", result->d_name); flush_log();
+          log_printf(15, "leveldb_trash_iterator_next: Invalid file so skipping: %s\n", result->d_name); flush_log();
        }
     }
 //if (result==NULL) {
-//  log_printf(15, "osd_fs:iterator_next: result=NULL n=%d\n", iter->n); flush_log();
+//  log_printf(15, "osd_leveldb:iterator_next: result=NULL n=%d\n", iter->n); flush_log();
 //} else {
-//  log_printf(15, "osd_fs:iterator_next: d_name=%s\n", result->d_name); flush_log();
+//  log_printf(15, "osd_leveldb:iterator_next: d_name=%s\n", result->d_name); flush_log();
 //}
   } while (finished == 0);
 
@@ -2884,19 +2883,19 @@ int fs_trash_iterator_next(osd_iter_t *oi, osd_id_t *id, ibp_time_t *move_time, 
 }
 
 //*************************************************************
-// fs_umount - Unmounts the dir.
+// leveldb_umount - Unmounts the dir.
 //*************************************************************
 
-int fs_umount(osd_t *d)
+int leveldb_umount(osd_t *d)
 {
-  osd_fs_t *fs = (osd_fs_t *)(d->private);
+  osd_leveldb_t *fs = (osd_leveldb_t *)(d->private);
 
-log_printf(15, "fs_umount fs=%p rid=%s\n",fs, fs->devicename);
+log_printf(15, "leveldb_umount fs=%p rid=%s\n",fs, fs->devicename);
 
   destroy_pigeon_coop(fs->fd_list);
   destroy_pigeon_coop(fs->obj_list);
 
-  fs_cache_destroy(fs->cache);
+  leveldb_cache_destroy(fs->cache);
 
   //**NOTE: there is no apr_hash_destroy function:(  so it gets removed when the pool is destroyed
   apr_thread_mutex_destroy(fs->lock);
@@ -2911,18 +2910,18 @@ log_printf(15, "fs_umount fs=%p rid=%s\n",fs, fs->devicename);
 }
 
 //*************************************************************
-// fs_shelf_fd_new - Creates a new shelf of osd_fs_fd_t.
+// leveldb_shelf_fd_new - Creates a new shelf of osd_leveldb_fd_t.
 //*************************************************************
 
-void *fs_shelf_fd_new(void *arg, int size)
+void *leveldb_shelf_fd_new(void *arg, int size)
 {
-  osd_fs_t *fs = (osd_fs_t *)arg;
-  osd_fs_fd_t *shelf = (osd_fs_fd_t *)malloc(sizeof(osd_fs_fd_t)*size);
+  osd_leveldb_t *fs = (osd_leveldb_t *)arg;
+  osd_leveldb_fd_t *shelf = (osd_leveldb_fd_t *)malloc(sizeof(osd_leveldb_fd_t)*size);
   int i;
 
-  memset(shelf, 0, sizeof(osd_fs_fd_t)*size);
+  memset(shelf, 0, sizeof(osd_leveldb_fd_t)*size);
 
-log_printf(10, "fs_shelf_fd_new: called data=%p size=%d rid=%s\n", (void *)shelf, size, fs->devicename); flush_log();
+log_printf(10, "leveldb_shelf_fd_new: called data=%p size=%d rid=%s\n", (void *)shelf, size, fs->devicename); flush_log();
 
   for (i=0; i<size; i++) {
     apr_thread_mutex_create(&(shelf[i].lock), APR_THREAD_MUTEX_DEFAULT, fs->pool);
@@ -2934,16 +2933,16 @@ log_printf(10, "fs_shelf_fd_new: called data=%p size=%d rid=%s\n", (void *)shelf
 }
 
 //*************************************************************
-// fs_shelf_fd_free - Deletes a shelf of osd_fs_fd_t.
+// leveldb_shelf_fd_free - Deletes a shelf of osd_leveldb_fd_t.
 //*************************************************************
 
-void fs_shelf_fd_free(void *arg, int size, void *data)
+void leveldb_shelf_fd_free(void *arg, int size, void *data)
 {
-  osd_fs_t *fs = (osd_fs_t *)arg;
-  osd_fs_fd_t *shelf = (osd_fs_fd_t *)data;
+  osd_leveldb_t *fs = (osd_leveldb_t *)arg;
+  osd_leveldb_fd_t *shelf = (osd_leveldb_fd_t *)data;
   int i;
 
-log_printf(10, "fs_shelf_fd_free: called data=%p rid=%s size=%d\n", data, fs->devicename, size); flush_log();
+log_printf(10, "leveldb_shelf_fd_free: called data=%p rid=%s size=%d\n", data, fs->devicename, size); flush_log();
   for (i=0; i<size; i++) {
     apr_thread_mutex_destroy(shelf[i].lock);
     apr_thread_cond_destroy(shelf[i].cond);
@@ -2953,51 +2952,51 @@ log_printf(10, "fs_shelf_fd_free: called data=%p rid=%s size=%d\n", data, fs->de
 }
 
 //*************************************************************
-// fs_shelf_range_new - Creates a new shelf of fs_range structs
+// leveldb_shelf_range_new - Creates a new shelf of leveldb_range structs
 //*************************************************************
 
-void *fs_shelf_range_new(void *arg, int size)
+void *leveldb_shelf_range_new(void *arg, int size)
 {
-//  log_printf(15, "fs_shelf_range_new: size=%d\n", size);
-  void *ptr = malloc(sizeof(osd_fs_range_t)*size);
-  memset(ptr, 0, sizeof(osd_fs_range_t)*size);
+//  log_printf(15, "leveldb_shelf_range_new: size=%d\n", size);
+  void *ptr = malloc(sizeof(osd_leveldb_range_t)*size);
+  memset(ptr, 0, sizeof(osd_leveldb_range_t)*size);
   return(ptr);
 }
 
 //*************************************************************
-// fs_shelf_range_free - Frees an existing shelf of fs_range structs
+// leveldb_shelf_range_free - Frees an existing shelf of leveldb_range structs
 //*************************************************************
 
-void fs_shelf_range_free(void *arg, int size, void *data)
+void leveldb_shelf_range_free(void *arg, int size, void *data)
 {
-//  log_printf(15, "fs_shelf_range_free: size=%d\n", size);
+//  log_printf(15, "leveldb_shelf_range_free: size=%d\n", size);
    free(data);
 }
 
 
 //*************************************************************
-// fs_shelf_object_new - Creates a new shelf of osd_fs_object_t.
+// leveldb_shelf_object_new - Creates a new shelf of osd_leveldb_object_t.
 //*************************************************************
 
-void *fs_shelf_object_new(void *arg, int size)
+void *leveldb_shelf_object_new(void *arg, int size)
 {
-  osd_fs_object_t *shelf, *obj;
+  osd_leveldb_object_t *shelf, *obj;
   int i;
 //  apr_pool_t *pool = (apr_pool_t *)arg;
 
-  shelf = (osd_fs_object_t *)malloc(sizeof(osd_fs_object_t)*size);
+  shelf = (osd_leveldb_object_t *)malloc(sizeof(osd_leveldb_object_t)*size);
   assert(shelf != NULL);
 
-log_printf(15, "fs_shelf_object_new: shelf=%p size=%d\n", shelf, size);
+log_printf(15, "leveldb_shelf_object_new: shelf=%p size=%d\n", shelf, size);
 
-  memset(shelf, 0, sizeof(osd_fs_object_t)*size);
+  memset(shelf, 0, sizeof(osd_leveldb_object_t)*size);
 
   for (i=0; i<size; i++) {
      obj = &(shelf[i]);
 
      //** Make the read/write ranges for each object
-     obj->read_range_list = new_pigeon_coop("read_range", FS_RANGE_COUNT, sizeof(osd_fs_range_t), NULL, fs_shelf_range_new, fs_shelf_range_free);
-     obj->write_range_list = new_pigeon_coop("write_range", FS_RANGE_COUNT, sizeof(osd_fs_range_t), NULL, fs_shelf_range_new, fs_shelf_range_free);
+     obj->read_range_list = new_pigeon_coop("read_range", leveldb_RANGE_COUNT, sizeof(osd_leveldb_range_t), NULL, leveldb_shelf_range_new, leveldb_shelf_range_free);
+     obj->write_range_list = new_pigeon_coop("write_range", leveldb_RANGE_COUNT, sizeof(osd_leveldb_range_t), NULL, leveldb_shelf_range_new, leveldb_shelf_range_free);
      assert(obj->read_range_list != NULL);
      assert(obj->write_range_list != NULL);
 
@@ -3011,16 +3010,16 @@ log_printf(15, "fs_shelf_object_new: shelf=%p size=%d\n", shelf, size);
 }
 
 //*************************************************************
-// fs_shelf_object_free - Deletes a shelf of osd_fs_object_t.
+// leveldb_shelf_object_free - Deletes a shelf of osd_leveldb_object_t.
 //*************************************************************
 
-void fs_shelf_object_free(void *arg, int size, void *data)
+void leveldb_shelf_object_free(void *arg, int size, void *data)
 {
-  osd_fs_object_t *shelf = (osd_fs_object_t *)data;
-  osd_fs_object_t *obj;
+  osd_leveldb_object_t *shelf = (osd_leveldb_object_t *)data;
+  osd_leveldb_object_t *obj;
   int i;
 
-log_printf(15, "fs_shelf_object_free: shelf=%p size=%d\n", shelf, size);
+log_printf(15, "leveldb_shelf_object_free: shelf=%p size=%d\n", shelf, size);
   for (i=0; i<size; i++) {
      obj = &(shelf[i]);
 
@@ -3043,28 +3042,28 @@ log_printf(15, "fs_shelf_object_free: shelf=%p size=%d\n", shelf, size);
 
 
 //*************************************************************
-// osd_mount_fs - Mounts the device
+// osd_mount_leveldb - Mounts the device
 //*************************************************************
 
-osd_t *osd_mount_fs(const char *device, int n_cache, apr_time_t expire_time)
+osd_t *osd_mount_leveldb(const char *device, int n_cache, apr_time_t expire_time)
 {
    int i;
    osd_t *d = (osd_t *)malloc(sizeof(osd_t));
    assert(d != NULL);
 
-   osd_fs_t *fs = (osd_fs_t *)malloc(sizeof(osd_fs_t));
+   osd_leveldb_t *fs = (osd_leveldb_t *)malloc(sizeof(osd_leveldb_t));
    assert(fs != NULL);
 
-   memset(fs, 0, sizeof(osd_fs_t));
+   memset(fs, 0, sizeof(osd_leveldb_t));
 
    d->private = (void *)fs;
    fs->devicename = strdup(device);
    fs->pathlen = strlen(fs->devicename) + 100;
 
-   if (strcmp(device, FS_LOOPBACK_DEVICE) != 0) {
+   if (strcmp(device, LEVELDB_LOOPBACK_DEVICE) != 0) {
       DIR *dir;
       if ((dir = opendir(fs->devicename)) == NULL) {
-         log_printf(0, "osd_fs:  Directory does not exist!!!!!! checked: %s\n", device);
+         log_printf(0, "osd_leveldb:  Directory does not exist!!!!!! checked: %s\n", device);
       } else {
          closedir(dir);
       }
@@ -3076,8 +3075,8 @@ osd_t *osd_mount_fs(const char *device, int n_cache, apr_time_t expire_time)
          snprintf(fname, sizeof(fname), "%s/%d", fs->devicename, i);
          if (mkdir(fname, S_IRUSR | S_IWUSR | S_IXUSR) != 0) {
             if (errno != EEXIST) {
-               printf("osd_fs: Error creating/checking sub directories!  errno=%d\n", errno);
-               printf("osd_fs: Directory : %s\n", fname);
+               printf("osd_leveldb: Error creating/checking sub directories!  errno=%d\n", errno);
+               printf("osd_leveldb: Directory : %s\n", fname);
                abort();
             }
          }
@@ -3087,16 +3086,16 @@ osd_t *osd_mount_fs(const char *device, int n_cache, apr_time_t expire_time)
       snprintf(fname, sizeof(fname), "%s/deleted_trash", fs->devicename);
       if (mkdir(fname, S_IRUSR | S_IWUSR | S_IXUSR) != 0) {
          if (errno != EEXIST) {
-            printf("osd_fs: Error creating deleted_trash directory!  errno=%d\n", errno);
-            printf("osd_fs: Directory : %s\n", fname);
+            printf("osd_leveldb: Error creating deleted_trash directory!  errno=%d\n", errno);
+            printf("osd_leveldb: Directory : %s\n", fname);
             abort();
          }
       }
       snprintf(fname, sizeof(fname), "%s/expired_trash", fs->devicename);
       if (mkdir(fname, S_IRUSR | S_IWUSR | S_IXUSR) != 0) {
          if (errno != EEXIST) {
-            printf("osd_fs: Error creating expired_trash directory!  errno=%d\n", errno);
-            printf("osd_fs: Directory : %s\n", fname);
+            printf("osd_leveldb: Error creating expired_trash directory!  errno=%d\n", errno);
+            printf("osd_leveldb: Directory : %s\n", fname);
             abort();
          }
       }
@@ -3106,69 +3105,69 @@ osd_t *osd_mount_fs(const char *device, int n_cache, apr_time_t expire_time)
    fs->mount_type = 0;
 
 //#ifdef _HAS_XFS
-//   fs->mount_type = platform_test_xfs_path(device);
+//   fs->mount_type = platform_test_xleveldb_path(device);
 //#endif
 
-   log_printf(10, "osd_fs_mount: %s mount_type=%d\n", fs->devicename, fs->mount_type);
-   log_printf(15, "fs_mount fs=%p rid=%s\n",fs, fs->devicename);
+   log_printf(10, "osd_leveldb_mount: %s mount_type=%d\n", fs->devicename, fs->mount_type);
+   log_printf(15, "leveldb_mount fs=%p rid=%s\n",fs, fs->devicename);
 
    apr_pool_create(&(fs->pool), NULL);
    apr_thread_mutex_create(&(fs->lock), APR_THREAD_MUTEX_DEFAULT, fs->pool);
    apr_thread_mutex_create(&(fs->obj_lock), APR_THREAD_MUTEX_DEFAULT, fs->pool);
 
    //** Lastly set up all the pointers
-   d->umount = fs_umount;
-   d->create_id = fs_create_id;
-   d->native_open = fs_native_open;
-   d->native_close = fs_native_close;
-   d->reserve = fs_reserve;
-   d->remove = fs_remove;
-   d->chksum_info = fs_chksum_info;
-   d->get_chksum = fs_get_chksum;
-   d->validate_chksum = fs_validate_chksum;
-   d->delete_remove = fs_delete_remove;
-   d->expire_remove = fs_expire_remove;
-   d->physical_remove = fs_physical_remove;
-   d->trash_physical_remove = fs_trash_physical_remove;
-   d->trash_undelete = fs_trash_undelete;
-   d->truncate = fs_truncate;
-   d->size = fs_size;
-   d->fd_size = fs_fd_size;
-   d->trash_size = fs_trash_size;
-   d->read = fs_read;
-   d->write = fs_write;
-   d->open = fs_open;
-   d->get_state = fs_get_state;
-   d->close = fs_close;
-   d->id_exists = fs_id_exists;
-   d->statfs = fs_statfs;
-   d->get_corrupt_count = fs_corrupt_count;
-   d->new_corrupt_iterator = fs_new_corrupt_iterator;
-   d->destroy_corrupt_iterator = fs_destroy_corrupt_iterator;
-   d->corrupt_iterator_next = fs_corrupt_iterator_next;
-   d->new_iterator = fs_new_iterator;
-   d->new_trash_iterator = fs_new_trash_iterator;
-   d->destroy_iterator = fs_destroy_iterator;
-   d->iterator_next = fs_iterator_next;
-   d->trash_iterator_next = fs_trash_iterator_next;
+   d->umount = leveldb_umount;
+   d->create_id = leveldb_create_id;
+   d->native_open = leveldb_native_open;
+   d->native_close = leveldb_native_close;
+   d->reserve = leveldb_reserve;
+   d->remove = leveldb_remove;
+   d->chksum_info = leveldb_leveldb_chksum_info;
+   d->get_chksum = leveldb_get_leveldb_chksum;
+   d->validate_chksum = leveldb_validate_leveldb_chksum;
+   d->delete_remove = leveldb_delete_remove;
+   d->expire_remove = leveldb_expire_remove;
+   d->physical_remove = leveldb_physical_remove;
+   d->trash_physical_remove = leveldb_trash_physical_remove;
+   d->trash_undelete = leveldb_trash_undelete;
+   d->truncate = leveldb_truncate;
+   d->size = leveldb_size;
+   d->fd_size = leveldb_fd_size;
+   d->trash_size = leveldb_trash_size;
+   d->read = leveldb_read;
+   d->write = leveldb_write;
+   d->open = leveldb_open;
+   d->get_state = leveldb_get_state;
+   d->close = leveldb_close;
+   d->id_exists = leveldb_id_exists;
+   d->statfs = leveldb_statfs;
+   d->get_corrupt_count = leveldb_corrupt_count;
+   d->new_corrupt_iterator = leveldb_new_corrupt_iterator;
+   d->destroy_corrupt_iterator = leveldb_destroy_corrupt_iterator;
+   d->corrupt_iterator_next = leveldb_corrupt_iterator_next;
+   d->new_iterator = leveldb_new_iterator;
+   d->new_trash_iterator = leveldb_new_trash_iterator;
+   d->destroy_iterator = leveldb_destroy_iterator;
+   d->iterator_next = leveldb_iterator_next;
+   d->trash_iterator_next = leveldb_trash_iterator_next;
 
-   if (strcmp(device, FS_LOOPBACK_DEVICE) == 0) {
-      fs->id2fname = id2fname_loopback;
-      fs->trashid2fname = trashid2fname_loopback;
+   if (strcmp(device, LEVELDB_LOOPBACK_DEVICE) == 0) {
+      fs->id2fname = leveldb_id2fname_loopback;
+      fs->trashid2fname = leveldb_trashid2fnameloopback;
    } else {
-      fs->id2fname = id2fname_normal;
-      fs->trashid2fname = trashid2fname_normal;
+      fs->id2fname = leveldb_id2fname_normal;
+      fs->trashid2fname = leveldb_trashid2fnamenormal;
    }
 
    //** Now make the object and Object FD buffers
-   fs->obj_list = new_pigeon_coop("obj_list", FS_OBJ_COUNT, sizeof(osd_fs_object_t), (void *)fs, fs_shelf_object_new, fs_shelf_object_free); assert(fs->obj_list != NULL);
-   fs->fd_list = new_pigeon_coop("fd_list", FS_OBJ_COUNT, sizeof(osd_fs_fd_t), (void *)fs, fs_shelf_fd_new, fs_shelf_fd_free); assert(fs->fd_list != NULL);
+   fs->obj_list = new_pigeon_coop("obj_list", leveldb_OBJ_COUNT, sizeof(osd_leveldb_object_t), (void *)fs, leveldb_shelf_object_new, leveldb_shelf_object_free); assert(fs->obj_list != NULL);
+   fs->fd_list = new_pigeon_coop("fd_list", leveldb_OBJ_COUNT, sizeof(osd_leveldb_fd_t), (void *)fs, leveldb_shelf_fd_new, leveldb_shelf_fd_free); assert(fs->fd_list != NULL);
    fs->obj_hash = apr_hash_make(fs->pool); assert(fs->obj_hash != NULL);
    fs->corrupt_hash = apr_hash_make(fs->pool); assert(fs->corrupt_hash != NULL);
 
    //** Lastly make the cache buffers
    i = (n_cache > 0) ? sqrt(1.0*n_cache) : 0;
-   fs->cache = fs_cache_create(fs->pool, i, i, expire_time);
+   fs->cache = leveldb_cache_create(fs->pool, i, i, expire_time);
 
    return(d);
 }

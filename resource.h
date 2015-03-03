@@ -66,10 +66,12 @@ http://www.accre.vanderbilt.edu
 //*** Types of resources ***
 #define RES_TYPE_UNKNOWN 0
 #define RES_TYPE_DIR     1
-#define RES_TYPE_MAX     2
+#define RES_TYPE_LEVELDB 2
+#define RES_TYPE_MAX     3
 
 #define DEVICE_UNKNOWN "unknown"
 #define DEVICE_DIR   "dir"
+#define DEVICE_LEVELDB "leveldb"
 
 extern const char *_res_types[];
 

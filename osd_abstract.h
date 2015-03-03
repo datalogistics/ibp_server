@@ -124,7 +124,7 @@ typedef struct {
 #define osd_trash_iterator_next(oi, id, move_time, trash_id) (oi)->d->trash_iterator_next(oi, id, move_time, trash_id)
 
 struct osd_s {
-    void *private;  //** All private implementation specific data goes hear
+    void *private;  //** All private implementation specific data goes here
     int (*umount)(osd_t *d);
     osd_id_t (*create_id)(osd_t *d, int chksum_type, int header_size, int block_size, osd_id_t id);    // Returns an OSD object.  Think of it as a filename
     osd_native_fd_t (*native_open)(osd_t *d, osd_id_t id, osd_off_t offset, int mode);   //Native open
