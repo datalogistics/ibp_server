@@ -33,15 +33,21 @@ http://www.accre.vanderbilt.edu
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/mount.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mntent.h>
+#if defined(__APPLE__) && defined(__MACH__)
+#    include <sys/param.h>
+#else
+#    include <mntent.h>
+#endif
 #include <assert.h>
 #include <apr_time.h>
+#include "statfs.h"
 #include "resource.h"
 #include "log.h"
 #include "debug.h"
@@ -78,6 +84,38 @@ int _remove_allocation_for_make_free(Resource_t *r, int rmode, Allocation_t *all
 //  fname2dev - Maps the file or directory to the physical device
 //***************************************************************************
 
+#if defined(__APPLE__) && defined(__MACH__)
+char *fname2dev(char *fname)
+{
+    // OSX version of getmntinfo malloc's to a thread-local buffer, don't need
+    // a _r version
+
+    // Get the st_dev of the file:
+    struct stat file_stat;
+    int result = stat(fname, &file_stat);
+    if (result != 0) {
+         log_printf(0, "ERROR:  Can't stat file! fname=%s\n", fname);
+         return NULL;
+    }
+
+    // Get the list of mounts:
+    struct statfs * mount_array;
+    int mount_count = getmntinfo(&mount_array, MNT_WAIT);
+    if (mount_count == 0) {
+         log_printf(0, "ERROR:  Can't get mounts!\n");
+         return NULL;
+    }
+
+    for (int i = 0; i < mount_count; ++i) {
+        if (file_stat.st_dev == mount_array[i].f_fsid.val[0]) {
+            char * buffer;
+            buffer = strdup(mount_array[i].f_mntonname);
+            return buffer;
+        }
+    }
+    return NULL;
+}
+#else
 char *fname2dev(char *fname)
 {
   FILE *fd;
@@ -113,7 +151,7 @@ char *fname2dev(char *fname)
 
   return(dev);
 }
-
+#endif
 
 //***************************************************************************
 // trash_adjust - Adjusts the trash space

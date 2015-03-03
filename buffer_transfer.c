@@ -253,8 +253,9 @@ return(-2);
   err = splice_kernel(src_fd, dest_fd, &len, end_time,
          &(_res_splice_enabled[resource_get_type(src_res)]), &(_res_splice_enabled[resource_get_type(dest_res)]));
 
-posix_fadvise(dest_fd, dest_offset+4096, len, POSIX_FADV_DONTNEED);
-
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
+    posix_fadvise(dest_fd, dest_offset+4096, len, POSIX_FADV_DONTNEED);
+#endif
   //** Close the allocations
   resource_native_close_id(src_res, src_fd);
   resource_native_close_id(dest_res, dest_fd);

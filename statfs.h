@@ -29,10 +29,11 @@ http://www.accre.vanderbilt.edu
 
 //*** Handles statfs header mangling
 
-#ifdef _DARWIN
+#include <sys/types.h>
+#if defined(__APPLE__) && defined(__MACH__)
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <sys/mount.h>
 #else
 #include <sys/vfs.h>
 #endif
-
