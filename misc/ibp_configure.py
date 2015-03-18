@@ -499,9 +499,12 @@ class Configuration():
             phoebus_config = PHOEBUS_SAMPLE_CONFIG.format(phoebus_gateway=self.phoebus)
 
         if len(self.ibp_host):
-            ibp_conn_strings = self.ibp_host+':'+str(self.ibp_port)+";"+args.extra_nat_iface+";"
+            ibp_conn_strings = self.ibp_host+':'+str(self.ibp_port)+";"
         else:
             ibp_conn_strings = self.get_ibp_interface_addresses(args)
+
+        if args.extra_nat_iface:
+	    ibp_conn_strings += args.extra_nat_iface+";" 
 
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
                                                 public_ip=self.public_ip,
