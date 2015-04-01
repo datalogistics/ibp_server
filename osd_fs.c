@@ -29,12 +29,12 @@ http://www.accre.vanderbilt.edu
 
 //*******************************************
 
+#include <sys/types.h>
 #define _XOPEN_SOURCE 600
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <apr_time.h>
 #include <math.h>
 #include "string_token.h"
@@ -813,8 +813,24 @@ log_printf(10, "osd_fs: reserve(" LU ", " ST ")\n", id, len);
   osd_fs_fd_t *fsfd = (osd_fs_fd_t *)fs_open(d, id, OSD_READ_MODE);
   if (fsfd == NULL) return(0);
 
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
   posix_fallocate(fileno(fsfd->fd), 0, len);
-
+#elif  defined(__APPLE__) && defined(__MACH__)
+  // OSX doesn't have posix_fallocate
+  // from: http://stackoverflow.com/questions/11497567/fallocate-command-equivalent-in-os-x
+  int fd = fileno(fsfd->fd);
+  fstore_t store = {F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, len};
+  // Try to get a continous chunk of disk space
+  int ret = fcntl(fd, F_PREALLOCATE, &store);
+    if(-1 == ret){
+    // OK, perhaps we are too fragmented, allocate non-continuous
+    store.fst_flags = F_ALLOCATEALL;
+    ret = fcntl(fd, F_PREALLOCATE, &store);
+    if (-1 == ret)
+      return 0;
+  }
+  return 0 == ftruncate(fd, len);
+#endif
   fs_close(d, (osd_fd_t *)fsfd);
 
   return(0);
@@ -1827,8 +1843,9 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
     //** But if I do this I get crappy performance...  Weird interaction with lunix IO scheduler...
     end_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
     doff = end_off - start_off + 1;
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
     posix_fadvise(fileno(fsfd->fd), start_off, doff, POSIX_FADV_WILLNEED);
-
+#endif
 
    log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T ")\n", fsfd, offset, len);
    log_printf(10, "fs_chksum_write(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T " hbs=" I64T " bs=" I64T "\n",
@@ -1902,8 +1919,9 @@ osd_off_t fs_chksum_write(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd
       apr_thread_mutex_unlock(fs->obj_lock);
    }
 
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
    if (end_block != 0) posix_fadvise(fileno(fsfd->fd), start_off, doff, POSIX_FADV_DONTNEED);
-
+#endif
    return(err);
 }
 
@@ -1930,7 +1948,9 @@ log_printf(15, "fs_normal_write(%s, %p, " I64T ", " I64T ", %p)\n", fs->devicena
 
 //   apr_thread_mutex_unlock(fsfd->lock);
 
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
    if (offset > 4095) posix_fadvise(fileno(fsfd->fd), offset, len, POSIX_FADV_DONTNEED);
+#endif
 
    return(err);
 }
@@ -2163,7 +2183,9 @@ osd_off_t fs_normal_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
 
 //   apr_thread_mutex_lock(fsfd->lock);
 
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
    posix_fadvise(fileno(fsfd->fd), offset, len, POSIX_FADV_WILLNEED);
+#endif
 
    fseeko(fsfd->fd, offset, SEEK_SET);
 
@@ -2210,8 +2232,9 @@ osd_off_t fs_chksum_read(osd_fs_t *fs, osd_fs_fd_t *fsfd, osd_off_t offset, osd_
     }
     end_off = FS_MAGIC_HEADER + ocs->hbs_with_chksum + ((end_block+1)-1) * ocs->bs_with_chksum;
     doff = end_off - start_off + 1;
+#if ! ( defined(__APPLE__) && defined(__MACH__) )
     posix_fadvise(fileno(fsfd->fd), start_off, doff, POSIX_FADV_WILLNEED);
-
+#endif
 
    log_printf(10, "fs_chksum_read(%p, " I64T ", " I64T ")\n", fsfd->fd, offset, len);
    log_printf(10, "fs_chksum_read(%p, " I64T ", " I64T "): sb=" I64T " eb=" I64T " so=" I64T " ss=" I64T " es=" I64T "\n",
