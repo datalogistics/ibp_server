@@ -42,6 +42,7 @@ http://www.accre.vanderbilt.edu
 #include "osd_fs.h"
 #include "fmttypes.h"
 #include "log.h"
+#include "random.h"
 #include "type_malloc.h"
 #ifdef _HAS_XFS
 #include <xfs/xfs.h>

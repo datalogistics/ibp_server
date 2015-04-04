@@ -66,7 +66,7 @@ char *_blanks[_RESOURCE_BUF_SIZE];
 
 #define _RES_USAGE_ID 1
 
-const char *_res_types[] = {DEVICE_UNKNOWN, DEVICE_DIR};
+const char *_res_types[] = {DEVICE_UNKNOWN, DEVICE_DIR, DEVICE_LEVELDB};
 
 typedef struct {  //** Internal resource iterator
   int mode;
@@ -329,10 +329,16 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
 //BROKEN
    memcpy(&(res.rid), &rid, sizeof(rid_t));
    res.max_duration = 2592000;   //default to 30 days
-   assert(strcmp(dev_type, DEVICE_DIR) == 0);
+   if (strcmp(dev_type, DEVICE_DIR) == 0) {
+       res.res_type = RES_TYPE_DIR;
+   } else if (strcmp(dev_type, DEVICE_LEVELDB) == 0) {
+       res.res_type = RES_TYPE_LEVELDB;
+   } else {
+      printf("Unknown resource type\n");
+      abort();
+   }
+   
    res.device_type = dev_type;
-   res.res_type = RES_TYPE_DIR;
-
    res.device = device_name;
    res.rwm_mode = RES_MODE_WRITE|RES_MODE_READ|RES_MODE_MANAGE;
    res.preallocate = 0;
@@ -373,8 +379,16 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
         max_bytes = stat.f_bavail;
         max_bytes = max_bytes * (ibp_off_t)stat.f_bsize;
       }
-   }
+   } else if (strcmp("leveldb", dev_type)==0) {
+      res.res_type = RES_TYPE_LEVELDB;
+      assert((res.dev = osd_mount_leveldb(res.device)) != NULL);
 
+      if (max_bytes == 0) {
+        statfs(device_name, &stat);
+        max_bytes = stat.f_bavail;
+        max_bytes = max_bytes * (ibp_off_t)stat.f_bsize;
+      }
+   } 
    res.max_size[ALLOC_HARD] = max_bytes;
    res.max_size[ALLOC_SOFT] = max_bytes;
    res.max_size[ALLOC_TOTAL] = max_bytes;
@@ -875,8 +889,11 @@ int parse_resource(Resource_t *res, inip_file_t *keyfile, char *group)
    }
 
    res->device_type = inip_get_string(keyfile, group, "resource_type", NULL);
-   if (strcmp(res->device_type, DEVICE_DIR) != 0) {
+   if (strcmp(res->device_type, DEVICE_DIR) == 0) {
       res->res_type = RES_TYPE_DIR;
+   } else if (strcmp(res->device_type, DEVICE_LEVELDB) == 0) {
+      res->res_type = RES_TYPE_LEVELDB;
+   } else {
       printf("parse_resource: (%s) Invalid device type: %s\n",group, res->device_type);
       abort();
    }
@@ -1000,7 +1017,15 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
 
       res->res_type = RES_TYPE_DIR;
       assert((res->dev = osd_mount_fs(res->device, res->n_cache, res->cache_expire)) != NULL);
+   } else if (strcmp(DEVICE_LEVELDB, res->device_type)==0) {
+      DIR *dir;
+      assert((dir = opendir(res->device)) != NULL);
+      closedir(dir);
+
+      res->res_type = RES_TYPE_LEVELDB;
+      assert((res->dev = osd_mount_leveldb(res->device)) != NULL);
    }
+
 
    //** Init the lock **
    apr_pool_create(&(res->pool), NULL);

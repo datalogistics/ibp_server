@@ -31,7 +31,7 @@
 
 int main(int argc, char **argv)
 {
-  int start_option, i, err;
+  int start_option, i;
   char buffer[10240];
   char *afile, *state;
   osd_fd_t *afd;

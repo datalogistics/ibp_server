@@ -36,5 +36,6 @@ http://www.accre.vanderbilt.edu
 
 #include "osd_abstract.h"
 #include "osd_fs.h"
+#include "osd_leveldb.h"
 
 #endif

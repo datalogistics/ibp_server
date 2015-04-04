@@ -1,10 +1,10 @@
 # make a project
-project( IBP_SERVER C )
+project( IBP_SERVER C CXX )
 
 # User changes should go here
 #----------------------------------------
 set(CMAKE_BUILD_TYPE "Debug")
-#set(CMAKE_BUILD_TYPE "Release")
+#set (CMAKE_CXX_FLAGS "-fexceptions")set(CMAKE_BUILD_TYPE "Release")
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_REQUIRED_FLAGS} -O0 -Wall -g -D_ENABLE_DEBUG -DHAVE_CONFIG_H -DLINUX=2 -D_REENTRANT -D_GNU_SOURCE -D_LARGEFILE64_SOURCE" )
 message("flags_debug1=${CMAKE_C_FLAGS_DEBUG}")
@@ -25,6 +25,8 @@ include(${CMAKE_SOURCE_DIR}/cmake/Date.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/CompilerVersion.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/CompilerFlags.cmake)
 
+#First, link here
+find_package(Snappy)
 #Prefer to use static libs
 if(WIN32)
  set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -39,16 +41,36 @@ find_package(APR REQUIRED)
 find_package(APRUtil REQUIRED)
 find_package(Phoebus)
 find_package(Unisc)
+find_package(LevelDB)
 
 check_include_file("stdint.h" HAVE_STDINT_H)
 check_include_file("inttypes.h" HAVE_INTTYPES_H)
 
 include_directories(${BDB_INCLUDE_DIR} ${OPENSSL_INCLUDE_DIR} ${PROTOBUF_INCLUDE_DIR} 
-     ${APR_INCLUDE_DIR} ${APRUTIL_INCLUDE_DIR} )
+    ${APR_INCLUDE_DIR} ${APRUTIL_INCLUDE_DIR})
 #SET(LIBS ${LIBS} ${BDB_LIBRARIES}  ${OPENSSL_LIBRARIES}
 #     ${CRYPTO_LIBRARIES} ${PROTOBUF_LIBRARY}  ${APRUTIL_LIBS} ${APR_LIBRARY} pthread)
 list(APPEND LIBS ${BDB_LIBRARIES}  ${OPENSSL_LIBRARIES}
-     ${CRYPTO_LIBRARIES} ${PROTOBUF_LIBRARY}  ${APRUTIL_LIBRARY} ${APR_LIBRARY} pthread dl m z)
+     ${CRYPTO_LIBRARIES} ${PROTOBUF_LIBRARY}  ${APRUTIL_LIBRARY} 
+     ${APR_LIBRARY} rt pthread dl m z)
+if (APPLE)
+    list(REMOVE_ITEM LIBS rt)
+endif (APPLE)
+ # LEVELDB
+ if (LEVELDB_FOUND)
+    set(LEVELDB_OPT "-D_ENABLE_LEVELDBDB")
+    OPTION( _ENABLE_LEVELDB "Enable LEVELDB support" ON )
+    include_directories(${LEVELDB_INCLUDE_DIR})
+    list(APPEND LIBS ${LEVELDB_LIBRARY} ${SNAPPY_LIBRARIES})
+    if (APPLE)
+        list(INSERT LIBS 0 -lc++)
+        SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.8 " )
+    endif (APPLE)
+    #set (CMAKE_CXX_FLAGS "-lc++")
+else (LEVELDB_FOUND)
+    OPTION( _ENABLE_LEVELDB "Enable LEVELDB support" OFF )
+endif (LEVELDB_FOUND)
+
 
 # config options
 if (PHOEBUS_FOUND)
@@ -84,11 +106,13 @@ configure_file("${PROJECT_SOURCE_DIR}/server_version.c.in" "${PROJECT_BINARY_DIR
 
 
 # common objects
-SET(RESOURCE_OBJS resource.c alloc_history.c cap_timestamp.c random.c osd_fs.c db_resource.c log.c atomic_counter.c debug.c rid.c 
+SET(RESOURCE_OBJS resource.c alloc_history.c cap_timestamp.c random.c osd_fs.c osd_leveldb.c db_resource.c log.c atomic_counter.c debug.c rid.c 
       pigeon_hole.c pigeon_coop.c )
 SET(NETWORK_OBJS network.c net_sock.c net_1_ssl.c net_2_ssl.c net_fd.c net_phoebus.c phoebus.c chksum.c )
 set(STRING_OBJS string_token.c append_printf.c iniparse.c)
-
+if (LEVELDB_FOUND)
+    list(APPEND RESOURCE_OBJS leveldb_fd.c leveldb_fs.c leveldb_range.c leveldb_state.c osd_leveldb.c leveldb_iterator.c)
+endif (LEVELDB_FOUND)
 # various executables
 ADD_EXECUTABLE(ibp_server ibp_server.c server_lib.c  global_data.c
    parse_commands.c install_commands.c commands.c
@@ -97,7 +121,7 @@ ADD_EXECUTABLE(ibp_server ibp_server.c server_lib.c  global_data.c
    server_version.c lock_alloc.c activity_log.c thread_slots.c envelope.c
    envelope_net ${STRING_OBJS} ${RESOURCE_OBJS} ${NETWORK_OBJS} ${PROTO_SRC})
 
-ADD_EXECUTABLE(mkfs.resource mkfs_resource.c chksum.c stack.c ${STRING_OBJS} ${RESOURCE_OBJS})
+ADD_EXECUTABLE(mkfs.resource mkfs_resource.c chksum.c stack.c log.c ${STRING_OBJS} ${RESOURCE_OBJS})
 ADD_EXECUTABLE(get_corrupt get_corrupt.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(get_config get_config.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(get_version get_version.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
@@ -118,8 +142,8 @@ ADD_EXECUTABLE(ibp_detach_rid ibp_detach_rid.c log.c atomic_counter.c stack.c dn
 ADD_EXECUTABLE(ibp_attach_rid ibp_attach_rid.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(ibp_rid_mode ibp_rid_mode.c log.c atomic_counter.c stack.c dns_cache.c cmd_send.c ${STRING_OBJS} ${NETWORK_OBJS})
 ADD_EXECUTABLE(chksum_test chksum_test.c chksum.c)
+ADD_EXECUTABLE(testing_leveldb testing_leveldb.c log.c atomic_counter.c stack.c  dns_cache.c cmd_send.c ${RESOURCE_OBJS} ${STRING_OBJS} ${NETWORK_OBJS})
 
-SET_TARGET_PROPERTIES(ibp_server PROPERTIES LINKER_LANGUAGE C)
 TARGET_LINK_LIBRARIES( ibp_server ${LIBS})
 TARGET_LINK_LIBRARIES( mkfs.resource ${LIBS})
 TARGET_LINK_LIBRARIES( get_corrupt ${LIBS})
@@ -138,9 +162,19 @@ TARGET_LINK_LIBRARIES( ibp_attach_rid ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_rid_mode ${LIBS})
 TARGET_LINK_LIBRARIES( ibp_undelete ${LIBS})
 TARGET_LINK_LIBRARIES( chksum_test ${OPENSSL_LIBRARIES} ${CRYPTO_LIBRARIES})
+TARGET_LINK_LIBRARIES( testing_leveldb ${LIBS})
 
-install(TARGETS chksum_test date_spacefree expire_list get_alloc get_config get_corrupt get_version get_rid_status ibp_attach_rid ibp_detach_rid
-    ibp_rescan ibp_rid_mode ibp_server ibp_undelete mkfs.resource print_alog read_alloc repair_history DESTINATION bin)
+set(ALL_TARGETS  chksum_test date_spacefree expire_list get_alloc get_config 
+                 get_corrupt get_version get_rid_status ibp_attach_rid ibp_detach_rid
+                 ibp_rescan ibp_rid_mode ibp_server ibp_undelete mkfs.resource
+                 print_alog read_alloc repair_history )
+
+if (LEVELDB_FOUND)
+    # leveldb is a c++ library, so we need to link properly
+    SET_TARGET_PROPERTIES(${ALL_TARGETS} PROPERTIES LINKER_LANGUAGE CXX)
+    SET_TARGET_PROPERTIES(testing_leveldb PROPERTIES LINKER_LANGUAGE CXX)
+endif (LEVELDB_FOUND)
+install(TARGETS ${ALL_TARGETS} DESTINATION bin)
 install(FILES misc/ibp.cfg DESTINATION etc)
 install(FILES misc/ibp-server DESTINATION etc/init.d)
 
