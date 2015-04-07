@@ -238,6 +238,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   char *str, *bstate;
   int val, k, i, timeout_ms;
   char iface_default[1024];
+  char statsd_postfix_default[1024];
   apr_time_t t;
   pMount_t *pm, *pmarray;
 
@@ -274,6 +275,17 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   server->rid_log = "/log/rid.log";
   server->rid_eject_script = NULL;
   server->rid_eject_tmp_path = "/tmp";
+  server->statsd_host = NULL;
+  server->statsd_port = 8125;
+  server->statsd_prefix = "ibp_server";
+  gethostname(statsd_postfix_default, sizeof(statsd_postfix_default));
+  for (i = 0; i < strlen(statsd_postfix_default); ++i) {
+      if (statsd_postfix_default[i] == '.') {
+          statsd_postfix_default[i] = '_';
+      }
+  }
+  server->statsd_postfix = statsd_postfix_default;
+  server->stats = NULL;
 
   cfg->dbenv_loc = "/tmp/ibp_dbenv";
   cfg->db_mem = 256;
@@ -392,7 +404,16 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   set_log_level(cfg->server.log_level);
   set_debug_level(cfg->server.debug_level);
   set_log_maxsize(cfg->server.log_maxsize);
-
+  server->statsd_host = inip_get_string(keyfile, "server", "statsd_host", server->statsd_host);
+  server->statsd_port = inip_get_integer(keyfile, "server", "statsd_port", server->statsd_port);
+  server->statsd_prefix = inip_get_string(keyfile, "server", "statsd_prefix", server->statsd_prefix);
+  server->statsd_postfix = inip_get_string(keyfile, "server", "statsd_postfix", server->statsd_postfix);
+  if (server->statsd_host) {
+    server->stats = statsd_init_with_namespace(server->statsd_host, server->statsd_port, 
+                                                server->statsd_prefix, server->statsd_postfix);
+  } else {
+    server->stats = NULL;
+  }
   // *** Now iterate through each resource which is assumed to be all groups beginning with "resource" ***
   apr_pool_t *mount_pool;
   apr_pool_create(&mount_pool, NULL);
@@ -505,7 +526,9 @@ int ibp_shutdown(Config_t *cfg)
   if ((err = close_db_env(cfg->dbenv)) != 0) {
      log_printf(0, "ibp_server: Error closing DB envirnment!  Err=%d\n", err);
   }
-
+  if (cfg->server.stats) {
+     statsd_finalize(cfg->server.stats);
+  }
   return(0);
 }
 

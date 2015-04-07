@@ -109,7 +109,7 @@ configure_file("${PROJECT_SOURCE_DIR}/server_version.c.in" "${PROJECT_BINARY_DIR
 SET(RESOURCE_OBJS resource.c alloc_history.c cap_timestamp.c random.c osd_fs.c osd_leveldb.c db_resource.c log.c atomic_counter.c debug.c rid.c 
       pigeon_hole.c pigeon_coop.c )
 SET(NETWORK_OBJS network.c net_sock.c net_1_ssl.c net_2_ssl.c net_fd.c net_phoebus.c phoebus.c chksum.c )
-set(STRING_OBJS string_token.c append_printf.c iniparse.c)
+set(STRING_OBJS string_token.c append_printf.c iniparse.c statsd-client.c)
 if (LEVELDB_FOUND)
     list(APPEND RESOURCE_OBJS leveldb_fd.c leveldb_fs.c leveldb_range.c leveldb_state.c osd_leveldb.c leveldb_iterator.c)
 endif (LEVELDB_FOUND)

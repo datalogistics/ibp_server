@@ -846,7 +846,7 @@ void server_loop(Config_t *config)
   print_time = apr_time_now();
 
   log_printf(10, "server_loop: Start.....\n");
-
+  STATSD_COUNT(config->server.stats, "startup", 1);
   task_count = 0;
 
 log_printf(0, "shutdown_now=%d\n", shutdown_now);
