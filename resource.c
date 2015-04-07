@@ -388,7 +388,9 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
         max_bytes = stat.f_bavail;
         max_bytes = max_bytes * (ibp_off_t)stat.f_bsize;
       }
-   } 
+   }
+
+   res.dev->stats = NULL;
    res.max_size[ALLOC_HARD] = max_bytes;
    res.max_size[ALLOC_SOFT] = max_bytes;
    res.max_size[ALLOC_TOTAL] = max_bytes;
@@ -1004,7 +1006,6 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
 
    res->data_pdev = fname2dev(res->device);
    res->pending = 0;
-
    log_printf(15, "mount_resource: rid=%s force_rebuild=%d device=%s\n", res->name, force_rebuild, res->device);
 
    res->lazy_allocate = lazy_allocate;
@@ -1025,7 +1026,7 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
       res->res_type = RES_TYPE_LEVELDB;
       assert((res->dev = osd_mount_leveldb(res->device)) != NULL);
    }
-
+   res->dev->stats = NULL;
 
    //** Init the lock **
    apr_pool_create(&(res->pool), NULL);

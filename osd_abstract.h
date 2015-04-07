@@ -38,6 +38,7 @@ http://www.accre.vanderbilt.edu
 #include <stdint.h>
 #include "statfs.h"
 #include "ibp_time.h"
+#include "statsd-client.h"
 
  //** Type of ID
 #define OSD_ID        0
@@ -87,44 +88,45 @@ typedef struct {
   int  my_index;
 } osd_fd_t;
 
-#define osd_umount(d) (d)->umount(d)
-#define osd_create_id(d, type, header, block, id) (d)->create_id(d, type, header, block, id)
-#define osd_native_open_id(d, id, offset, mode) (d)->native_open(d, id, offset, mode)
-#define osd_native_enabled(d) (d)->native_open
-#define osd_native_close_id(d, fd) (d)->native_close(d, fd)
-#define osd_validate_chksum(d, id, correct_errors) (d)->validate_chksum(d, id, correct_errors)
-#define osd_get_chksum(d, id, disk_buffer, calc_buffer, bsize, block_len, good_block, start_block, end_block) (d)->get_chksum(d, id, disk_buffer, calc_buffer, bsize, block_len, good_block, start_block, end_block)
-#define osd_chksum_info(d, id, cs_type, hbs, bs) (d)->chksum_info(d, id, cs_type, hbs, bs)
-#define osd_get_corrupt_count(d) (d)->get_corrupt_count(d)
-#define osd_new_corrupt_iterator(d) (d)->new_corrupt_iterator(d)
-#define osd_destroy_corrupt_iterator(iter) (iter)->d->destroy_corrupt_iterator(iter)
-#define osd_corrupt_iterator_next(iter, id) (iter)->d->corrupt_iterator_next(iter, id)
-#define osd_reserve(d, id, len) (d)->reserve(d, id, len)
-#define osd_remove(d, rmode, id) (d)->remove(d, rmode, id)
-#define osd_delete_remove(d, id) (d)->delete_remove(d, id)
-#define osd_expire_remove(d, id) (d)->expire_remove(d, id)
-#define osd_physical_remove(d, id) (d)->physical_remove(d, id)
-#define osd_trash_physical_remove(d, trash_type, trash_id) (d)->trash_physical_remove(d, trash_type, trash_id)
-#define osd_trash_undelete(d, trash_type, trash_id) (d)->trash_undelete(d, trash_type, trash_id)
-#define osd_truncate(d, id, len) (d)->truncate(d, id, len)
-#define osd_size(d, id) (d)->size(d, id)
-#define osd_fd_size(d, fd) (d)->fd_size(d, fd)
-#define osd_trash_size(d, trash_type, trash_id) (d)->trash_size(d, trash_type, trash_id)
-#define osd_read(d, fd, offset, len, buffer) (d)->read(d, fd, offset, len, buffer)
-#define osd_write(d, fd, offset, len, buffer) (d)->write(d, fd, offset, len, buffer)
-#define osd_open(d, id, mode) (d)->open(d, id, mode)
-#define osd_get_state(d, fd) (d)->get_state(d, fd)
-#define osd_close(d, fd) (d)->close(d, fd)
-#define osd_id_exists(d, id) (d)->id_exists(d, id)
-#define osd_statfs(d, buf) (d)->statfs(d, buf)
-#define osd_new_iterator(d) (d)->new_iterator(d)
-#define osd_new_trash_iterator(d, trash_type) (d)->new_trash_iterator(d, trash_type)
-#define osd_destroy_iterator(oi) (oi)->d->destroy_iterator(oi)
-#define osd_iterator_next(oi, id) (oi)->d->iterator_next(oi, id)
-#define osd_trash_iterator_next(oi, id, move_time, trash_id) (oi)->d->trash_iterator_next(oi, id, move_time, trash_id)
+#define osd_umount(d) (STATSD_COUNT(d->stats, "ops.umount",1),(d)->umount(d))
+#define osd_create_id(d, type, header, block, id) (STATSD_COUNT(d->stats, "opps.create_id", 1),(d)->create_id(d, type, header, block, id))
+#define osd_native_open_id(d, id, offset, mode) (STATSD_COUNT(d->stats, "ops.native_open_id", 1),(d)->native_open(d, id, offset, mode))
+#define osd_native_enabled(d) (STATSD_COUNT(d->stats, "ops.native_enabled", 1),(d)->native_open)
+#define osd_native_close_id(d, fd) (STATSD_COUNT(d->stats, "ops.native_close_id", 1),(d)->native_close(d, fd))
+#define osd_validate_chksum(d, id, correct_errors) (STATSD_COUNT(d->stats, "ops.validate_chksum", 1),(d)->validate_chksum(d, id, correct_errors))
+#define osd_get_chksum(d, id, disk_buffer, calc_buffer, bsize, block_len, good_block, start_block, end_block) (STATSD_COUNT(d->stats, "ops.get_chksum", 1),(d)->get_chksum(d, id, disk_buffer, calc_buffer, bsize, block_len, good_block, start_block, end_block))
+#define osd_chksum_info(d, id, cs_type, hbs, bs) (STATSD_COUNT(d->stats, "ops.chksum_info", 1),(d)->chksum_info(d, id, cs_type, hbs, bs))
+#define osd_get_corrupt_count(d) (STATSD_COUNT(d->stats, "ops.get_corrupt_count", 1),(d)->get_corrupt_count(d))
+#define osd_new_corrupt_iterator(d) (STATSD_COUNT(d->stats, "ops.net_corrupt_iterator", 1),(d)->new_corrupt_iterator(d))
+#define osd_destroy_corrupt_iterator(iter) (STATSD_COUNT(iter->d->stats, "ops.destroy_corrupt_iterator", 1),(iter)->d->destroy_corrupt_iterator(iter))
+#define osd_corrupt_iterator_next(iter, id) (STATSD_COUNT(iter->d->stats, "ops.orrupt_iterator_next", 1),(iter)->d->corrupt_iterator_next(iter, id))
+#define osd_reserve(d, id, len) (STATSD_COUNT(d->stats, "ops.reserve",1),(d)->reserve(d, id, len))
+#define osd_remove(d, rmode, id)  (STATSD_COUNT(d->stats, "ops.remove",1),(d)->remove(d, rmode, id))
+#define osd_delete_remove(d, id)  (STATSD_COUNT(d->stats, "ops.delete_remove",1),(d)->delete_remove(d, id))
+#define osd_expire_remove(d, id)  (STATSD_COUNT(d->stats, "ops.expire_remove",1),(d)->expire_remove(d, id))
+#define osd_physical_remove(d, id)  (STATSD_COUNT(d->stats, "ops.physical_remove",1),(d)->physical_remove(d, id))
+#define osd_trash_physical_remove(d, trash_type, trash_id)  (STATSD_COUNT(d->stats, "ops.trash_physical_rewmove",1),(d)->trash_physical_remove(d, trash_type, trash_id))
+#define osd_trash_undelete(d, trash_type, trash_id)  (STATSD_COUNT(d->stats, "ops.trash_undelete",1),(d)->trash_undelete(d, trash_type, trash_id))
+#define osd_truncate(d, id, len)  (STATSD_COUNT(d->stats, "ops.truncate",1),(d)->truncate(d, id, len))
+#define osd_size(d, id)  (STATSD_COUNT(d->stats, "ops.size",1),(d)->size(d, id))
+#define osd_fd_size(d, fd)  (STATSD_COUNT(d->stats, "ops.fd_size",1),(d)->fd_size(d, fd))
+#define osd_trash_size(d, trash_type, trash_id)  (STATSD_COUNT(d->stats, "ops.trash_size",1),(d)->trash_size(d, trash_type, trash_id))
+#define osd_read(d, fd, offset, len, buffer)  (STATSD_COUNT(d->stats, "ops.read",1),(d)->read(d, fd, offset, len, buffer))
+#define osd_write(d, fd, offset, len, buffer)  (STATSD_COUNT(d->stats, "ops.write",1),(d)->write(d, fd, offset, len, buffer))
+#define osd_open(d, id, mode)  (STATSD_COUNT(d->stats, "ops.open",1),(d)->open(d, id, mode))
+#define osd_get_state(d, fd)  (STATSD_COUNT(d->stats, "ops.get_state",1),(d)->get_state(d, fd))
+#define osd_close(d, fd)  (STATSD_COUNT(d->stats, "ops.close",1),(d)->close(d, fd))
+#define osd_id_exists(d, id)  (STATSD_COUNT(d->stats, "ops.id_exists",1),(d)->id_exists(d, id))
+#define osd_statfs(d, buf)  (STATSD_COUNT(d->stats, "ops.statfs",1),(d)->statfs(d, buf))
+#define osd_new_iterator(d)  (STATSD_COUNT(d->stats, "ops.new_iterator",1),(d)->new_iterator(d))
+#define osd_new_trash_iterator(d, trash_type)  (STATSD_COUNT(d->stats, "ops.new_trash_iterator",1),(d)->new_trash_iterator(d, trash_type))
+#define osd_destroy_iterator(oi)  (STATSD_COUNT(oi->d->stats, "ops.destroy_iterator",1),(oi)->d->destroy_iterator(oi))
+#define osd_iterator_next(oi, id)  (STATSD_COUNT(oi->d->stats, "ops.iterator_next",1),(oi)->d->iterator_next(oi, id))
+#define osd_trash_iterator_next(oi, id, move_time, trash_id)  (STATSD_COUNT(oi->d->stats, "ops.trash_iterator_next",1),(oi)->d->trash_iterator_next(oi, id, move_time, trash_id))
 
 struct osd_s {
     void *private;  //** All private implementation specific data goes here
+    statsd_link * stats;
     int (*umount)(osd_t *d);
     osd_id_t (*create_id)(osd_t *d, int chksum_type, int header_size, int block_size, osd_id_t id);    // Returns an OSD object.  Think of it as a filename
     osd_native_fd_t (*native_open)(osd_t *d, osd_id_t id, osd_off_t offset, int mode);   //Native open

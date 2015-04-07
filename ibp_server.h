@@ -126,6 +126,11 @@ typedef struct {       // Structure containg the overall server config
    char *default_acl;     //Default command ACLs
    char *rid_eject_script; //Script to run when ejecting drives that fail a health check
    char *rid_eject_tmp_path; //Location to create the temporary files for the eject script
+   char *statsd_host; // default statsd target
+   char *statsd_prefix; // default statsd prefix
+   char *statsd_postfix; // default statsd postfix
+   int statsd_port; // default statsd port
+   statsd_link * stats; // server-wide statsd link
 } Server_t;
 
 typedef struct {      //Main config structure
