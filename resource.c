@@ -380,6 +380,7 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
         max_bytes = max_bytes * (ibp_off_t)stat.f_bsize;
       }
    } else if (strcmp("leveldb", dev_type)==0) {
+#ifdef _ENABLE_LEVELDB
       res.res_type = RES_TYPE_LEVELDB;
       assert((res.dev = osd_mount_leveldb(res.device)) != NULL);
 
@@ -388,6 +389,10 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
         max_bytes = stat.f_bavail;
         max_bytes = max_bytes * (ibp_off_t)stat.f_bsize;
       }
+#else
+      printf("ERROR: LevelDB wasn't compiled in to this binary\n");
+      abort();
+#endif
    }
 
    res.dev->stats = NULL;
@@ -1019,12 +1024,17 @@ int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t 
       res->res_type = RES_TYPE_DIR;
       assert((res->dev = osd_mount_fs(res->device, res->n_cache, res->cache_expire)) != NULL);
    } else if (strcmp(DEVICE_LEVELDB, res->device_type)==0) {
+#ifdef _ENABLE_LEVELDB
       DIR *dir;
       assert((dir = opendir(res->device)) != NULL);
       closedir(dir);
 
       res->res_type = RES_TYPE_LEVELDB;
       assert((res->dev = osd_mount_leveldb(res->device)) != NULL);
+#else
+      printf("LevelDB wasn't compiled into this binary\n");
+      abort();
+#endif
    }
    res->dev->stats = NULL;
 
