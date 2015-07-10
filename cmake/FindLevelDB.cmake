@@ -11,17 +11,19 @@
  
 find_path(LEVELDB_INCLUDE_DIR leveldb/c.h PATHS
     leveldb/include
+    NO_DEFAULT_PATH
     )
  
 set(LEVELDB_NAME leveldb)
 find_library(LEVELDB_LIBRARY NAMES libleveldb.a PATHS
     leveldb/
+    NO_DEFAULT_PATH
     )
  
 if (LEVELDB_LIBRARY AND LEVELDB_INCLUDE_DIR)
   set(LEVELDB_LIBRARIES ${LEVELDB_LIBRARY})
   set(LEVELDB_FOUND "YES")
-  message(STATUS "Found LevelDB: ${LEVELDB_LIBRARY}")
+  message(STATUS "Found LevelDB: ${LEVELDB_LIBRARY} ${LEVELDB_INCLUDE_DIR}")
 else (LEVELDB_LIBRARY AND LEVELDB_INCLUDE_DIR)
   set(LEVELDB_FOUND "NO")
   message(STATUS "Could not find LevelDB")
