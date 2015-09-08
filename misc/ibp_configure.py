@@ -8,8 +8,9 @@ import fcntl
 import struct
 import sys
 import os
-import commands
 import os.path as path
+import commands
+import re
 import time
 import array
 import shutil
@@ -19,6 +20,7 @@ import logging
 
 # Setting basic logging
 log = logging.getLogger('ibp_configure')
+danger_pattern = re.compile(r"^/$|^/[boot|usr|var|lib|dev|bin|sbin|proc]+/?$")
 
 MS_URL = "https://dlt.incntre.iu.edu:9001"
 IBP_CONFIG_LOG = "ibp_configure.log"
@@ -62,6 +64,7 @@ institution = {inst}
 country = {country}
 state = {state}
 zipcode = {zipcode}
+email = {email}
 latitude = {lat}
 longitude = {lon}
 """
@@ -76,6 +79,7 @@ BLIPP_CONFIG = """{
         "country": "%s",
         "state": "%s",
         "zipcode": "%s",
+        "email": "%s",
         "latitude": %f,
         "longitude": %f
     },
@@ -144,8 +148,8 @@ class System():
         "Get the free space of the filesystem containing pathname"
         stat= os.statvfs(pathname)
         # use f_bfree for superuser, or f_bavail if filesystem
-        # has reserved space for superuser
-        return stat.f_bfree*stat.f_bsize
+        # has reserved space for superuser, in MB
+        return stat.f_bfree*stat.f_bsize/(1024*1024)
 
     def execute_command(self, cmd, ignore_status = False):
         log.debug("Executing command: %s" % cmd)
@@ -242,6 +246,7 @@ class Configuration():
         self.unis_institution  = ""
         self.unis_state        = ""
         self.unis_zipcode      = ""
+        self.unis_email        = ""
         self.unis_country      = ""
         self.unis_latitude     = 0
         self.unis_longitude    = 0
@@ -365,32 +370,34 @@ class Configuration():
             else:
                 return ""
 
-        # check if already allocated
-        if os.path.exists(self.ibp_resource_path):
-            ret = self.query_yes_no("WARNING: directory %s already exists, delete?" %
-                                    self.ibp_resource_path)
-            if ret:
-                shutil.rmtree(self.ibp_resource_path)
-            else:
-                log.error("Specify another resource path and try again, exiting.")
-                exit(1)
-                
-        if os.path.exists(self.ibp_resource_db):
-            ret = self.query_yes_no("WARNING: directory %s already exists, delete?" %
-                                    self.ibp_resource_db)
-            if os.path.exists(self.ibp_resource_db):
-                shutil.rmtree(self.ibp_resource_db)
-
-        # now init the resources
-        os.makedirs(self.ibp_resource_path)
-        os.makedirs(self.ibp_resource_db)
-        resource = mysys.execute_command(self.makefs_cmd())
+        if path.exists(self.ibp_resource_path) and path.exists(self.ibp_resource_db):
+            resource = mysys.execute_command(self.makefs_cmd())
+        else:
+            log.error("Resource and/or DB path do not exist: [%s, %s]" %
+                      self.ibp_resource_path, self.ibp_resource_db)
+            exit(1)
 
         # save resource for later runs
         with open(self.allocation_success_file(), 'w') as f:
             f.write(resource)
 
         return resource
+
+    def path_check_create(self, path, disp, dval):
+        path = self.get_string(disp, dval)
+
+        # check if already allocated
+        if os.path.exists(path):
+            if danger_pattern.match(path):
+                log.info("Specified path is an OS system directory, please try again")
+                return False
+            ret = self.query_yes_no("WARNING: directory %s already exists, delete?" % path)
+            if ret:
+                shutil.rmtree(path)
+            else:
+                return False
+        os.makedirs(path)
+        return True
 
     def save_and_write(self, fname, content):
         # check that $IBP_ROOT/etc exists
@@ -441,12 +448,17 @@ class Configuration():
         self.ibp_port = self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
         self.ibp_log = self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
         self.ibp_do_res = self.query_yes_no(' Configure an initial IBP resource', default="yes")
-        if self.ibp_do_res:
-            self.ibp_resource_path = self.get_string(' Resource path [%s] ' %
-                                                     self.ibp_resource_path, self.ibp_resource_path)
-            self.ibp_resource_db = self.get_string(' Resource DB path [%s] ' %
-                                                   self.ibp_resource_db, self.ibp_resource_db)
-            self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % self.ibp_size, self.ibp_size)
+        if self.ibp_do_res:                 
+            while not self.path_check_create(self.ibp_resource_path,
+                                             ' Resource path [%s] ' % self.ibp_resource_path,
+                                             self.ibp_resource_path):
+                pass
+            while not self.path_check_create(self.ibp_resource_db,
+                                             ' Resource DB path [%s] ' % self.ibp_resource_db,
+                                             self.ibp_resource_db):
+                pass
+            size = mysys.get_fs_freespace(self.ibp_resource_path)
+            self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % size, size)
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
         self.unis_endpoint = self.get_string(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
@@ -460,6 +472,7 @@ class Configuration():
         self.unis_country = self.get_string(' Country [%s]: ' % "US", "US")
         self.unis_state = self.get_string(' State [%s]: ' % "AK", "AK")
         self.unis_zipcode = self.get_string(' ZipCode [%s]: ' % "", "00000")
+        self.unis_email = self.get_string(' Admin email [%s]: ' % "", "dlt@crest.iu.edu")
         self.unis_latitude = self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude) 
         self.unis_longitude = self.get_real(' Longitude [%s]: ' % self.unis_longitude, self.unis_longitude) 
         self.enable_blipp = self.query_yes_no(' Monitor the depot with BLiPP (usage stats)', default='yes')
@@ -474,6 +487,7 @@ class Configuration():
         blipp_config = BLIPP_CONFIG % (self.unis_institution,
                                        self.unis_state,
                                        self.unis_zipcode,
+                                       self.unis_email,
                                        self.unis_country,
                                        self.unis_latitude,
                                        self.unis_longitude,
@@ -515,6 +529,7 @@ class Configuration():
                                                 inst=self.unis_institution,
                                                 state=self.unis_state,
                                                 zipcode=self.unis_zipcode,
+                                                email=self.unis_email,
                                                 country=self.unis_country,
                                                 lat=self.unis_latitude,
                                                 lon=self.unis_longitude)
@@ -596,7 +611,7 @@ def main():
         cfg.public_ip         = mysys.get_public_facing_ip(args)
         cfg.ibp_resource_path = args.ibp_resource_dir + "/ibp_resources"
         cfg.ibp_resource_db   = args.ibp_resource_dir + "/ibp_resources/db"
-        cfg.ibp_size          = mysys.get_fs_freespace(args.ibp_resource_dir)/(1024*1024)
+        cfg.ibp_size          = mysys.get_fs_freespace(args.ibp_resource_dir)
         if args.neuca:
             default_ip        = mysys.get_public_facing_ip_using_default_interface()
             cfg.ibp_sub_ip    = default_ip+":"+cfg.public_ip+";"

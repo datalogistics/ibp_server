@@ -29,6 +29,7 @@ void parse_unis_config(inip_file_t *kf)
   location.state = inip_get_string(kf, "unis", "state", NULL);
   location.institution = inip_get_string(kf, "unis", "institution", NULL);
   location.zipcode = inip_get_string(kf, "unis", "zipcode", NULL);
+  location.email = inip_get_string(kf, "unis", "email", NULL);
   location.lat = inip_get_double(kf, "unis", "latitude", 0);
   location.lon = inip_get_double(kf, "unis", "longitude", 0);
 
@@ -55,7 +56,11 @@ void parse_unis_config(inip_file_t *kf)
   config->cacerts = NULL;
   memcpy(&config->loc_info, &location, sizeof(location));
 
-  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name, config->type, config->endpoint, config->protocol_name, config->iface, config->port, config->do_register, config->registration_interval, config->refresh_timer, config->certfile, config->keyfile, config->use_ssl);
+  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name,
+	     config->type, config->endpoint, config->protocol_name,
+	     config->iface, config->port, config->do_register,
+	     config->registration_interval, config->refresh_timer,
+	     config->certfile, config->keyfile, config->use_ssl);
 }
 
 //*************************************************************************

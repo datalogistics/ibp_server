@@ -11,7 +11,7 @@
 
 find_path(UNIS_C_INCLUDE_DIR unis_registration.h)
 
-find_library(UNIS_C_LIBRARY NAMES unis-c curl jansson)
+find_library(UNIS_C_LIBRARY NAMES unis-c)
 find_library(CURL_LIBRARY NAMES curl)
 find_library(JANSSON_LIBRARY NAMES jansson)
 
