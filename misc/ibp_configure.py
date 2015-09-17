@@ -22,7 +22,7 @@ import logging
 log = logging.getLogger('ibp_configure')
 danger_pattern = re.compile(r"^/$|^/[boot|usr|var|lib|dev|bin|sbin|proc]+/?$")
 
-MS_URL = "https://dlt.incntre.iu.edu:9001"
+MS_URL = "https://dlt.crest.iu.edu:9001"
 IBP_CONFIG_LOG = "ibp_configure.log"
 
 IBP_SAMPLE_CONFIG = """
@@ -46,6 +46,16 @@ substitute_map={substitute_map}
 [unis]
 {unis}
 
+"""
+
+SYSCTL_CONFIG = """net.ipv4.tcp_no_metrics_save = 1
+net.ipv4.tcp_timestamps = 1
+net.ipv4.tcp_sack = 1
+net.core.rmem_max = 33554432
+net.core.wmem_max = 33554432
+net.ipv4.tcp_rmem = 4096 87380 33554432
+net.ipv4.tcp_wmem = 4096 65536 33554432
+net.core.netdev_max_backlog = 25000
 """
 
 PHOEBUS_SAMPLE_CONFIG = "gateway={phoebus_gateway}"
@@ -238,8 +248,9 @@ class Configuration():
         self.public_ip         = ""
         self.wait_interval     = 10
         self.enable_blipp      = False
+        self.blipp_sysoptfile  = "/etc/sysconfig/blippd"
         self.phoebus           = ""
-        self.unis_endpoint     = "https://dlt.incntre.iu.edu:9000"
+        self.unis_endpoint     = "https://dlt.crest.iu.edu:9000"
         self.unis_use_ssl      = True
         self.unis_cert_file    = "/usr/local/etc/dlt-client.pem"
         self.unis_key_file     = "/usr/local/etc/dlt-client.key"
@@ -259,6 +270,7 @@ class Configuration():
         self.ibp_root          = "/"
         self.ibp_log           = "/var/log/ibp_server.log"
         self.ibp_sub_ip        = ""
+        self.ibp_sysctl        = "/etc/sysctl.d/ibp.conf"
         
     def allocation_success_file(self):
         # acts as lock for reallocation. This file will be created when resources are
@@ -274,7 +286,7 @@ class Configuration():
         return path.join(self.ibp_root, "etc/ibp.cfg")
 
     def blipp_config_file(self):
-        return path.join(self.ibp_root, "etc/blipp_dlt.json")
+        return path.join(self.ibp_root, "etc/periscope/blipp_dlt.json")
 
     def ibp_interface_monitor(self):
         return path.join(self.ibp_root, "bin/ibp_interface_monitor.py") + " -l -d"
@@ -480,7 +492,10 @@ class Configuration():
         log.info("== Phoebus Settings (WAN Acceleration) ==")
         self.phoebus = self.get_string(' Optional Phoebus Gateway (<host>/<port>): ', '')
         log.info('')
-        log.info("End DLT onfiguration")
+        log.info("== System Settings ==")
+        self.systune = self.query_yes_no(' Apply network tuning to improve TCP performance (sysctl)', default='yes')
+        log.info('')
+        log.info("End DLT configuration")
         log.info("===============================================================")
 
     def generate_blipp_config(self, args):
@@ -500,6 +515,9 @@ class Configuration():
                                        self.ibp_port)
         
         self.save_and_write(self.blipp_config_file(), blipp_config)
+        # update default blipp options
+        blipp_opts = 'OPTIONS="-c %s"\n' % self.blipp_config_file()
+        self.save_and_write(self.blipp_sysoptfile, blipp_opts)
         return blipp_config
 
     def generate_ibp_config(self, args):
@@ -605,7 +623,7 @@ def main():
     cfg.ibp_root = args.ibp_root
 
     if (args.geni):
-        cfg.unis_endpoint     = "http://monitor.incntre.iu.edu:9000"
+        cfg.unis_endpoint     = "http://monitor.crest.iu.edu:9000"
         cfg.unis_use_ssl      = False
         cfg.ibp_do_res        = True
         cfg.public_ip         = mysys.get_public_facing_ip(args)
@@ -627,8 +645,14 @@ def main():
 
     if (cfg.enable_blipp):
         log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())
+        log.info("  Start BLiPP using systemctl or service")
         blipp_config = cfg.generate_blipp_config(args)
         log.debug(blipp_config)
+
+    if (cfg.systune):
+        cfg.save_and_write(cfg.ibp_sysctl, SYSCTL_CONFIG)
+        mysys.execute_command("sysctl --system")
+        log.info("Added %s and ran 'sysctl --system' to apply network tuning" % cfg.ibp_sysctl)
     
     # start interface monitoring thread
     # execute_command(c.ibp_interface_monitor(), True)
