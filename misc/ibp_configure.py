@@ -402,14 +402,14 @@ class Configuration():
         if os.path.exists(path):
             if danger_pattern.match(path):
                 log.info("Specified path is an OS system directory, please try again")
-                return False
+                return path, False
             ret = self.query_yes_no("WARNING: directory %s already exists, delete?" % path)
             if ret:
                 shutil.rmtree(path)
             else:
-                return False
+                return path, False
         os.makedirs(path)
-        return True
+        return path, True
 
     def save_and_write(self, fname, content):
         # check that $IBP_ROOT/etc exists
@@ -460,15 +460,18 @@ class Configuration():
         self.ibp_port = self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
         self.ibp_log = self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
         self.ibp_do_res = self.query_yes_no(' Configure an initial IBP resource', default="yes")
-        if self.ibp_do_res:                 
-            while not self.path_check_create(self.ibp_resource_path,
-                                             ' Resource path [%s] ' % self.ibp_resource_path,
-                                             self.ibp_resource_path):
-                pass
-            while not self.path_check_create(self.ibp_resource_db,
-                                             ' Resource DB path [%s] ' % self.ibp_resource_db,
-                                             self.ibp_resource_db):
-                pass
+        if self.ibp_do_res:
+            is_valid = False
+            while not is_valid:
+                self.ibp_resource_path, is_valid = self.path_check_create(self.ibp_resource_path,
+                                                                          ' Resource path [%s] ' % self.ibp_resource_path,
+                                                                          self.ibp_resource_path):
+
+            is_valid = False
+            while not is_valid:
+                self.ibp_resource_db, is_valid = self.path_check_create(self.ibp_resource_db,
+                                                                        ' Resource DB path [%s] ' % self.ibp_resource_db,
+                                                                        self.ibp_resource_db):
             size = mysys.get_fs_freespace(self.ibp_resource_path)
             self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % size, size)
         log.info('')
