@@ -465,13 +465,13 @@ class Configuration():
             while not is_valid:
                 self.ibp_resource_path, is_valid = self.path_check_create(self.ibp_resource_path,
                                                                           ' Resource path [%s] ' % self.ibp_resource_path,
-                                                                          self.ibp_resource_path):
+                                                                          self.ibp_resource_path)
 
             is_valid = False
             while not is_valid:
                 self.ibp_resource_db, is_valid = self.path_check_create(self.ibp_resource_db,
                                                                         ' Resource DB path [%s] ' % self.ibp_resource_db,
-                                                                        self.ibp_resource_db):
+                                                                        self.ibp_resource_db)
             size = mysys.get_fs_freespace(self.ibp_resource_path)
             self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % size, size)
         log.info('')
