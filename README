@@ -10,6 +10,11 @@ For building you need the following packages installed:
 
 and optionally Phoebus for TCP overlay transfers.
 
+Debian installs
+----------------------------------------------------------------
+** Not from Maintainer : I installed the following on debian apart from unis - Try this and update if you needed more **
+sudo apt-get install cmake libdb-dev libaprutil1-dev libsnappy-dev libleveldb-dev libcurl4-gnutls-dev
+
 To build the IBP_server you should be able to unpack the tarball and then modify
 bootstrap as needed.  bootstrap is a wrapper that runs cmake to generate the Makefiles.
 You can then run 'make' to build the executables....
