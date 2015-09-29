@@ -42,6 +42,12 @@ if (APPLE)
     list(REMOVE_ITEM LIBS rt)
 endif (APPLE)
 
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-9]86$")
+    add_definitions(${APR_CONFIG_EXECUTABLE} ${APR_FLAGS})
+endif (CMAKE_SYSTEM_PROCESSOR MATCHES "^i[3-9]86$")
+endif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+
 # Try finding optional dependencies
 find_package(Phoebus)
 find_package(Unisc)
