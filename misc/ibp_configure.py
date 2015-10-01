@@ -286,7 +286,11 @@ class Configuration():
         return path.join(self.ibp_root, "etc/ibp.cfg")
 
     def blipp_config_file(self):
-        return path.join(self.ibp_root, "etc/periscope/blipp_dlt.json")
+        # check that etc/periscope exists
+        filename = "/etc/periscope/blipp_dlt.json"
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
+        return path.join(self.ibp_root, filename)
 
     def ibp_interface_monitor(self):
         return path.join(self.ibp_root, "bin/ibp_interface_monitor.py") + " -l -d"
