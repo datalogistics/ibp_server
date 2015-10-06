@@ -546,7 +546,7 @@ class Configuration():
 	    ibp_conn_strings += args.extra_nat_iface+";" 
 
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
-                                                public_ip=self.public_ip,
+                                                public_ip=self.ibp_host,
                                                 port=self.ibp_port,
                                                 use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
