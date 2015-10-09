@@ -48,7 +48,8 @@ substitute_map={substitute_map}
 
 """
 
-SYSCTL_CONFIG = """net.ipv4.tcp_no_metrics_save = 1
+SYSCTL_CONFIG = """\n# Added by ibp_configure.py
+net.ipv4.tcp_no_metrics_save = 1
 net.ipv4.tcp_timestamps = 1
 net.ipv4.tcp_sack = 1
 net.core.rmem_max = 33554432
@@ -100,7 +101,7 @@ BLIPP_CONFIG = """{
         "use_ssl": "%s",
             "ssl_cert": "%s",
             "ssl_key": "%s",
-        "ssl_cafile": "",
+            "ssl_cafile": "%s",
         "probe_defaults":
         {"collection_schedule":"builtins.simple",
          "schedule_params": {"every": 5},
@@ -254,6 +255,7 @@ class Configuration():
         self.unis_use_ssl      = True
         self.unis_cert_file    = "/usr/local/etc/dlt-client.pem"
         self.unis_key_file     = "/usr/local/etc/dlt-client.key"
+        self.unis_ca_file      = "/usr/local/etc/dlt-ca.bundle"
         self.unis_institution  = ""
         self.unis_state        = ""
         self.unis_zipcode      = ""
@@ -415,9 +417,17 @@ class Configuration():
         os.makedirs(path)
         return path, True
 
+    def save_and_append(self, fname, content):
+        # check that path exists
+        if not os.path.isdir(os.path.dirname(fname)):
+            os.makedirs(os.path.dirname(fname))
+            
+        with open(fname, 'a') as f:
+            f.write(content)
+
     def save_and_write(self, fname, content):
-        # check that $IBP_ROOT/etc exists
-        if not os.path.dirname(fname):
+        # check that path exists
+        if not os.path.isdir(os.path.dirname(fname)):
             os.makedirs(os.path.dirname(fname))
 
         if os.path.isfile(fname):
@@ -517,6 +527,7 @@ class Configuration():
                                        self.unis_use_ssl,
                                        self.unis_cert_file,
                                        self.unis_key_file,
+                                       self.unis_ca_file,
                                        MS_URL,
                                        self.ibp_host,
                                        self.ibp_port)
@@ -551,6 +562,7 @@ class Configuration():
                                                 use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
                                                 key_file=self.unis_key_file,
+                                                ca_file=self.unis_ca_file,
                                                 inst=self.unis_institution,
                                                 state=self.unis_state,
                                                 zipcode=self.unis_zipcode,
@@ -659,7 +671,7 @@ def main():
     if (cfg.systune):
         cfg.save_and_write(cfg.ibp_sysctl, SYSCTL_CONFIG)
         mysys.execute_command("sysctl --system")
-        log.info("Added %s and ran 'sysctl --system' to apply network tuning" % cfg.ibp_sysctl)
+        log.info("Added sysctl settings and ran 'sysctl --system' to apply network tuning")
     
     # start interface monitoring thread
     # execute_command(c.ibp_interface_monitor(), True)
