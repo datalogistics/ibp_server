@@ -76,9 +76,9 @@ do
         ;;
     stop)
         if [ "x$PID" != "x" ]; then
-	    kill $PID
+	    kill -SIGQUIT $PID
             echo "$0 $ARG: ibp_server stopped"
-	elif pkill -o ibp_server; then
+	elif pkill -SIGQUIT -o ibp_server; then
 	    echo "$0 $ARG: ibp_server stopped"
         else
             echo "$0 $ARG: ibp_server could not be stopped"
