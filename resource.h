@@ -152,7 +152,7 @@ typedef struct {
 #define resource_get_counter(d) atomic_get((d)->counter)
 
 int read_usage_file(Resource_t *r, resource_usage_file_t *u);
-int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_location, ibp_off_t max_bytes);
+int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_location, ibp_off_t max_bytes, int max_duration);
 int mount_resource(Resource_t *res, inip_file_t *keyfile, char *group, DB_env_t *env, int force_rebuild,
      int lazy_allocate, int truncate_expiration);
 int umount_resource(Resource_t *res);
