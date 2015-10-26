@@ -37,39 +37,71 @@ http://www.accre.vanderbilt.edu
 //***********************************************************************************
 //***********************************************************************************
 
-int main(int argc, const char **argv)
-{
-    apr_initialize();
-    open_log("stderr");
-   if (argc < 5) {
-      printf("mkfs.resource RID type device db_location [max_mbytes]\n");
-      printf("\n");
-      printf("RID    - Resource ID (integer)\n");
-      printf("type   - Type of resource [dir|leveldb] (dir is default)\n");
-      printf("device - Device to be used for the resource.\n");
-      printf("db_location - Base directory to use for storing the DBes for the resource.\n");
-      printf("max_mbytes  - Max number of MB to use.  If missing it defaults to the entire disk.\n");
-      printf("\n");
-      return(1);
-   }
+static void _usage(FILE *f, int error) {
+    fprintf(f, "mkfs.resource RID type device db_location [options]\n"
+            "\t-b max_mbytes\n"
+            "\t-d max_duration\n"
+            "\t-h show help\n");
+    fprintf(f, "\n");
+    fprintf(f, "RID - Resource ID (integer)\n");
+    fprintf(f, "type - Type of resource [dir|leveldb] (dir is default)\n");
+    fprintf(f, "device - Device to be used for the resource.\n");
+    fprintf(f, "db_location - Base directory to use for storing the DBes for the resource.\n");
+    fprintf(f, "max_mbytes - Max number of MB to use. If missing it defaults to the entire disk.\n");
+    fprintf(f, "max_duration - Maximum duration for allocation in seconds. If missing it defaults to 30 days.\n");
+    fprintf(f, "\n");
 
-   int err = 0;
-   rid_t rid;
-   ibp_off_t nbytes = 0;
-
-   if (argc > 5) nbytes = 1024*1024 * atoll(argv[5]);
-
-   assert(apr_initialize() == APR_SUCCESS);
-
-   if (ibp_str2rid((char *)argv[1], &rid) != 0) {
-     printf("Invalid RID format!  RID=%s\n", argv[1]);
-   } else {
-     // TODO: leveldb should have its own options eventually
-     err = mkfs_resource(rid, (char *)argv[2], (char *)argv[3], (char *)argv[4], nbytes);
-   }
-
-   apr_terminate();
-
-   return(err);
+    fflush(f);
+    exit(error);
 }
 
+int main(int argc, const char **argv)
+{
+    int err = 0;
+    ibp_off_t nbytes = 0;
+    int max_duration = 0;
+
+    apr_initialize();
+    open_log("stderr");
+   
+    int opt = 0;
+    while ((opt = getopt(argc, argv, "b:d:h?")) != -1) {
+      switch (opt) {
+        case 'b':
+          nbytes = 1024 * 1024 * atoll(optarg);
+          break;
+        case 'd':
+          max_duration = atoi(optarg);
+          break;
+        case 'h':
+          _usage(stdout, EXIT_SUCCESS);
+        case '?':
+        default:
+          _usage(stderr, EXIT_FAILURE);
+      }
+    }
+    
+    argc -= optind;
+    argv += optind;
+ 
+    if (argc == 0 || argc < 4) {
+      fprintf(stderr, "\n Missing parameters\n");
+      _usage(stderr, EXIT_FAILURE);
+    }
+
+    if (max_duration == 0)
+      max_duration = 2592000;
+
+    assert(apr_initialize() == APR_SUCCESS);
+   
+    rid_t rid;
+    if (ibp_str2rid((char *)argv[0], &rid) != 0) {
+      printf("Invalid RID format!  RID=%s\n", argv[0]);
+    } else {
+      // TODO: leveldb should have its own options eventually
+      err = mkfs_resource(rid, (char *)argv[1], (char *)argv[2], (char *)argv[3], nbytes, max_duration);
+    }
+    apr_terminate();
+
+    return(err);
+}

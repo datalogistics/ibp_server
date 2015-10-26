@@ -66,6 +66,7 @@ type = ibp_server
 endpoint = {unis_endpoint}
 protocol_name= ibp
 registration_interval = 600
+max_duration = {seconds}  
 publicip = {public_ip}
 publicport = {port}
 use_ssl = {use_ssl}
@@ -247,6 +248,7 @@ class Configuration():
     def __init__(self):
         # init sets config defaults
         self.public_ip         = ""
+        self.max_duration      = 2592000
         self.wait_interval     = 10
         self.enable_blipp      = False
         self.blipp_sysoptfile  = "/etc/sysconfig/blippd"
@@ -282,7 +284,8 @@ class Configuration():
 
     def makefs_cmd(self):
         return path.join(self.ibp_root, "bin/mkfs.resource") + " 1 dir " + self.ibp_resource_path\
-               + " " + self.ibp_resource_db + " " + str(self.ibp_size)
+               + " " + self.ibp_resource_db + " -b " + str(self.ibp_size)\
+               + " -d " + str(self.max_duration)
 
     def ibp_config_file(self):
         return path.join(self.ibp_root, "etc/ibp.cfg")
@@ -487,7 +490,10 @@ class Configuration():
                                                                         ' Resource DB path [%s] ' % self.ibp_resource_db,
                                                                         self.ibp_resource_db)
             size = mysys.get_fs_freespace(self.ibp_resource_path)
-            self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % size, size)
+            self.ibp_size = self.get_int(' Usable disk space [%s MB] ' % size, size)  
+            duration = self.max_duration
+            self.max_duration = self.get_int(' Max duration for allocation [%s seconds] ' % duration, duration)
+
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
         self.unis_endpoint = self.get_string(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
@@ -559,6 +565,7 @@ class Configuration():
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
                                                 public_ip=self.ibp_host,
                                                 port=self.ibp_port,
+                                                seconds=self.max_duration,
                                                 use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
                                                 key_file=self.unis_key_file,
@@ -646,6 +653,7 @@ def main():
         cfg.unis_use_ssl      = False
         cfg.ibp_do_res        = True
         cfg.public_ip         = mysys.get_public_facing_ip(args)
+        cfg.max_duration      = args.max_duration
         cfg.ibp_resource_path = args.ibp_resource_dir + "/ibp_resources"
         cfg.ibp_resource_db   = args.ibp_resource_dir + "/ibp_resources/db"
         cfg.ibp_size          = mysys.get_fs_freespace(args.ibp_resource_dir)

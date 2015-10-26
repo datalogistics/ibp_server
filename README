@@ -29,7 +29,7 @@ Adding resources
 Each drive this server will use needs to be mounted and added to the server
 configuration to be used. In order to do that:
 
-./mkfs.resource <IBP id (unique)> dir <path to drive> <path to drive DB> <maximum size in MB>
+./mkfs.resource <IBP id (unique)> dir <path to drive> <path to drive DB> <-b maximum size in MB> <-d maximum duration for allocation in seconds>
 
 Where:
     IBP id needs to be unique per server
@@ -37,6 +37,7 @@ Where:
     path to drive DB is the absolute path to the directory storing the resource DB
         -- This can be on a separate disk, possibly SSD
     If the maximum size is omitted, the default is to have no limit
+    If the maximum duration is omitted, the default is to have 2592000 (30 days)
 
 Will provide the on-disk files needed. The output from mkfs.resource should then
 be copy/pasted into the /etc/ibp.cfg to inform IBP of the additional resources
@@ -401,8 +402,8 @@ This is the IBP server.
 ibp_config_file  -- Config file to load.  Also used with ibp_mount/ibp_umount.
 
 
-mkfs.resource RID type device db_location [max_mbytes]
------------------------------------------------------
+mkfs.resource RID type device db_location [-b max_mbytes] [-d max_duration]
+------------------------------------------------------------------------
 Creates a new IBP resource. Not invoked directly but through the shell scripts create_resource.[dev|dir]
 
 RID    - Resource ID.  Can be any non-blank valid character string.
@@ -410,7 +411,7 @@ type   - Type or resource. Currently only 'dir' is supported
 device - Device to be used for the resource.
 db_location - Base directory to use for storing the DBes for the resource.
 max_mbytes  - Max number of MB to use.  If missing it defaults to the entire disk.
-
+max_duration - Max duration for allocation in seconds. If missing it defaults to 2592000 seconds (30 days).
 
 get_corrupt host port rid [timeout]
 ----------------------------------------------------------------

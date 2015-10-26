@@ -294,7 +294,7 @@ int print_resource_usage(Resource_t *r, FILE *fd)
 // mkfs_resource - Creates a new resource
 //***************************************************************************
 
-int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_location, ibp_off_t max_bytes)
+int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_location, ibp_off_t max_bytes, int max_duration)
 {
    int err;
    char rname[256];
@@ -328,7 +328,7 @@ int mkfs_resource(rid_t rid, char *dev_type, char *device_name, char *db_locatio
 //return(0);
 //BROKEN
    memcpy(&(res.rid), &rid, sizeof(rid_t));
-   res.max_duration = 5529600;   //default to 64 days
+   res.max_duration = max_duration;   //default to 30 days in seconds
    if (strcmp(dev_type, DEVICE_DIR) == 0) {
        res.res_type = RES_TYPE_DIR;
    } else if (strcmp(dev_type, DEVICE_LEVELDB) == 0) {
