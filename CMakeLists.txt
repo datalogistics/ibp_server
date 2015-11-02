@@ -212,6 +212,6 @@ if (LEVELDB_FOUND)
 endif (LEVELDB_FOUND)
 
 install(TARGETS ${ALL_TARGETS} DESTINATION bin)
-install(FILES misc/ibp.cfg DESTINATION etc)
+install(FILES misc/ibp.cfg DESTINATION etc/ibp)
 install(FILES misc/ibp-server DESTINATION etc/init.d)
 

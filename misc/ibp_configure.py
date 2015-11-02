@@ -255,9 +255,9 @@ class Configuration():
         self.phoebus           = ""
         self.unis_endpoint     = "https://dlt.crest.iu.edu:9000"
         self.unis_use_ssl      = True
-        self.unis_cert_file    = "/usr/local/etc/dlt-client.pem"
-        self.unis_key_file     = "/usr/local/etc/dlt-client.key"
-        self.unis_ca_file      = "/usr/local/etc/dlt-ca.bundle"
+        self.unis_cert_file    = "/etc/ibp/dlt-client.pem"
+        self.unis_key_file     = "/etc/ibp/dlt-client.key"
+        self.unis_ca_file      = "/etc/ibp/dlt-ca.bundle"
         self.unis_institution  = ""
         self.unis_state        = ""
         self.unis_zipcode      = ""
@@ -283,12 +283,12 @@ class Configuration():
         return os.path.join(self.ibp_resource_path, ".allocations_do_not_remove")
 
     def makefs_cmd(self):
-        return path.join(self.ibp_root, "bin/mkfs.resource") + " 1 dir " + self.ibp_resource_path\
+        return path.join(self.ibp_root, "/usr/bin/mkfs.resource") + " 1 dir " + self.ibp_resource_path\
                + " " + self.ibp_resource_db + " -b " + str(self.ibp_size)\
                + " -d " + str(self.max_duration)
 
     def ibp_config_file(self):
-        return path.join(self.ibp_root, "etc/ibp.cfg")
+        return path.join(self.ibp_root, "/etc/ibp/ibp.cfg")
 
     def blipp_config_file(self):
         # check that etc/periscope exists
@@ -298,7 +298,7 @@ class Configuration():
         return path.join(self.ibp_root, filename)
 
     def ibp_interface_monitor(self):
-        return path.join(self.ibp_root, "bin/ibp_interface_monitor.py") + " -l -d"
+        return path.join(self.ibp_root, "/usr/bin/ibp_interface_monitor.py") + " -l -d"
 
     def query_yes_no(self, question, default="no"):
         """Ask a yes/no question via raw_input() and return their answer.
