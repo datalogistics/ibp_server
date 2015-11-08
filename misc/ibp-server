@@ -9,14 +9,14 @@
 #
 
 
-#PREFIX=/usr/local
+#PREFIX=/usr
 if [ -z ${PREFIX} ]; then
-IBPBINDIR=/bin
+IBPBINDIR=/usr/bin
 else
 IBPBINDIR=${PREFIX}/bin
 fi
-CONFDIR=${PREFIX}/etc
-CONFFILE=${PREFIX}/etc/ibp.cfg
+CONFDIR=${PREFIX}/etc/ibp
+CONFFILE=${PREFIX}/etc/ibp/ibp.cfg
 IBPVARDIR=${PREFIX}/var
 PIDFILE=${IBPVARDIR}/run/ibp_server.pid
 LOGFILE=${IBPVARDIR}/log/ibp_server.log

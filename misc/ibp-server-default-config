@@ -1,4 +1,4 @@
 #
 # Set the option below to override the default ibp_configure flags
 #
-#IBP_CONFIGURE_ARGS=" --geni --ibp-resource-dir=/mnt --ibp-root=/usr/local"
+#IBP_CONFIGURE_ARGS=" --geni --ibp-resource-dir=/mnt --ibp-root=/usr"
