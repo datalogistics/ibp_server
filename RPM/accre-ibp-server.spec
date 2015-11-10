@@ -1,4 +1,4 @@
-%define default_release 8
+%define default_release 9
 
 Name: accre-ibp-server
 Version: 1.0
