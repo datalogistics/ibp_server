@@ -1,4 +1,4 @@
-%define default_release 9
+%define default_release 10
 
 Name: accre-ibp-server
 Version: 1.0
@@ -46,6 +46,12 @@ rm -rf ${RPM_BUILD_ROOT}/bin
 %clean
 rm -rf %{buildroot}
 
+%pre
+/usr/bin/getent group ibp || /usr/sbin/groupadd -r ibp
+/usr/bin/getent passwd ibp || /usr/sbin/useradd -r -d /etc/ibp -s /sbin/nologin -g ibp ibp
+
+%postun
+
 %post
 rpmconf --owner=accre-ibp-server
 
@@ -59,6 +65,8 @@ rpmconf --owner=accre-ibp-server
 %attr(755,root,root) /etc/init.d/ibp-server
 
 %changelog
+* Tue Dec 08 2015 <ezkissel@indiana.edu> 1.0-10-accre-ibp-server
+- Added support to run ibp_server as a non-root user, specified in config.
 * Tue Nov 03 2015 <jayaajay@indiana.edu> 1.0-9-accre-ibp-server
 - Updated the paths to executables and sysconf files.
 * Thu Oct 08 2015 <exkissel@indiana.edu> 1.0-8-accre-ibp-server

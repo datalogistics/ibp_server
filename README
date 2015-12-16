@@ -65,6 +65,15 @@ IBP configuration options
 
 [server] options
 -------------------------------
+user=<user>
+  Run the ibp_server as the specified user, default=ibp.
+
+group=<group>
+  Run the ibp_server as the specified group, default=ibp.
+
+pidfile=<file>
+  Place the process ID in specified file, default=/var/run/ibp_server.pid
+
 interfaces=host1:port1;host2:port2;
   You can have as many host/port combinations as you want.  If interfaces is
   not used then it defaults to using the hostname.

@@ -35,7 +35,12 @@ http://www.accre.vanderbilt.edu
 #include <apr_time.h>
 #include <apr_signal.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <grp.h>
+#include <pwd.h>
+#include <errno.h>
 #include "ibp_server.h"
 #include "debug.h"
 #include "log.h"
@@ -53,13 +58,155 @@ typedef struct {
 } pMount_t;
 
 //*****************************************************************************
+// setup_log_permissions - Make sure the log files have the correct ownership
+//*****************************************************************************
+int setup_log_permissions(char *lfile, Config_t *cfg) {
+  int fd, rc;
+  uid_t uid;
+  gid_t gid;
+  struct group *gr;
+  struct passwd *pw;
+
+  pw = getpwnam(cfg->server.user);
+  if (pw) {
+    uid = pw->pw_uid;
+  }
+  else {
+    fprintf(stderr, "Unknown user '%s'\n", cfg->server.user);
+    goto exit;
+  }
+  
+  gr = getgrnam(cfg->server.group);
+  if (gr) {
+    gid = gr->gr_gid;
+  }
+  else {
+    fprintf(stderr, "Unknown group '%s'\n", cfg->server.group);
+    goto exit;
+  }
+  
+  fd = open(lfile, O_WRONLY | O_CREAT, DEFFILEMODE);
+  if (fd < 0) {
+    fprintf(stderr, "Could not open file %s: %s!\n", lfile, strerror(errno));
+    goto exit;
+  }
+  
+  rc = fchown(fd, uid, gid);
+  if (rc) {
+    fprintf(stderr, "Could not change ownership on %s: %s\n", lfile, strerror(errno));
+    goto exit_close;
+  }
+  
+  close(fd);
+  return 0;
+
+ exit_close:
+  close(fd);
+ exit:
+  exit(-1);
+}
+
+//*****************************************************************************
+// daemonize - Make the ibp server run as a daemon
+//*****************************************************************************
+int ibp_daemonize(char *pid_file, char *user, char *group) {
+  uid_t uid;
+  gid_t gid;
+  struct group *gr;
+  struct passwd *pw;
+  
+  pid_t pid, sid, parent;
+  
+  /* already a daemon */
+  if (getppid() == 1) return 0;
+  
+  /* Fork off the parent process */
+  pid = fork();
+  if (pid < 0) {
+    exit(EXIT_FAILURE);
+  }
+  
+  /* If we got a good PID, then we can exit the parent process. */
+  if (pid > 0) {
+    exit(EXIT_SUCCESS);
+  }
+  
+  /* At this point we are executing as the child process */
+  parent = getppid();
+  pid = getpid();
+  
+  /* Change the file mode mask */
+  umask(0);
+  
+  /* Create a new SID for the child process */
+  sid = setsid();
+  if (sid < 0) {
+    exit(EXIT_FAILURE);
+  }
+  
+  /* Cancel certain signals */
+  /* These all may get overridden after daemonize */
+  signal(SIGCHLD,SIG_DFL); /* A child process dies */
+  signal(SIGTSTP,SIG_IGN); /* Various TTY signals */
+  signal(SIGTTOU,SIG_IGN);
+  signal(SIGTTIN,SIG_IGN);
+  signal(SIGHUP, SIG_IGN);
+  signal(SIGTERM,SIG_DFL); /* Die on SIGTERM */
+  
+  if (pid) {
+    FILE *pid_out = fopen(pid_file, "w+");
+    if (!pid_out) {
+      fprintf(stderr, "Couldn't open pid file: %s\n", pid_file);
+      exit(-1);
+    }
+    
+    fprintf(pid_out, "%d", getpid());
+    fclose(pid_out);
+  }
+  
+  if (group) {
+    gr = getgrnam(group);
+    if (gr) {
+      gid = gr->gr_gid;
+    }
+    else {
+      fprintf(stderr, "Unknown group '%s'\n", group);
+      exit(EXIT_FAILURE);
+    }
+    
+    if (setgid(gid) < 0) {
+      fprintf(stderr, "Couldn't change process group to %s", group);
+    }
+  }
+  
+  if (user) {
+    pw = getpwnam(user);
+    if (pw) {
+      uid = pw->pw_uid;
+    }
+    else {
+      fprintf(stderr, "Unknown user '%s'\n", user);
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (setuid(uid) < 0) {
+    fprintf(stderr, "Couldn't change process user to %s", user);
+  }
+  
+  kill(parent, SIGUSR1);
+  
+  return 0;
+}
+
+//*****************************************************************************
 // parallel_mount_resource - Mounts a resource in a separate thread
 //*****************************************************************************
 
 void *parallel_mount_resource(apr_thread_t *th, void *data) {
    pMount_t *pm = (pMount_t *)data;
    Resource_t *r;
-
+  
    assert((r = (Resource_t *)malloc(sizeof(Resource_t))) != NULL);
 
    int err = mount_resource(r, pm->keyfile, pm->group, pm->dbenv,
@@ -168,7 +315,7 @@ void *resource_health_check(apr_thread_t *th, void *data) {
           resource_list_iterator_destroy(global_config->rl, &it);
 
           //** Now do the same for the ejected drives
-          for (i=0; i<j; i++) {
+         for (i=0; i<j; i++) {
              rid_name = pop(eject);  data_dir = pop(eject);  data_device = pop(eject);
              fprintf(fd, "%s|%s|%s|%d\n", rid_name, data_dir, data_device, 1);
              free(rid_name); free(data_dir); free(data_device);
@@ -193,7 +340,7 @@ void *resource_health_check(apr_thread_t *th, void *data) {
     apr_thread_cond_timedwait(shutdown_cond, shutdown_lock, dt_wait);
   }
   apr_thread_mutex_unlock(shutdown_lock);
-
+  
   free_stack(eject, 1);
 
   apr_thread_exit(th, 0);
@@ -244,6 +391,9 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
 
   // *** Initialize the data structure to default values ***
   server = &(cfg->server);
+  server->user = "ibp";
+  server->group = "ibp";
+  server->pidfile = "/var/run/ibp_server.pid";
   server->max_threads = 64;
   server->max_pending = 16;
   server->min_idle = apr_time_make(60, 0);
@@ -294,6 +444,9 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   cfg->soft_fail = -1;
 
   // *** Parse the Server settings ***
+  server->user = inip_get_string(keyfile, "server", "user", server->user);
+  server->group = inip_get_string(keyfile, "server", "group", server->group);
+  server->pidfile = inip_get_string(keyfile, "server", "pidfile", server->pidfile);
   server->port = inip_get_integer(keyfile, "server", "port", server->port);
 
   //** Make the default interface
@@ -398,7 +551,6 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
 
   i = inip_get_integer(keyfile, "server", "soft_fail", 0);
   cfg->soft_fail = (i==0) ? -1 : 0;
-
   //*** Do some initial config of the log and debugging info ***
   open_log(cfg->server.logfile);
   set_log_level(cfg->server.log_level);
@@ -414,6 +566,7 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   } else {
     server->stats = NULL;
   }
+
   // *** Now iterate through each resource which is assumed to be all groups beginning with "resource" ***
   apr_pool_t *mount_pool;
   apr_pool_create(&mount_pool, NULL);
@@ -572,7 +725,7 @@ int main(int argc, const char **argv)
   memset(global_config, 0, sizeof(Config_t));  //** init the data
   global_network = NULL;
 
-  if (argc < 1) {
+  if (argc < 2) {
      printf("ibp_server [-d] [-r] config_file\n\n");
      printf("-r          - Rebuild RID databases. Same as force_rebuild=2 in config file\n");
      printf("-d          - Run as a daemon\n");
@@ -582,16 +735,25 @@ int main(int argc, const char **argv)
 
   int daemon = 0;
   int force_rebuild = 0;
+  int argcount = 1;
   for (i=1; i<argc; i++) {
      if (strcmp(argv[i], "-d") == 0) {
         daemon = 1;
+	argcount++;
      } else if (strcmp(argv[i], "-r") == 0) {
         force_rebuild = 2;
+	argcount++;
      }
   }
 
-  config_file = (char *)argv[argc-1];
-  global_config->config_file = config_file;
+  if (argcount < argc) {
+      config_file = (char *)argv[argc-1];
+      global_config->config_file = config_file;
+  }
+  else {
+      log_printf(0, "ibp_server: No config file given!\n");
+      return(-1);
+  }
 
   //*** Open the config file *****
   printf("Config file: %s\n\n", config_file);
@@ -612,6 +774,10 @@ int main(int argc, const char **argv)
 
   //** Parse the global options first ***
   parse_config(keyfile, &config, force_rebuild);
+
+  //** Setup log file permissions on the system
+  setup_log_permissions(config.server.logfile, &config);
+  setup_log_permissions(config.server.alog_name, &config);
 
   //** Make sure we have enough fd's
   i = sysconf(_SC_OPEN_MAX);
@@ -652,31 +818,32 @@ int main(int argc, const char **argv)
 
   //***Launch as a daemon if needed***
   if (daemon == 1) {    //*** Launch as a daemon ***
-     if ((strcmp(config.server.logfile, "stdout") == 0) ||
-         (strcmp(config.server.logfile, "stderr") == 0)) {
-        log_printf(0, "Can't launch as a daemom because log_file is either stdout or stderr\n");
-        log_printf(0, "Running in normal mode\n");
-     } else if (fork() == 0) {    //** This is the daemon
-        log_printf(0, "Running as a daemon.\n");
-        flush_log();
-        fclose(stdin);     //** Need to close all the std* devices **
-        fclose(stdout);
-        fclose(stderr);
-
-        char fname[1024];
-        fname[1023] = '\0';
-        snprintf(fname, 1023, "%s.stdout", config.server.logfile);
-        assert((stdout = fopen(fname, "w")) != NULL);
-        snprintf(fname, 1023, "%s.stderr", config.server.logfile);
-        assert((stderr = fopen(fname, "w")) != NULL);
-//        stdout = stderr = log_fd();  //** and reassign them to the log device
-printf("ibp_server.c: STDOUT=STDERR=LOG_FD() dnoes not work!!!!!!!!!!!!!!!!!!!!!!!!\n");
-     } else {           //** Parent exits
-        exit(0);
-     }
+      if ((strcmp(config.server.logfile, "stdout") == 0) ||
+	  (strcmp(config.server.logfile, "stderr") == 0)) {
+	  log_printf(0, "Can't launch as a daemom because log_file is either stdout or stderr\n");
+	  log_printf(0, "Running in normal mode\n");
+      } else {
+	  ibp_daemonize(config.server.pidfile,
+			config.server.user,
+			config.server.group);
+	  log_printf(0, "Running as a daemon.\n");
+	  flush_log();
+	  fclose(stdin);     //** Need to close all the std* devices **
+	  fclose(stdout);
+	  fclose(stderr);
+	  
+	  /*** Not sure why this is even here, should ignore stdout/stderr in daemon mode
+	  char fname[1024];
+	  fname[1023] = '\0';
+	  snprintf(fname, 1023, "%s.stdout", config.server.logfile);
+	  assert((stdout = fopen(fname, "w")) != NULL);
+	  snprintf(fname, 1023, "%s.stderr", config.server.logfile);
+	  assert((stderr = fopen(fname, "w")) != NULL);
+	  */
+      }
   }
 
-//  test_alloc();   //** Used for testing allocation speed only
+  //  test_alloc();   //** Used for testing allocation speed only
 
   //*** Initialize all command data structures.  This is mainly 3rd party commands ***
   initialize_commands();

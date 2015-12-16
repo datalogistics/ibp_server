@@ -92,6 +92,9 @@ typedef struct {    //*** forms the fn table for a depot command
 #define COMMAND_TABLE_MAX 100   //** Size of static command table
 
 typedef struct {       // Structure containg the overall server config
+   char *user;           // user to run as 
+   char *group;          // group to run as
+   char *pidfile;        // location of PID file
    interface_t *iface;   //Interfaces listening on
    int n_iface;          //Number of bound interfaces
    int port;             //Default Port to listen on

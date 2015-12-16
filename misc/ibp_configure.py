@@ -30,10 +30,14 @@ IBP_SAMPLE_CONFIG = """
 # Change in ibp_configure.py and then do 'service ibp-server restart'
 
 [server]
+user=ibp
+group=ibp
+pidfile=/var/run/ibp_server.pid
 interfaces={interfaces}
 lazy_allocate=1
 threads=16
 log_file={ibp_log}
+activity_file=/var/log/ibp_activity.log
 password=ibp
 big_alloc_enable=1
 substitute_map={substitute_map}
