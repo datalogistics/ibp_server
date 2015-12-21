@@ -8,6 +8,8 @@ import fcntl
 import struct
 import sys
 import os
+import pwd
+import grp
 import os.path as path
 import commands
 import re
@@ -167,12 +169,64 @@ class System():
         # has reserved space for superuser, in MB
         return stat.f_bfree*stat.f_bsize/(1024*1024)
 
-    def execute_command(self, cmd, ignore_status = False):
-        log.debug("Executing command: %s" % cmd)
-        (status, output) = commands.getstatusoutput(cmd)
-        if status and not ignore_status:
-            log.error(output)
-            sys.exit(1)
+    def name_to_id(self, user, group):
+        try:
+            uid = pwd.getpwnam(user).pw_uid
+            gid = grp.getgrnam(group).gr_gid
+        except Exception, e:
+            log.error("%s" % e)
+            exit(1)
+        return (uid, gid)
+
+    def set_user_group(self, user, group, real=False):
+        try:
+            (ruid, euid, suid) = os.getresuid()
+            (rgid, egid, sgid) = os.getresgid()
+
+            if group:
+                gid = grp.getgrnam(group)
+                egid = gid.gr_gid
+                if real:
+                    os.setresgid(egid, egid,rgid)
+                else:
+                    os.setresgid(rgid, egid, rgid)
+                
+            if user:
+                uid = pwd.getpwnam(user)
+                euid = uid.pw_uid
+                if real:
+                    os.setresuid(euid, euid, ruid)
+                else:
+                    os.setresuid(ruid, euid, ruid)
+        except Exception, e:
+            log.debug("Error: %s" % e)
+            exit(1)
+
+        return (euid, egid)
+
+    def restore_user_group(self):
+        try:
+            (ruid, euid, suid) = os.getresuid()
+            (rgid, egid, sgid) = os.getresgid()
+            os.setresuid(suid, suid, suid)
+            os.setresgid(sgid, sgid, sgid)
+        except Exception, e:
+            log.debug("Error: %s" % e)
+            exit(1)
+
+    def execute_command(self, cmd, ignore_status=False, user=None, group=None):
+        try:
+            (uid, gid) = self.set_user_group(user, group, real=True)
+            log.debug("Executing command: %s (user=%s, group=%s)" % (cmd, uid, gid))
+            (status, output) = commands.getstatusoutput(cmd)
+            if status and not ignore_status:
+                log.error(output)
+                sys.exit(1)
+        except Exception, e:
+            log.debug("Error: %s" % e)
+            exit(1)
+
+        self.restore_user_group()
         return output
 
     def get_ip_address(self, ifname):
@@ -213,7 +267,6 @@ class System():
             str(ord(addr[1])) + '.' + \
             str(ord(addr[2])) + '.' + \
             str(ord(addr[3]))
-
 
     def get_default_iface_name_linux(self):
         route = "/proc/net/route"
@@ -276,6 +329,8 @@ class Configuration():
         self.ibp_resource_path = "/tmp/ibp_resources"
         self.ibp_resource_db   = "/tmp/ibp_resources/db"
         self.ibp_root          = "/"
+        self.ibp_user          = "ibp"
+        self.ibp_group         = "ibp"
         self.ibp_log           = "/var/log/ibp_server.log"
         self.ibp_sub_ip        = ""
         self.ibp_sysctl        = "/etc/sysctl.d/ibp.conf"
@@ -365,20 +420,17 @@ class Configuration():
             return True
             
         if not args.geni and os.path.exists('/tmp/ibp_dbenv'):
-            do_del = self.query_yes_no(' Found existing IBP DB environment, delete', default="yes")
+            do_del = self.query_yes_no(' Found existing IBP runtime environment, delete', default="no")
             if do_del:
                 shutil.rmtree('/tmp/ibp_dbenv')
             else:
-                log.info("WARNING: Existing DB environment in /tmp/ibp_dbenv might conflict\n\
-                with new resource configurations!")
+                log.warn("Existing DB environment in /tmp/ibp_dbenv might conflict with new resource configurations!")
 
         if self.ibp_do_res and os.path.isfile(self.allocation_success_file()):
-            log.info('This text file ({0}) acts as a lock for resource allocation.\n\
-       Delete it to allow re-allocation!'.format(self.allocation_success_file()))
+            log.info('Existing IBP resource configuration found in (%s). Keeping existing resource DB!' % self.allocation_success_file())
             return False
         elif self.ibp_do_res:
-            log.info('This text file ({0}) not found, so allocating the '
-                     'resources'.format(self.allocation_success_file()))
+            log.info('Existing IBP resource configuration not found, allocating resources DB!')
             return True
 
         return False
@@ -395,17 +447,25 @@ class Configuration():
             else:
                 return ""
 
+        (uid, gid) = mysys.name_to_id(self.ibp_user, self.ibp_group)
+
         if path.exists(self.ibp_resource_path) and path.exists(self.ibp_resource_db):
-            resource = mysys.execute_command(self.makefs_cmd())
+            os.chown(self.ibp_resource_path, uid, gid)
+            os.chown(self.ibp_resource_db, uid, gid)
+            resource = mysys.execute_command(self.makefs_cmd(),
+                                             user=self.ibp_user,
+                                             group=self.ibp_group)
         else:
             log.error("Resource and/or DB path do not exist: [%s, %s]" %
                       self.ibp_resource_path, self.ibp_resource_db)
             exit(1)
 
+        mysys.set_user_group(self.ibp_user, self.ibp_group)
         # save resource for later runs
         with open(self.allocation_success_file(), 'w') as f:
             f.write(resource)
 
+        mysys.restore_user_group()
         return resource
 
     def path_check_create(self, path, disp, dval):
@@ -420,7 +480,7 @@ class Configuration():
             if ret:
                 shutil.rmtree(path)
             else:
-                return path, False
+                return path, True
         os.makedirs(path)
         return path, True
 
@@ -522,7 +582,7 @@ class Configuration():
         log.info("== System Settings ==")
         self.systune = self.query_yes_no(' Apply network tuning to improve TCP performance (sysctl)', default='yes')
         log.info('')
-        log.info("End DLT configuration")
+        log.info(" :: End DLT configuration")
         log.info("===============================================================")
 
     def generate_blipp_config(self, args):
@@ -622,6 +682,10 @@ def main():
                         help='Turn on debugging output.')
     parser.add_argument('--force-allocate', action='store_true',
                         help='Ignores the resource lock and reallocates the resources.')
+    parser.add_argument('--ibp-user', type=str, default="ibp",
+                        help='Specify system user for filesystem resources, default is "ibp"')
+    parser.add_argument('--ibp-group', type=str, default="ibp",
+                        help='Specify system group for filesystem resources, default is "ibp"')
     parser.add_argument('--host', type=str, default=None,
                         help='Specify hostname or IP of the node. If specified this script will not attempt\
                         to guess the public IP.')
@@ -649,8 +713,13 @@ def main():
 
     configure_logging(args.log, debug=args.debug)
 
+    # check that the user/group names are valid
+    (uid, gid) = mysys.name_to_id(args.ibp_user, args.ibp_group)
+
     cfg = Configuration()
     cfg.ibp_root = args.ibp_root
+    cfg.ibp_user = args.ibp_user
+    cfg.ibp_group = args.ibp_group
 
     if (args.geni):
         cfg.unis_endpoint     = "http://monitor.crest.iu.edu:9000"
@@ -670,13 +739,12 @@ def main():
     else:
         cfg.get_user_input(args)
     
-    log.info("Saving IBP configuration to %s" % cfg.ibp_config_file())
     ibp_config = cfg.generate_ibp_config(args)
     log.debug(ibp_config)
+    log.info("Saved IBP configuration to %s" % cfg.ibp_config_file())
 
     if (cfg.enable_blipp):
         log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())
-        log.info("  Start BLiPP using systemctl or service")
         blipp_config = cfg.generate_blipp_config(args)
         log.debug(blipp_config)
 
@@ -689,6 +757,8 @@ def main():
     # execute_command(c.ibp_interface_monitor(), True)
 
     # bbye
+    log.info("===============================================================")
+    log.info("Start ibp-server and blipp using 'systemctl' or 'service' commands")
     sys.exit(0)
 
 if __name__ == "__main__":
