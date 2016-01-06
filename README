@@ -66,7 +66,9 @@ IBP configuration options
 [server] options
 -------------------------------
 user=<user>
-  Run the ibp_server as the specified user, default=ibp.
+  Run the ibp_server as the specified user, default=ibp.  This applies only
+  when running as a daemon.  If run in the foreground, ibp_server will run
+  as the current user.
 
 group=<group>
   Run the ibp_server as the specified group, default=ibp.
