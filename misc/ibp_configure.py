@@ -95,7 +95,6 @@ type = ibp_server
 endpoint = {unis_endpoint}
 protocol_name= ibp
 registration_interval = 600
-max_duration = {seconds}  
 publicip = {public_ip}
 publicport = {port}
 use_ssl = {use_ssl}
@@ -650,7 +649,6 @@ class Configuration():
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
                                                 public_ip=self.ibp_host,
                                                 port=self.ibp_port,
-                                                seconds=self.max_duration,
                                                 use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
                                                 key_file=self.unis_key_file,

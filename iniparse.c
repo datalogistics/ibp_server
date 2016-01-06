@@ -41,8 +41,8 @@ char * _get_line(bfile_t *bfd)
    if (bfd->curr->used == 1) return(bfd->curr->buffer);
 
    comment = fgets(bfd->curr->buffer, BUFMAX, bfd->curr->fd);
-log_printf(15, "_get_line: fgets=%s", comment);
-
+   log_printf(15, "_get_line: fgets=%s", comment);
+ 
    if (comment == NULL) {  //** EOF or error
      fclose(bfd->curr->fd);
      free(bfd->curr);

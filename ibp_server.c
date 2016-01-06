@@ -107,14 +107,50 @@ int setup_log_permissions(char *lfile, Config_t *cfg) {
 }
 
 //*****************************************************************************
-// daemonize - Make the ibp server run as a daemon
+// change_user_group - switch uid and gid of the current process
 //*****************************************************************************
-int ibp_daemonize(char *pid_file, char *user, char *group) {
+void change_user_group(char *user, char *group) {
   uid_t uid;
   gid_t gid;
   struct group *gr;
   struct passwd *pw;
   
+  if (group) {
+    gr = getgrnam(group);
+    if (gr) {
+      gid = gr->gr_gid;
+    }
+    else {
+      fprintf(stderr, "Unknown group '%s'\n", group);
+      exit(EXIT_FAILURE);
+    }
+    
+    if (setgid(gid) < 0) {
+      fprintf(stderr, "Couldn't change process group to %s", group);
+    }
+  }
+  
+  if (user) {
+    pw = getpwnam(user);
+    if (pw) {
+      uid = pw->pw_uid;
+    }
+    else {
+      fprintf(stderr, "Unknown user '%s'\n", user);
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (setuid(uid) < 0) {
+    fprintf(stderr, "Couldn't change process user to %s", user);
+  }
+}
+
+
+//*****************************************************************************
+// daemonize - Make the ibp server run as a daemon
+//*****************************************************************************
+int ibp_daemonize(char *pid_file, char *user, char *group) {
   pid_t pid, sid, parent;
   
   /* already a daemon */
@@ -163,36 +199,8 @@ int ibp_daemonize(char *pid_file, char *user, char *group) {
     fprintf(pid_out, "%d", getpid());
     fclose(pid_out);
   }
-  
-  if (group) {
-    gr = getgrnam(group);
-    if (gr) {
-      gid = gr->gr_gid;
-    }
-    else {
-      fprintf(stderr, "Unknown group '%s'\n", group);
-      exit(EXIT_FAILURE);
-    }
-    
-    if (setgid(gid) < 0) {
-      fprintf(stderr, "Couldn't change process group to %s", group);
-    }
-  }
-  
-  if (user) {
-    pw = getpwnam(user);
-    if (pw) {
-      uid = pw->pw_uid;
-    }
-    else {
-      fprintf(stderr, "Unknown user '%s'\n", user);
-      exit(EXIT_FAILURE);
-    }
-  }
-  
-  if (setuid(uid) < 0) {
-    fprintf(stderr, "Couldn't change process user to %s", user);
-  }
+
+  change_user_group(user, group);
   
   kill(parent, SIGUSR1);
   
@@ -230,6 +238,54 @@ void *parallel_mount_resource(apr_thread_t *th, void *data) {
    return(0);   //** Never gets here but suppresses compiler warnings
 }
 
+//*****************************************************************************
+// mount_resources - mount configured resources
+//*****************************************************************************
+
+int mount_resources(inip_file_t *keyfile, Config_t *cfg) {
+  // Iterate through each resource which is assumed to be all groups beginning with "resource"
+  char *str;
+  int val, i, k;
+  pMount_t *pm, *pmarray;
+  apr_pool_t *mount_pool;
+  apr_pool_create(&mount_pool, NULL);
+  cfg->dbenv = create_db_env(cfg->dbenv_loc, cfg->db_mem, cfg->force_resource_rebuild);
+  k = inip_n_groups(keyfile);
+  assert((pmarray = (pMount_t *)malloc(sizeof(pMount_t)*(k-1))) != NULL);
+  inip_group_t *igrp = inip_first_group(keyfile);
+  val = 0;
+  for (i=0; i<k; i++) {
+      str = inip_get_group(igrp);
+      if (strncmp("resource", str, 8) == 0) {
+         pm = &(pmarray[val]);
+         pm->keyfile = keyfile;
+         pm->group = strdup(str);
+         pm->dbenv = cfg->dbenv;
+         pm->force_resource_rebuild = cfg->force_resource_rebuild;
+
+         apr_thread_create(&(pm->thread_id), NULL, parallel_mount_resource, (void *)pm, mount_pool);
+
+         val++;
+      }
+
+      igrp = inip_next_group(igrp);
+  }
+
+  //** Wait for all the threads to join **
+  apr_status_t dummy;
+  for (i=0; i<val; i++) {
+     apr_thread_join(&dummy, pmarray[i].thread_id);
+  }
+
+  free(pmarray);
+
+  if (val < 0) {
+     printf("mount_resources:  No resources defined!!!!\n");
+     abort();
+  }
+
+  return 0;
+}
 
 //*****************************************************************************
 // resource_health_check - Does periodic health checks on the RIDs
@@ -387,7 +443,6 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
   char iface_default[1024];
   char statsd_postfix_default[1024];
   apr_time_t t;
-  pMount_t *pm, *pmarray;
 
   // *** Initialize the data structure to default values ***
   server = &(cfg->server);
@@ -567,44 +622,6 @@ int parse_config(inip_file_t *keyfile, Config_t *cfg, int force_rebuild)
     server->stats = NULL;
   }
 
-  // *** Now iterate through each resource which is assumed to be all groups beginning with "resource" ***
-  apr_pool_t *mount_pool;
-  apr_pool_create(&mount_pool, NULL);
-  cfg->dbenv = create_db_env(cfg->dbenv_loc, cfg->db_mem, cfg->force_resource_rebuild);
-  k= inip_n_groups(keyfile);
-  assert((pmarray = (pMount_t *)malloc(sizeof(pMount_t)*(k-1))) != NULL);
-  inip_group_t *igrp = inip_first_group(keyfile);
-  val = 0;
-  for (i=0; i<k; i++) {
-      str = inip_get_group(igrp);
-      if (strncmp("resource", str, 8) == 0) {
-         pm = &(pmarray[val]);
-         pm->keyfile = keyfile;
-         pm->group = strdup(str);
-         pm->dbenv = cfg->dbenv;
-         pm->force_resource_rebuild = cfg->force_resource_rebuild;
-
-         apr_thread_create(&(pm->thread_id), NULL, parallel_mount_resource, (void *)pm, mount_pool);
-
-         val++;
-      }
-
-      igrp = inip_next_group(igrp);
-  }
-
-  //** Wait for all the threads to join **
-  apr_status_t dummy;
-  for (i=0; i<val; i++) {
-     apr_thread_join(&dummy, pmarray[i].thread_id);
-  }
-
-  free(pmarray);
-
-  if (val < 0) {
-     printf("parse_config:  No resources defined!!!!\n");
-     abort();
-  }
-
   return(0);
 }
 
@@ -767,7 +784,6 @@ int main(int argc, const char **argv)
     return(-1);
   }
 
-
   set_starttime();
 
   config.rl = create_resource_list(1);
@@ -800,8 +816,6 @@ int main(int argc, const char **argv)
   //save unis configs
   parse_unis_config(keyfile);
 
-  inip_destroy(keyfile);   //Free the keyfile context
-
   log_preamble(&config);
 
   configure_signals();   //** Setup the signal handlers
@@ -823,31 +837,41 @@ int main(int argc, const char **argv)
 	  log_printf(0, "Can't launch as a daemom because log_file is either stdout or stderr\n");
 	  log_printf(0, "Running in normal mode\n");
       } else {
+	  char outfname[1024];
+	  char errfname[1024];
+	  outfname[1023] = '\0';
+	  errfname[1023] = '\0';
+	  snprintf(outfname, 1023, "%s.stdout", config.server.logfile);
+	  setup_log_permissions(outfname, &config);
+	  snprintf(errfname, 1023, "%s.stderr", config.server.logfile);
+	  setup_log_permissions(errfname, &config);
+
 	  ibp_daemonize(config.server.pidfile,
 			config.server.user,
 			config.server.group);
 	  log_printf(0, "Running as a daemon.\n");
+	  
+	  // flush log and close std*
 	  flush_log();
-	  fclose(stdin);     //** Need to close all the std* devices **
+	  fclose(stdin);
 	  fclose(stdout);
 	  fclose(stderr);
 	  
-	  /*** Not sure why this is even here, should ignore stdout/stderr in daemon mode
-	  char fname[1024];
-	  fname[1023] = '\0';
-	  snprintf(fname, 1023, "%s.stdout", config.server.logfile);
-	  assert((stdout = fopen(fname, "w")) != NULL);
-	  snprintf(fname, 1023, "%s.stderr", config.server.logfile);
-	  assert((stderr = fopen(fname, "w")) != NULL);
-	  */
+	  // open new stdout and stderr logging to files
+	  assert((stdout = fopen(outfname, "w")) != NULL);
+	  assert((stderr = fopen(errfname, "w")) != NULL);
       }
   }
 
   //  test_alloc();   //** Used for testing allocation speed only
 
+  // mount resources after we've potentially daemonized
+  mount_resources(keyfile, &config);
+
+  inip_destroy(keyfile);   //Free the keyfile context
+
   //*** Initialize all command data structures.  This is mainly 3rd party commands ***
   initialize_commands();
-
 
   //** Launch the garbage collection threads ...AFTER fork!!!!!!
   resource_list_iterator_t it;
