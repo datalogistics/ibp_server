@@ -11,11 +11,11 @@
 
 find_path(LEVELDB_INCLUDE_DIR
     NAMES leveldb/c.h
-    HINTS ${LEVELDB_ROOT_DIR}/include)
+    HINTS ${CMAKE_SOURCE_DIR}/leveldb/include)
  
 find_library(LEVELDB_LIBRARIES
     NAMES leveldb
-    HINTS ${LEVELDB_ROOT_DIR}/lib64)
+    HINTS ${CMAKE_SOURCE_DIR}/leveldb)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(leveldb DEFAULT_MSG
@@ -27,4 +27,3 @@ mark_as_advanced(
   LEVELDB_LIBRARIES
   LEVELDB_INCLUDE_DIR
   )
- 

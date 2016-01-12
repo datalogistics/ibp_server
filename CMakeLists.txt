@@ -59,8 +59,7 @@ OPTION( _ENABLE_UNIS_C "Enable UNIS support" ${UNIS_C_FOUND} )
 if (NOT LEVELDB_FOUND AND _ENABLE_LEVELDB)
     message(FATAL_ERROR "LevelDB requested but not found. We can't use the "
                         "LevelDB provided by Google, you must install the "
-                        "in-tree version by executing:\ngit submodule init\n"
-                        "git submodule update\ncd leveldb\nmake"
+                        "in-tree version by executing:\ncd leveldb\nmake libleveldb.a"
                         )
 endif  (NOT LEVELDB_FOUND AND _ENABLE_LEVELDB)
 if (NOT PHOEBUS_FOUND AND _ENABLE_PHOEBUS)
@@ -83,7 +82,7 @@ if (_ENABLE_LEVELDB)
         list(APPEND LIBS ${SNAPPY_LIBRARIES})
     endif (SNAPPY_FOUND)
     if (APPLE)
-        list(INSERT LIBS 0 -lc++)
+        list(APPEND LIBS -lc++)
         SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.8 " )
     endif (APPLE)
 endif (_ENABLE_LEVELDB)
