@@ -1,0 +1,16 @@
+build_config.mk
+include/leveldb/ldb_config.h
+*.a
+*.o
+*.dylib*
+*.dSYM
+*.d
+*.so
+*.so.*
+*_test
+db_bench
+leveldb_repair
+perf_dump
+sst_scan
+sst_rewrite
+*~
