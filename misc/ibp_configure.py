@@ -600,8 +600,13 @@ class Configuration():
         self.unis_state = self.get_from_args(args,'unis_state',"AK") or self.get_string(' State [%s]: ' % "AK", "AK")
         self.unis_zipcode = self.get_from_args(args,'unis_zipcode',"00000") or self.get_string(' ZipCode [%s]: ' % "", "00000")
         self.unis_email = self.get_from_args(args,'unis_email',"dlt@crest.iu.edu") or self.get_string(' Admin email [%s]: ' % "", "dlt@crest.iu.edu")
-        self.unis_latitude = self.get_from_args(args,'unis_latitude',self.unis_latitude) or self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude)
-        self.unis_longitude = self.get_from_args(args,'unis_longitude',self.unis_longitude) or self.get_real(' Longitude [%s]: ' % self.unis_longitude, self.unis_longitude) 
+        if getattr(args,'non_interactive',False) :
+            self.unis_latitude = get_float(self.get_from_args(args,'unis_latitude',self.unis_latitude))
+            self.unis_longitude = get_float(self.get_from_args(args,'unis_longitude',self.unis_longitude))
+        else :
+            self.unis_longitude = self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude)
+            self.unis_longitude = self.get_real(' Longitude [%s]: ' % self.unis_longitude, self.unis_longitude)
+
         self.enable_blipp = self.get_from_args(args,'enable_blipp',False) or self.query_yes_no(' Monitor the depot with BLiPP (usage stats)', default='yes')
         log.info('')
         log.info("== Phoebus Settings (WAN Acceleration) ==")
@@ -771,6 +776,12 @@ def populate_args_from_file(name,args) :
 def get_int (x) :
     try :
         return int(x)
+    except :
+        return 0
+
+def get_float (x) :
+    try :
+        return float(x)
     except :
         return 0
 
