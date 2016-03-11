@@ -507,7 +507,7 @@ class Configuration():
         # check that path exists
         if not os.path.isdir(os.path.dirname(fname)):
             os.makedirs(os.path.dirname(fname))
-            
+
         with open(fname, 'a') as f:
             f.write(content)
 
@@ -548,12 +548,12 @@ class Configuration():
             return rval
         except:
             return dval
-    def get_from_args(self,args,key,default):
-        if hasattr(args,'non-interactive') and args.non-interactive :
-            return getattr(args,key) if hasattr(args,key) else default
-        else :
-            return getattr(args,key) if hasattr(args,key) else None
 
+    def get_from_args(self,args,key,default):
+        if getattr(args,'non_interactive',False) :
+            return getattr(args,key,default) or default
+        else :
+            return getattr(args,key,None)
 
     def get_user_input(self, args):
         self.public_ip = mysys.get_public_facing_ip(args)
@@ -562,7 +562,7 @@ class Configuration():
         log.info('')
         log.info("== IBP Server Settings ==")
         self.ibp_host = self.get_from_args(args,'ibp_host',self.public_ip) or self.get_string(' IBP hostname [%s]: ' % self.public_ip, self.public_ip)
-        self.ibp_port = int(self.get_from_args(args,'ibp_port',self.ibp_port) or "0") or self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
+        self.ibp_port = get_int(self.get_from_args(args,'ibp_port',self.ibp_port)) or self.get_int(' IBP port [%s]: ' % self.ibp_port, self.ibp_port)
         self.ibp_log = self.get_from_args(args,'ibp_log',self.ibp_log) or self.get_string(' IBP log file [%s] ' % self.ibp_log, self.ibp_log)
         self.ibp_do_res = self.get_from_args(args,'ibp_do_res',False)  or self.query_yes_no(' Configure an initial IBP resource', default="yes")
         if self.ibp_do_res:
@@ -583,17 +583,17 @@ class Configuration():
                                                                         def_resource_db)
             size = mysys.get_fs_freespace(self.ibp_resource_path)
             duration = self.max_duration
-            self.ibp_size = int(self.get_from_args(args,'ibp_size',size) or "0") or self.get_int(' Usable disk space [%s MB] ' % size, size)  
-            self.max_duration = int(self.get_from_args(args,'max_duration',duration) or "0") or self.get_int(' Max duration for allocation [%s seconds] ' % duration, duration)
+            self.ibp_size = get_int(self.get_from_args(args,'ibp_size',size)) or self.get_int(' Usable disk space [%s MB] ' % size, size)
+            self.max_duration = get_int(self.get_from_args(args,'max_duration',duration)) or self.get_int(' Max duration for allocation [%s seconds] ' % duration, duration)
 
         log.info('')
         log.info("== UNIS Settings (depot registration) ==")
         self.unis_endpoint = self.get_from_args(args,'unis_endpoint',self.unis_endpoint) or self.get_string(' UNIS URL [%s]: ' % self.unis_endpoint, self.unis_endpoint)
         self.unis_use_ssl = self.get_from_args(args,'unis_use_ssl',False) or self.query_yes_no(' Enable SSL', default="yes")
         if self.unis_use_ssl:
-            self.unis_cert_file =  self.get_from_args(args,'UNIS client cert file',self.unis_cert_file) or self.get_string(' UNIS client cert file [%s]: ' %
+            self.unis_cert_file =  self.get_from_args(args,'unis_cert_file',self.unis_cert_file) or self.get_string(' UNIS client cert file [%s]: ' %
                                                   self.unis_cert_file, self.unis_cert_file)
-            self.unis_key_file =  self.get_from_args(args,'unis_institution',self.unis_key_file) or self.get_string(' UNIS client key file [%s]: ' %
+            self.unis_key_file =  self.get_from_args(args,'unis_key_file',self.unis_key_file) or self.get_string(' UNIS client key file [%s]: ' %
                                                  self.unis_key_file, self.unis_key_file)
         self.unis_institution = self.get_from_args(args,'unis_institution',"unknown") or self.get_string(' Institution [%s]: ' % "", "unknown")
         self.unis_country = self.get_from_args(args,'unis_country',"US") or self.get_string(' Country [%s]: ' % "US", "US")
@@ -698,6 +698,84 @@ def configure_logging(log_to_file, debug=False):
 
 
 mysys = System()
+def get_from_line(arr,i,j,default="") :
+    try :
+        return arr[i][j]
+    except :
+        return default
+
+def populate_args_from_file(name,args) :
+    try :
+        f = open(name,"r")
+    except :
+        print "File doesn't exist " + name
+    else :
+        lines = f.readlines()
+        lines = map(lambda x : x.strip(),lines)
+        lines = filter(lambda x : True if x else False,lines)
+        lines = map(lambda x : x.split(": ") , lines)
+        i = 0
+        # Ibp stuff
+        args.ibp_host = get_from_line(lines,i,1)
+        i+=1
+        args.ibp_port = get_from_line(lines,i,1)
+        i+=1
+        args.ibp_log = get_from_line(lines,i,1)
+        i+=1
+        # Configure resource
+        args.ibp_do_res = False if get_from_line(lines,i,1).lower() == 'n' else True
+        i+=1
+        if args.ibp_do_res :
+            args.ibp_resource_path = get_from_line(lines,i,1)
+            i+=1
+            args.ibp_resource_db = get_from_line(lines,i,1)
+            i+=1
+            args.ibp_size = get_from_line(lines,i,1)
+            i+=1
+            args.max_duration = get_from_line(lines,i,1)
+            i+=1
+
+        # Unis stuff
+        args.unis_endpoint = get_from_line(lines,i,1)
+        i+=1
+        args.unis_use_ssl = False if get_from_line(lines,i,1).lower() == 'n' else True
+        i+=1
+        if args.unis_use_ssl :
+            args.unis_cert_file = get_from_line(lines,i,1)
+            i+=1
+            args.unis_key_file = get_from_line(lines,i,1)
+            i+=1
+        args.unis_institution = get_from_line(lines,i,1)
+        i+=1
+        args.unis_country = get_from_line(lines,i,1)
+        i+=1
+        args.unis_state = get_from_line(lines,i,1)
+        i+=1
+        args.unis_zipcode = get_from_line(lines,i,1)
+        i+=1
+        args.unis_email = get_from_line(lines,i,1)
+        i+=1
+        args.unis_latitude = get_from_line(lines,i,1)
+        i+=1
+        args.unis_longitude = get_from_line(lines,i,1)
+        i+=1
+        args.enable_blipp = False if get_from_line(lines,i,1).lower() == 'n' else True
+        i+=1
+
+        args.phoebus = get_from_line(lines,i,1)
+        i+=1
+        # systuen stuff
+        args.systune = False if (get_from_line(lines,i,1).lower() == 'n') else True
+        i+=1
+
+def get_int (x) :
+    try :
+        return int(x)
+    except :
+        return 0
+
+def populate_res_from_file(name) :
+    pass
 
 def main():
     parser = argparse.ArgumentParser(
@@ -739,8 +817,8 @@ def main():
     parser.add_argument('--ibp_size',type=str,default=None,help=' Usable disk space [ MB] ')
     parser.add_argument('--max_duration',type=str,default=None,help=' Max duration for allocation [seconds] ')
     parser.add_argument('--unis_endpoint', type=str, default=None,help=' UNIS URL')
-    parser.add_argument('--unis_use_ssl', action='store_true', default=None,help=' Enable SSL')
-    parser.add_argument('--enable_blipp', action='store_true', default=None,help='Monitor the depot with BLiPP (usage stats)')
+    parser.add_argument('--unis_use_ssl', action='store_true',help=' Enable SSL')
+    parser.add_argument('--enable_blipp', action='store_true',help='Monitor the depot with BLiPP (usage stats)')
     parser.add_argument('--unis_longitude', type=str, default=None,help=' Longitude')
     parser.add_argument('--unis_latitude', type=str, default=None,help=' Latitude ')
     parser.add_argument('--unis_email', type=str, default=None,help=' Admin email ')
@@ -749,13 +827,19 @@ def main():
     parser.add_argument('--unis_country', type=str, default=None,help=' Country ')
     parser.add_argument('--unis_institution', type=str, default=None,help=' Institution ')
     parser.add_argument('--unis_cert_file', type=str, default=None,help='UNIS client cert file')
-    parser.add_argument('--ibp_do_res', action='store_true', default=None,help='Configure an initial IBP resource')
+    parser.add_argument('--ibp_do_res', action='store_true',help='Configure an initial IBP resource')
     parser.add_argument('--ibp_log', type=str, default=None,help=' IBP log file ')
     parser.add_argument('--ibp_port', type=str, default=None,help=' IBP Port ')
-    parser.add_argument('--ibp_host', type=str, default=None,help=' IBP hostname [%s]: ')
+    parser.add_argument('--ibp_host', type=str, default=None,help=' IBP hostname ')
     parser.add_argument('--unis_key_file', type=str, default=None,help=' UNIS client key file')
     parser.add_argument('--phoebus',type=str,default=None,help=' Optional Phoebus Gateway (<host>/<port>): ')
     parser.add_argument('--systune',action='store_true',help=' Apply network tuning to improve TCP performance (sysctl)')
+
+    # Lets pick stuff out of the file
+    parser.add_argument('--file',type=str,default=None,help='Get all arguments from file - Ignore conflicting command line arguments')
+
+    # Lets pick resources out of a file
+    parser.add_argument('--addresource-file',type=str,default=None,help='Get resource arguments from file - Ignore conflicting command line arguments')
 
     args = parser.parse_args()
 
@@ -790,8 +874,12 @@ def main():
             cfg.ibp_sub_ip   += args.extra_sub_map+";"
 
     else:
+        if args.file :
+            populate_args_from_file(args.file,args)
+        if args.addresource_file :
+            populate_res_from_file(args.addresource_file)
         cfg.get_user_input(args)
-    
+
     ibp_config = cfg.generate_ibp_config(args)
     log.debug(ibp_config)
     log.info("Saved IBP configuration to %s" % cfg.ibp_config_file)
@@ -805,7 +893,7 @@ def main():
         cfg.save_and_write(cfg.ibp_sysctl, SYSCTL_CONFIG)
         mysys.execute_command("sysctl --system")
         log.info("Added sysctl settings and ran 'sysctl --system' to apply network tuning")
-    
+
     # start interface monitoring thread
     # execute_command(c.ibp_interface_monitor(), True)
 
