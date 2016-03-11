@@ -56,11 +56,11 @@ void parse_unis_config(inip_file_t *kf)
   config->cacerts = NULL;
   memcpy(&config->loc_info, &location, sizeof(location));
 
-  log_printf(5, "UNIS: %s:%s:%s:%s:%s:%d:%d:%d:%d:%s:%s:%d", config->name,
-	     config->type, config->endpoint, config->protocol_name,
-	     config->iface, config->port, config->do_register,
-	     config->registration_interval, config->refresh_timer,
-	     config->certfile, config->keyfile, config->use_ssl);
+  log_printf(0, "UNIS server   : %s\n", config->endpoint);
+  log_printf(0, "UNIS iface    : %s\n", config->iface);
+  log_printf(0, "UNIS certfile : %s\n", config->certfile);
+  log_printf(0, "UNIS keyfile  : %s\n", config->keyfile);
+  log_printf(0, "UNIS use SSL  : %d\n", config->use_ssl);
 }
 
 //*************************************************************************

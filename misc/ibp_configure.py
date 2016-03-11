@@ -20,6 +20,29 @@ import argparse
 import ConfigParser
 import logging
 
+# implement our own version of user/group "res" methods for older python
+if sys.version_info < (2, 7):
+    class MyOS():
+        suid = os.getuid()
+        sgid = os.getgid()
+
+        def setresuid(self,r,e,s):
+            os.setreuid(r, self.suid)
+            self.suid = s
+        def setresgid(self,r,e,s):
+            os.setregid(r, self.sgid)
+            self.sgid = s
+        def getresuid(self):
+            return (os.getuid(),os.geteuid(),self.suid)
+        def getresgid(self):
+            return (os.getgid(),os.getegid(),self.sgid)
+
+    myos = MyOS()
+    os.setresuid = myos.setresuid
+    os.setresgid = myos.setresgid
+    os.getresuid = myos.getresuid
+    os.getresgid = myos.getresgid
+
 # Setting basic logging
 log = logging.getLogger('ibp_configure')
 danger_pattern = re.compile(r"^/$|^/[boot|usr|var|lib|dev|bin|sbin|proc]+/?$")
@@ -72,7 +95,6 @@ type = ibp_server
 endpoint = {unis_endpoint}
 protocol_name= ibp
 registration_interval = 600
-max_duration = {seconds}  
 publicip = {public_ip}
 publicport = {port}
 use_ssl = {use_ssl}
@@ -199,7 +221,7 @@ class System():
                 else:
                     os.setresuid(ruid, euid, ruid)
         except Exception, e:
-            log.debug("Error: %s" % e)
+            log.error("Error: %s" % e)
             exit(1)
 
         return (euid, egid)
@@ -211,7 +233,7 @@ class System():
             os.setresuid(suid, suid, suid)
             os.setresgid(sgid, sgid, sgid)
         except Exception, e:
-            log.debug("Error: %s" % e)
+            log.error("Error: %s" % e)
             exit(1)
 
     def execute_command(self, cmd, ignore_status=False, user=None, group=None):
@@ -328,12 +350,13 @@ class Configuration():
         self.ibp_port          = 6714
         self.ibp_resource_path = "/tmp/ibp_resources"
         self.ibp_resource_db   = "/tmp/ibp_resources/db"
-        self.ibp_root          = "/"
+        self.ibp_root          = "/usr/bin"
         self.ibp_user          = "ibp"
         self.ibp_group         = "ibp"
         self.ibp_log           = "/var/log/ibp_server.log"
         self.ibp_sub_ip        = ""
         self.ibp_sysctl        = "/etc/sysctl.d/ibp.conf"
+        self.ibp_config_file   = "/etc/ibp/ibp.cfg"
         
     def allocation_success_file(self):
         # acts as lock for reallocation. This file will be created when resources are
@@ -342,12 +365,9 @@ class Configuration():
         return os.path.join(self.ibp_resource_path, ".allocations_do_not_remove")
 
     def makefs_cmd(self):
-        return path.join(self.ibp_root, "/usr/bin/mkfs.resource") + " 1 dir " + self.ibp_resource_path\
+        return path.join(self.ibp_root, "mkfs.resource") + " 1 dir " + self.ibp_resource_path\
                + " " + self.ibp_resource_db + " -b " + str(self.ibp_size)\
                + " -d " + str(self.max_duration)
-
-    def ibp_config_file(self):
-        return path.join(self.ibp_root, "/etc/ibp/ibp.cfg")
 
     def blipp_config_file(self):
         # check that etc/periscope exists
@@ -357,7 +377,7 @@ class Configuration():
         return path.join(self.ibp_root, filename)
 
     def ibp_interface_monitor(self):
-        return path.join(self.ibp_root, "/usr/bin/ibp_interface_monitor.py") + " -l -d"
+        return path.join(self.ibp_root, "ibp_interface_monitor.py") + " -l -d"
 
     def query_yes_no(self, question, default="no"):
         """Ask a yes/no question via raw_input() and return their answer.
@@ -637,7 +657,6 @@ class Configuration():
         unis_config = UNIS_SAMPLE_CONFIG.format(unis_endpoint=self.unis_endpoint,
                                                 public_ip=self.ibp_host,
                                                 port=self.ibp_port,
-                                                seconds=self.max_duration,
                                                 use_ssl=int(self.unis_use_ssl),
                                                 cert_file=self.unis_cert_file,
                                                 key_file=self.unis_key_file,
@@ -657,7 +676,7 @@ class Configuration():
                                               resource=resource_config,
                                               unis=unis_config)
 
-        self.save_and_write(self.ibp_config_file(), ibp_config)
+        self.save_and_write(self.ibp_config_file, ibp_config)
         return ibp_config
 
 
@@ -703,7 +722,7 @@ def main():
                               'interfaces by a comma separated list')
     parser.add_argument('--ibp-resource-dir', type=str, default='/root',
 			help='A path for the ibp_resource and db directories.')
-    parser.add_argument('--ibp-root', type=str, default='/',
+    parser.add_argument('--ibp-root', type=str, default='/usr/bin',
                         help='Change the relative install path, default is /')
     parser.add_argument('--geni', action='store_true',
                         help='Non-interactive config generation for GENI deployments.')
@@ -775,7 +794,7 @@ def main():
     
     ibp_config = cfg.generate_ibp_config(args)
     log.debug(ibp_config)
-    log.info("Saved IBP configuration to %s" % cfg.ibp_config_file())
+    log.info("Saved IBP configuration to %s" % cfg.ibp_config_file)
 
     if (cfg.enable_blipp):
         log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())

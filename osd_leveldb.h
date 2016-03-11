@@ -20,10 +20,12 @@
 
 // Defines for munging 64 bit ints into big-endian. Want it this way to get
 // our ints to sort right when sorted lexicographically
-//#ifndef htonll
+#ifndef htonll
 #define htonll(x) ((1==htonl(1)) ? (x) : ((uint64_t)htonl((x) & 0xFFFFFFFF) << 32) | htonl((x) >> 32))
+#endif
+#ifndef ntohll
 #define ntohll(x) ((1==ntohl(1)) ? (x) : ((uint64_t)ntohl((x) & 0xFFFFFFFF) << 32) | ntohl((x) >> 32))
-//#endif
+#endif
 // Top 8 bits of the ID are reserved for flags
 #define LEVELDB_FLAG_BITMASK 0xFF00000000000000U
 #define LEVELDB_INDEX_FLAG   (1 << 0)
