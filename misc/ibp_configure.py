@@ -785,15 +785,36 @@ def get_float (x) :
     except :
         return 0
 
-def populate_res_from_file(name) :
-    pass
+def mkfs_resource(name) :
+    try :
+        f = open(name,"r")
+    except :
+        print "File doesn't exist " + name
+    else :
+        lines = f.readlines()
+        lines = map(lambda x : x.strip(),lines)
+        lines = filter(lambda x : True if x else False,lines)
+        lines = map(lambda x : x.split(": ") , lines)
+        i = 0
+        # Ibp stuff
+        ibp_id = get_from_line(lines,i,1)
+        i+=1
+        ibp_pathtodrive = get_from_line(lines,i,1)
+        i+=1
+        ibp_pathtodrivedb = get_from_line(lines,i,1)
+        i+=1
+        ibp_maxsize = get_from_line(lines,i,1)
+        i+=1
+        # Configure resource
+        ibp_maxduration = get_from_line(lines,i,1)
+        mysys.execute_command("mkfs.resource "+ ibp_id + " dir "+ ibp_pathtodrive + " " + ibp_pathtodrivedb + " -d " + ibp_maxduration + " -b "+ibp_maxsize)
 
 def main():
     parser = argparse.ArgumentParser(
         description="Allocates resources and creates ibp.cfg file")
     parser.add_argument('--neuca', type=str, default=None,
                         help='Use neuca tools to get public ip. Provide distro name as parameter'
-                        'Supported distributions are debian, ubuntu, redhat, centos, fedora.')
+                        'Supported distributions are debian, ubuntu, redhat, centos, fe1dora.')
     parser.add_argument('--debug', action='store_true',
                         help='Turn on debugging output.')
     parser.add_argument('--force-allocate', action='store_true',
@@ -849,6 +870,7 @@ def main():
     # Lets pick stuff out of the file
     parser.add_argument('--file',type=str,default=None,help='Get all arguments from file - Ignore conflicting command line arguments')
 
+    # Call mkfs.resource after parsing resources
     # Lets pick resources out of a file
     parser.add_argument('--addresource-file',type=str,default=None,help='Get resource arguments from file - Ignore conflicting command line arguments')
 
@@ -885,25 +907,26 @@ def main():
             cfg.ibp_sub_ip   += args.extra_sub_map+";"
 
     else:
-        if args.file :
-            populate_args_from_file(args.file,args)
         if args.addresource_file :
-            populate_res_from_file(args.addresource_file)
-        cfg.get_user_input(args)
+            mkfs_resource(args.addresource_file)
+        else :
+            if args.file :
+                populate_args_from_file(args.file,args)
+            cfg.get_user_input(args)
 
-    ibp_config = cfg.generate_ibp_config(args)
-    log.debug(ibp_config)
-    log.info("Saved IBP configuration to %s" % cfg.ibp_config_file)
+            ibp_config = cfg.generate_ibp_config(args)
+            log.debug(ibp_config)
+            log.info("Saved IBP configuration to %s" % cfg.ibp_config_file)
 
-    if (cfg.enable_blipp):
-        log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())
-        blipp_config = cfg.generate_blipp_config(args)
-        log.debug(blipp_config)
+            if (cfg.enable_blipp):
+                log.info("Saving BLiPP configuration to %s" % cfg.blipp_config_file())
+                blipp_config = cfg.generate_blipp_config(args)
+                log.debug(blipp_config)
 
-    if (cfg.systune):
-        cfg.save_and_write(cfg.ibp_sysctl, SYSCTL_CONFIG)
-        mysys.execute_command("sysctl --system")
-        log.info("Added sysctl settings and ran 'sysctl --system' to apply network tuning")
+            if (cfg.systune):
+                cfg.save_and_write(cfg.ibp_sysctl, SYSCTL_CONFIG)
+                mysys.execute_command("sysctl --system")
+                log.info("Added sysctl settings and ran 'sysctl --system' to apply network tuning")
 
     # start interface monitoring thread
     # execute_command(c.ibp_interface_monitor(), True)
