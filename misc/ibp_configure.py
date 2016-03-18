@@ -488,14 +488,17 @@ class Configuration():
         mysys.restore_user_group()
         return resource
 
-    def path_check_create(self, path, disp, dval):
+    def path_check_create(self, path, disp, dval,non_interactive=False):
         path = path or self.get_string(disp, dval)
         # check if already allocated
         if os.path.exists(path):
             if danger_pattern.match(path):
                 log.info("Specified path is an OS system directory, please try again")
                 return path, False
-            ret = self.query_yes_no("WARNING: directory %s already exists, delete?" % path)
+            if non_interactive :
+                ret = True
+            else :
+                ret = self.query_yes_no("WARNING: directory %s already exists, delete?" % path)
             if ret:
                 shutil.rmtree(path)
             else:
@@ -572,7 +575,7 @@ class Configuration():
                 self.ibp_resource_path = self.get_from_args(args,'ibp_resource_path',self.ibp_resource_path)
                 self.ibp_resource_path, is_valid = self.path_check_create(self.ibp_resource_path,
                                                                           ' Resource path [%s] ' % def_resource_path,
-                                                                          def_resource_path)
+                                                                          def_resource_path,getattr(args,'non_interactive',False))
 
             is_valid = False
             while not is_valid:
@@ -580,7 +583,7 @@ class Configuration():
                 self.ibp_resource_db = self.get_from_args(args,'ibp_resource_db',self.ibp_resource_db)
                 self.ibp_resource_db, is_valid = self.path_check_create(self.ibp_resource_db,
                                                                         ' Resource DB path [%s] ' % def_resource_db,
-                                                                        def_resource_db)
+                                                                        def_resource_db,getattr(args,'non_interactive',False))
             size = mysys.get_fs_freespace(self.ibp_resource_path)
             duration = self.max_duration
             self.ibp_size = get_int(self.get_from_args(args,'ibp_size',size)) or self.get_int(' Usable disk space [%s MB] ' % size, size)
