@@ -357,7 +357,7 @@ class Configuration():
         self.ibp_sub_ip        = ""
         self.ibp_sysctl        = "/etc/sysctl.d/ibp.conf"
         self.ibp_config_file   = "/etc/ibp/ibp.cfg"
-        
+
     def allocation_success_file(self):
         # acts as lock for reallocation. This file will be created when resources are
         # allocated for ibp_server. If this file is removed then resources will be
@@ -368,6 +368,53 @@ class Configuration():
         return path.join(self.ibp_root, "mkfs.resource") + " 1 dir " + self.ibp_resource_path\
                + " " + self.ibp_resource_db + " -b " + str(self.ibp_size)\
                + " -d " + str(self.max_duration)
+
+    def mkfs_resource(self,ibp_id,ibp_pathtodrive,ibp_pathtodrivedb,ibp_maxsize=22000,ibp_maxduration=25200):
+        (uid, gid) = mysys.name_to_id(self.ibp_user, self.ibp_group)
+        os.chown(self.ibp_config_file, uid, gid)
+        if path.exists(ibp_pathtodrive) and path.exists(ibp_pathtodrivedb):
+            os.chown(ibp_pathtodrive, uid, gid)
+            os.chown(ibp_pathtodrivedb, uid, gid)
+            resource = mysys.execute_command("mkfs.resource "+ ibp_id + " dir "+ ibp_pathtodrive + " " + ibp_pathtodrivedb + " -d " + ibp_maxduration + " -b "+ibp_maxsize,
+                                             user=self.ibp_user,
+                                             group=self.ibp_group)
+        else:
+            log.error("Resource and/or DB path do not exist: [%s, %s]" %
+                      ibp_pathtodrive, ibp_pathtodrivedb)
+            exit(1)
+
+        mysys.set_user_group(self.ibp_user, self.ibp_group)
+        # save resource for later runs
+        with open(self.ibp_config_file, 'a+') as f:
+            f.write(resource)
+
+        mysys.restore_user_group()
+        return resource
+
+    def mkfs_resource_file(self,name):
+        try :
+            f = open(name,"r")
+        except :
+            print "File doesn't exist " + name
+        else :
+            lines = f.readlines()
+            lines = map(lambda x : x.strip(),lines)
+            lines = filter(lambda x : True if x else False,lines)
+            lines = map(lambda x : x.split(": ") , lines)
+            i = 0
+            # Ibp stuff
+            ibp_id = get_from_line(lines,i,1)
+            i+=1
+            ibp_pathtodrive = get_from_line(lines,i,1)
+            i+=1
+            ibp_pathtodrivedb = get_from_line(lines,i,1)
+            i+=1
+            ibp_maxsize = get_from_line(lines,i,1)
+            i+=1
+            # Configure resource
+            ibp_maxduration = get_from_line(lines,i,1)
+            f.close();
+            return self.mkfs_resource(ibp_id,ibp_pathtodrive,ibp_pathtodrivedb,ibp_maxsize,ibp_maxduration)
 
     def blipp_config_file(self):
         # check that etc/periscope exists
@@ -385,7 +432,6 @@ class Configuration():
         "default" is the presumed answer if the user just hits <Enter>.
         It must be "yes" (the default), "no" or None (meaning
         an answer is required of the user).
-        
         The "answer" return value is one of "yes" or "no".
         """
         valid = {"yes":True,   "y":True,  "ye":True,
@@ -788,30 +834,6 @@ def get_float (x) :
     except :
         return 0
 
-def mkfs_resource(name) :
-    try :
-        f = open(name,"r")
-    except :
-        print "File doesn't exist " + name
-    else :
-        lines = f.readlines()
-        lines = map(lambda x : x.strip(),lines)
-        lines = filter(lambda x : True if x else False,lines)
-        lines = map(lambda x : x.split(": ") , lines)
-        i = 0
-        # Ibp stuff
-        ibp_id = get_from_line(lines,i,1)
-        i+=1
-        ibp_pathtodrive = get_from_line(lines,i,1)
-        i+=1
-        ibp_pathtodrivedb = get_from_line(lines,i,1)
-        i+=1
-        ibp_maxsize = get_from_line(lines,i,1)
-        i+=1
-        # Configure resource
-        ibp_maxduration = get_from_line(lines,i,1)
-        mysys.execute_command("mkfs.resource "+ ibp_id + " dir "+ ibp_pathtodrive + " " + ibp_pathtodrivedb + " -d " + ibp_maxduration + " -b "+ibp_maxsize)
-
 def main():
     parser = argparse.ArgumentParser(
         description="Allocates resources and creates ibp.cfg file")
@@ -911,7 +933,8 @@ def main():
 
     else:
         if args.addresource_file :
-            mkfs_resource(args.addresource_file)
+            cfg.mkfs_resource_file(args.addresource_file)
+            log.info("Mkfs called")
         else :
             if args.file :
                 populate_args_from_file(args.file,args)
