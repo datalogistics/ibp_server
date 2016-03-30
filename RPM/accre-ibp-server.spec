@@ -1,7 +1,7 @@
-%define default_release 12
+%define default_release 1
 
 Name: accre-ibp-server
-Version: 1.0
+Version: 2.0
 Release: %{?release}%{!?release:%{default_release}}
 Summary: Internet Backplane Protocol (IBP) Server
 
