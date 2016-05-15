@@ -38,7 +38,12 @@ void parse_unis_config(inip_file_t *kf)
     return;
   }
 
-  config = malloc(sizeof(unis_config));
+  config = calloc(1, sizeof(unis_config));
+
+  //ensure zeroed values
+  config->listener_count = 0;
+  config->persistent = 0;
+
   config->name = unis_name;
   config->type = unis_type;
   config->endpoint = unis_endpoint;
@@ -48,6 +53,7 @@ void parse_unis_config(inip_file_t *kf)
   config->do_register = unis_do_register;
   config->registration_interval = unis_reg_interval;
   config->refresh_timer = UNIS_REFRESH_TO;
+
   //ssl params
   config->certfile = client_cert_path;
   config->keyfile = client_key_path;
