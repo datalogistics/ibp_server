@@ -2,7 +2,7 @@
 
 Name: accre-ibp-server
 Version: 2.0
-Release: %{?release}%{!?release:%{default_release}}
+Release: %{?release}%{!?release:%{default_release}}%{?dist}
 Summary: Internet Backplane Protocol (IBP) Server
 
 Group: Applications/System
