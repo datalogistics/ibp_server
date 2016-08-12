@@ -653,7 +653,7 @@ class Configuration():
             self.unis_latitude = get_float(self.get_from_args(args,'unis_latitude',self.unis_latitude))
             self.unis_longitude = get_float(self.get_from_args(args,'unis_longitude',self.unis_longitude))
         else :
-            self.unis_longitude = self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude)
+            self.unis_latitude = self.get_real(' Latitude [%s]: ' % self.unis_latitude, self.unis_latitude)
             self.unis_longitude = self.get_real(' Longitude [%s]: ' % self.unis_longitude, self.unis_longitude)
 
         self.enable_blipp = self.get_from_args(args,'enable_blipp',False) or self.query_yes_no(' Monitor the depot with BLiPP (usage stats)', default='yes')
